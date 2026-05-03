@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Branch } from '@shared/git';
 import type { PullRequest } from '@shared/pull-requests';
 import { useTaskSettings } from '@renderer/features/tasks/hooks/useTaskSettings';
@@ -47,6 +47,12 @@ export function useFromPullRequestMode(
     resetKey: selectedProjectId,
   });
 
+  const [customBranchName, setCustomBranchName] = useState<string | null>(null);
+  const branchName = customBranchName ?? taskName.taskName;
+  const setBranchName = useCallback((value: string) => {
+    setCustomBranchName(value || null);
+  }, []);
+
   const isValid = taskName.taskName.trim().length > 0 && linkedPR !== null && !taskName.isPending;
 
   return {
@@ -56,6 +62,8 @@ export function useFromPullRequestMode(
     checkoutMode,
     setCheckoutMode,
     branchSelection,
+    branchName,
+    setBranchName,
     isValid,
   };
 }

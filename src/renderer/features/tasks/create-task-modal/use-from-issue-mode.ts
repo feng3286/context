@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Branch } from '@shared/git';
 import { Issue } from '@shared/tasks';
 import { useTaskSettings } from '@renderer/features/tasks/hooks/useTaskSettings';
@@ -51,6 +51,12 @@ export function useFromIssueMode(
     resetKey: selectedProjectId,
   });
 
+  const [customBranchName, setCustomBranchName] = useState<string | null>(null);
+  const branchName = customBranchName ?? taskName.taskName;
+  const setBranchName = useCallback((value: string) => {
+    setCustomBranchName(value || null);
+  }, []);
+
   const isValid =
     taskName.taskName.trim().length > 0 &&
     linkedIssue !== null &&
@@ -62,6 +68,8 @@ export function useFromIssueMode(
     ...taskName,
     linkedIssue,
     setLinkedIssue,
+    branchName,
+    setBranchName,
     isValid,
   };
 }

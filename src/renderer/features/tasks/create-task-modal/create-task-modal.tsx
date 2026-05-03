@@ -98,8 +98,9 @@ export const CreateTaskModal = observer(function CreateTaskModal({
         if (!fromBranch.selectedBranch) return;
         const taskStrategy = resolveBranchLikeTaskStrategy({
           isUnborn,
-          createBranchAndWorktree: fromBranch.createBranchAndWorktree,
-          taskBranch: fromBranch.taskName,
+          createWorktree: fromBranch.createBranchAndWorktree,
+          createNewBranch: fromBranch.createNewBranch,
+          taskBranch: fromBranch.branchName,
           pushBranch: fromBranch.pushBranch,
         });
         void projectStore.mountedProject!.taskManager.createTask({
@@ -115,8 +116,9 @@ export const CreateTaskModal = observer(function CreateTaskModal({
         if (!fromIssue.selectedBranch) return;
         const taskStrategy = resolveBranchLikeTaskStrategy({
           isUnborn,
-          createBranchAndWorktree: fromIssue.createBranchAndWorktree,
-          taskBranch: fromIssue.taskName,
+          createWorktree: fromIssue.createBranchAndWorktree,
+          createNewBranch: fromIssue.createNewBranch,
+          taskBranch: fromIssue.branchName,
           pushBranch: fromIssue.pushBranch,
         });
         void projectStore.mountedProject!.taskManager.createTask({
@@ -138,7 +140,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
           headBranch: reviewBranch,
           headRepositoryUrl: fromPR.linkedPR.headRepositoryUrl,
           isFork: isForkPr(fromPR.linkedPR),
-          taskBranch: fromPR.taskName,
+          taskBranch: fromPR.branchName,
           pushBranch: fromPR.branchSelection.pushBranch,
         });
         void projectStore.mountedProject!.taskManager.createTask({

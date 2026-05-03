@@ -14,9 +14,11 @@ export function useBranchSelection(
   const pushOnCreateByDefault = localProject?.pushOnCreate ?? true;
 
   const [createBranchAndWorktreePreference, setCreateBranchAndWorktreePreference] = useState(true);
+  const [createNewBranchPreference, setCreateNewBranchPreference] = useState(true);
   const [pushBranchOverride, setPushBranchOverride] = useState<boolean | undefined>(undefined);
   const pushBranch = pushBranchOverride ?? pushOnCreateByDefault;
   const createBranchAndWorktree = isUnborn ? false : createBranchAndWorktreePreference;
+  const createNewBranch = createBranchAndWorktree && createNewBranchPreference;
 
   // Store the user's branch override alongside the project it belongs to.
   // When the project changes the override is for a different project and is
@@ -52,12 +54,17 @@ export function useBranchSelection(
     },
     [isUnborn]
   );
+  const setCreateNewBranch = useCallback((value: boolean) => {
+    setCreateNewBranchPreference(value);
+  }, []);
 
   return {
     selectedBranch,
     setSelectedBranch,
     createBranchAndWorktree,
     setCreateBranchAndWorktree,
+    createNewBranch,
+    setCreateNewBranch,
     pushBranch,
     setPushBranch,
   };

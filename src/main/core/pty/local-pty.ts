@@ -1,6 +1,4 @@
 import path from 'node:path';
-import * as nodePty from 'node-pty';
-import type { IPty } from 'node-pty';
 import { log } from '@main/lib/logger';
 import { normalizeSignal } from './exit-signals';
 import type { Pty, PtyDimensions, PtyExitInfo } from './pty';
@@ -17,6 +15,10 @@ const MIN_COLS = 2;
 const MIN_ROWS = 1;
 
 export function spawnLocalPty(options: LocalSpawnOptions): LocalPtySession {
+  // Lazily import node-pty to avoid crashing the main process at startup
+  // when native module hasn't been compiled for Electron.
+  const nodePty = require('node-pty') as typeof import('node-pty');
+
   const { id, command, args, cwd, env, cols, rows } = options;
   const spawnSpec = resolveWindowsPtySpawn(command, args);
 
@@ -51,7 +53,7 @@ export class LocalPtySession implements Pty {
 
   constructor(
     id: string,
-    private readonly proc: IPty
+    private readonly proc: import('node-pty').IPty
   ) {
     this.id = id;
   }

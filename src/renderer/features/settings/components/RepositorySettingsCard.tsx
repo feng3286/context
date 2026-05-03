@@ -1,7 +1,11 @@
+import { Folder } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
+import { rpc } from '@renderer/lib/ipc';
+import { Button } from '@renderer/lib/ui/button';
 import { Input } from '@renderer/lib/ui/input';
 import { Switch } from '@renderer/lib/ui/switch';
+import { cn } from '@renderer/utils/utils';
 import { ResetToDefaultButton } from './ResetToDefaultButton';
 import { SettingRow } from './SettingRow';
 
@@ -16,6 +20,7 @@ const RepositorySettingsCard: React.FC = () => {
   } = useAppSettingsKey('localProject');
 
   const branchPrefix = localProject?.branchPrefix ?? '';
+  const defaultWorktreeDirectory = localProject?.defaultWorktreeDirectory ?? '';
   const pushOnCreate = localProject?.pushOnCreate ?? true;
   const writeAgentConfigToGitIgnore = localProject?.writeAgentConfigToGitIgnore ?? true;
 
@@ -25,6 +30,47 @@ const RepositorySettingsCard: React.FC = () => {
 
   return (
     <div className="grid gap-8">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="break-words text-sm text-foreground">Worktree directory</span>
+            <span className="break-words text-xs text-foreground-passive">
+              The default directory where task worktrees are stored. Can be overridden per project.
+            </span>
+          </div>
+          <ResetToDefaultButton
+            visible={isFieldOverridden('defaultWorktreeDirectory')}
+            defaultLabel="~/emdash/worktrees"
+            onReset={() => resetField('defaultWorktreeDirectory')}
+            disabled={loading || saving}
+          />
+        </div>
+        <button
+          className="h-9 border border-border rounded-md p-2 w-full flex items-center gap-2 hover:bg-background-quaternary-1 pr-1.5 transition-colors"
+          onClick={async () => {
+            const result = await rpc.app.openSelectDirectoryDialog({
+              title: 'Select Worktree Directory',
+              message: 'Choose where new task worktrees will be created by default.',
+            });
+            if (result) {
+              update({ defaultWorktreeDirectory: result });
+            }
+          }}
+        >
+          <Folder className="size-4 text-foreground-muted shrink-0" />
+          <p
+            className={cn(
+              'text-sm text-foreground-passive truncate min-w-0 flex-1 text-left',
+              defaultWorktreeDirectory ? 'text-foreground' : ''
+            )}
+          >
+            {defaultWorktreeDirectory || '~/emdash/worktrees'}
+          </p>
+          <Button variant="outline" size="xs" tabIndex={-1}>
+            Choose
+          </Button>
+        </button>
+      </div>
       <div className="grid gap-2">
         <div className="flex items-center gap-2">
           <Input

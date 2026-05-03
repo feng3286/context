@@ -22,6 +22,9 @@ export function FromBranchContent({
         projectId={projectId}
         currentBranch={currentBranch}
         isUnborn={isUnborn}
+        branchName={state.branchName}
+        onBranchNameChange={state.setBranchName}
+        taskName={state.taskName}
       />
       <TaskNameField state={state} />
     </div>

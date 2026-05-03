@@ -4,7 +4,9 @@ import { ProjectBranchSelector } from '@renderer/lib/components/project-branch-s
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@renderer/lib/ui/collapsible';
 import { ComboboxTrigger, ComboboxValue } from '@renderer/lib/ui/combobox';
 import { Field, FieldLabel } from '@renderer/lib/ui/field';
+import { Input } from '@renderer/lib/ui/input';
 import { Switch } from '@renderer/lib/ui/switch';
+import { liveTransformTaskName } from '@renderer/utils/taskNames';
 import { cn } from '@renderer/utils/utils';
 import { BranchSelectionState } from './use-branch-selection';
 
@@ -15,6 +17,9 @@ interface BranchPickerFieldProps {
   label?: string;
   className?: string;
   isUnborn?: boolean;
+  branchName?: string;
+  onBranchNameChange?: (value: string) => void;
+  taskName?: string;
 }
 
 export function BranchPickerField({
@@ -24,8 +29,18 @@ export function BranchPickerField({
   label = 'From Branch',
   className,
   isUnborn = false,
+  branchName,
+  onBranchNameChange,
+  taskName,
 }: BranchPickerFieldProps) {
-  const { createBranchAndWorktree, setCreateBranchAndWorktree, pushBranch, setPushBranch } = state;
+  const {
+    createBranchAndWorktree,
+    setCreateBranchAndWorktree,
+    createNewBranch,
+    setCreateNewBranch,
+    pushBranch,
+    setPushBranch,
+  } = state;
 
   return (
     <div className={cn('border border-border rounded-md overflow-hidden', className)}>
@@ -58,7 +73,7 @@ export function BranchPickerField({
       {!isUnborn && (
         <Collapsible className="border-t border-border">
           <CollapsibleTrigger className="w-full p-2 hover:bg-background-1 data-open:bg-background-1 flex text-xs text-foreground-muted items-center gap-2 justify-between">
-            Should create and push feature branch
+            Branch options
             <ChevronDown className="size-4 shrink-0 text-foreground-muted" />
           </CollapsibleTrigger>
           <CollapsibleContent className="overflow-hidden h-(--collapsible-panel-height) transition-[height] duration-200 ease-out">
@@ -68,13 +83,34 @@ export function BranchPickerField({
                   checked={createBranchAndWorktree}
                   onCheckedChange={setCreateBranchAndWorktree}
                 />
-                <FieldLabel>Create task branch and worktree</FieldLabel>
+                <FieldLabel>Create task worktree</FieldLabel>
               </Field>
               {createBranchAndWorktree && (
-                <Field orientation="horizontal">
-                  <Switch checked={pushBranch} onCheckedChange={setPushBranch} />
-                  <FieldLabel>Push branch to remote</FieldLabel>
-                </Field>
+                <>
+                  <Field orientation="horizontal">
+                    <Switch checked={createNewBranch} onCheckedChange={setCreateNewBranch} />
+                    <FieldLabel>Create new branch</FieldLabel>
+                  </Field>
+                  {createNewBranch && (
+                    <Field>
+                      <FieldLabel>Branch name</FieldLabel>
+                      <Input
+                        value={branchName ?? ''}
+                        placeholder={taskName ?? ''}
+                        onChange={(e) => {
+                          const transformed = liveTransformTaskName(e.target.value);
+                          onBranchNameChange?.(transformed);
+                        }}
+                      />
+                    </Field>
+                  )}
+                  {createNewBranch && (
+                    <Field orientation="horizontal">
+                      <Switch checked={pushBranch} onCheckedChange={setPushBranch} />
+                      <FieldLabel>Push branch to remote</FieldLabel>
+                    </Field>
+                  )}
+                </>
               )}
             </div>
           </CollapsibleContent>

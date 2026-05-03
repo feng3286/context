@@ -484,6 +484,10 @@ export class LocalProjectProvider implements ProjectProvider {
       return this.project.path;
     }
 
+    // Re-read worktree directory from settings to pick up any changes
+    // made to the global defaultWorktreeDirectory since project was opened.
+    await this.worktreeService.syncWorktreePoolPath();
+
     const existing = await this.worktreeService.getWorktree(task.taskBranch);
     if (existing) {
       return existing;

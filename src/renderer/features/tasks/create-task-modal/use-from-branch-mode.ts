@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Branch } from '@shared/git';
 import { useTaskSettings } from '@renderer/features/tasks/hooks/useTaskSettings';
 import { rpc } from '@renderer/lib/ipc';
@@ -37,6 +37,12 @@ export function useFromBranchMode(
     resetKey: selectedProjectId,
   });
 
+  const [customBranchName, setCustomBranchName] = useState<string | null>(null);
+  const branchName = customBranchName ?? taskName.taskName;
+  const setBranchName = useCallback((value: string) => {
+    setCustomBranchName(value || null);
+  }, []);
+
   const isValid =
     taskName.taskName.trim().length > 0 &&
     branchSelection.selectedBranch !== undefined &&
@@ -45,6 +51,8 @@ export function useFromBranchMode(
   return {
     ...branchSelection,
     ...taskName,
+    branchName,
+    setBranchName,
     isValid,
   };
 }

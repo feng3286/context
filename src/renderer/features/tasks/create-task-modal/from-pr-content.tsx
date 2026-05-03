@@ -25,6 +25,9 @@ export function FromPrContent({ state, projectId, nameWithOwner, disabled }: Fro
         pushBranch={state.branchSelection.pushBranch}
         onPushBranchChange={state.branchSelection.setPushBranch}
         disabled={disabled}
+        branchName={state.branchName}
+        onBranchNameChange={state.setBranchName}
+        taskName={state.taskName}
       />
       <TaskNameField state={state} />
     </div>

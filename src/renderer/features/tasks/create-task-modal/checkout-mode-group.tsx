@@ -1,6 +1,8 @@
 import { Field, FieldLabel } from '@renderer/lib/ui/field';
+import { Input } from '@renderer/lib/ui/input';
 import { RadioGroup, RadioGroupItem } from '@renderer/lib/ui/radio-group';
 import { Switch } from '@renderer/lib/ui/switch';
+import { liveTransformTaskName } from '@renderer/utils/taskNames';
 import { CheckoutMode } from './use-from-pull-request-mode';
 
 interface CheckoutModeGroupProps {
@@ -9,6 +11,9 @@ interface CheckoutModeGroupProps {
   pushBranch: boolean;
   onPushBranchChange: (value: boolean) => void;
   disabled?: boolean;
+  branchName?: string;
+  onBranchNameChange?: (value: string) => void;
+  taskName?: string;
 }
 
 export function CheckoutModeGroup({
@@ -17,6 +22,9 @@ export function CheckoutModeGroup({
   pushBranch,
   onPushBranchChange,
   disabled,
+  branchName,
+  onBranchNameChange,
+  taskName,
 }: CheckoutModeGroupProps) {
   const createBranchAndWorktree = value === 'new-branch';
 
@@ -33,10 +41,23 @@ export function CheckoutModeGroup({
         </Field>
       </RadioGroup>
       {createBranchAndWorktree && (
-        <Field orientation="horizontal">
-          <Switch checked={pushBranch} onCheckedChange={onPushBranchChange} disabled={disabled} />
-          <FieldLabel>Push branch to remote</FieldLabel>
-        </Field>
+        <>
+          <Field>
+            <FieldLabel>Branch name</FieldLabel>
+            <Input
+              value={branchName ?? ''}
+              placeholder={taskName ?? ''}
+              onChange={(e) => {
+                const transformed = liveTransformTaskName(e.target.value);
+                onBranchNameChange?.(transformed);
+              }}
+            />
+          </Field>
+          <Field orientation="horizontal">
+            <Switch checked={pushBranch} onCheckedChange={onPushBranchChange} disabled={disabled} />
+            <FieldLabel>Push branch to remote</FieldLabel>
+          </Field>
+        </>
       )}
     </div>
   );

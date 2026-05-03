@@ -13,7 +13,7 @@ export type ServeWorktreeError =
 
 export class WorktreeService {
   private gitOpQueue: Promise<unknown> = Promise.resolve();
-  private readonly worktreePoolPath: string;
+  private worktreePoolPath: string;
   private readonly repoPath: string;
   private readonly exec: ExecFn;
   private readonly rootFs: FileSystemProvider;
@@ -52,6 +52,11 @@ export class WorktreeService {
     } catch {
       return false;
     }
+  }
+
+  async syncWorktreePoolPath(): Promise<void> {
+    const dir = await this.projectSettings.getWorktreeDirectory();
+    this.worktreePoolPath = path.join(dir, path.basename(this.repoPath));
   }
 
   private async ensureWorktreePoolDirExists(): Promise<void> {
@@ -130,7 +135,7 @@ export class WorktreeService {
       for (const block of stdout.split('\n\n')) {
         if (block.split('\n').some((line) => line === branchLine)) {
           const match = /^worktree (.+)$/m.exec(block);
-          if (match?.[1]?.startsWith(realPoolPath)) return match[1];
+          if (match?.[1] && match[1] !== this.repoPath) return match[1];
         }
       }
     } catch {}

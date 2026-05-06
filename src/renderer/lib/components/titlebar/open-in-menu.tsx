@@ -17,6 +17,7 @@ import { cn } from '@renderer/utils/utils';
 
 interface OpenInMenuProps {
   path: string;
+  activeFile?: string | null;
   isRemote?: boolean;
   sshConnectionId?: string | null;
   className?: string;
@@ -24,6 +25,7 @@ interface OpenInMenuProps {
 
 export const OpenInMenu: React.FC<OpenInMenuProps> = ({
   path,
+  activeFile,
   className,
   isRemote = false,
   sshConnectionId = null,
@@ -51,6 +53,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         const res = await rpc.app.openIn({
           app: appId,
           path,
+          filePath: activeFile || undefined,
           isRemote,
           sshConnectionId: sshConnectionId ?? undefined,
         });
@@ -69,7 +72,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         });
       }
     },
-    [labels, path, isRemote, sshConnectionId, toast]
+    [labels, path, activeFile, isRemote, sshConnectionId, toast]
   );
 
   const sortedApps = useMemo(() => {

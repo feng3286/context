@@ -4,6 +4,7 @@ export type PlatformKey = 'darwin' | 'win32' | 'linux';
 
 export type PlatformConfig = {
   openCommands?: string[];
+  openWithFileCommands?: string[];
   openUrls?: string[];
   checkCommands?: string[];
   bundleIds?: string[];
@@ -79,11 +80,11 @@ const _OPEN_IN_APPS = {
         appNames: ['Cursor'],
       },
       win32: {
-        openCommands: ['start "" cursor {{path}}'],
+        openCommands: ['start "" cursor {{path}} {{file}}'],
         checkCommands: ['cursor'],
       },
       linux: {
-        openCommands: ['cursor {{path}}'],
+        openCommands: ['cursor {{path}} {{file}}'],
         checkCommands: ['cursor'],
       },
     },
@@ -97,7 +98,7 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: [
-          'command -v code >/dev/null 2>&1 && code {{path}}',
+          'command -v code >/dev/null 2>&1 && code {{path}} {{file}}',
           'open -n -b com.microsoft.VSCode --args {{path}}',
           'open -n -a "Visual Studio Code" {{path}}',
         ],
@@ -106,11 +107,11 @@ const _OPEN_IN_APPS = {
         appNames: ['Visual Studio Code'],
       },
       win32: {
-        openCommands: ['start "" code {{path}}', 'start "" code-insiders {{path}}'],
+        openCommands: ['start "" code {{path}} {{file}}', 'start "" code-insiders {{path}}'],
         checkCommands: ['code', 'code-insiders'],
       },
       linux: {
-        openCommands: ['code {{path}}', 'code-insiders {{path}}'],
+        openCommands: ['code {{path}} {{file}}', 'code-insiders {{path}}'],
         checkCommands: ['code', 'code-insiders'],
       },
     },
@@ -123,7 +124,7 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: [
-          'command -v windsurf >/dev/null 2>&1 && windsurf {{path}}',
+          'command -v windsurf >/dev/null 2>&1 && windsurf {{path}} {{file}}',
           'open -n -b com.exafunction.windsurf --args {{path}}',
           'open -n -a "Windsurf" {{path}}',
         ],
@@ -132,11 +133,11 @@ const _OPEN_IN_APPS = {
         appNames: ['Windsurf'],
       },
       win32: {
-        openCommands: ['start "" windsurf {{path}}'],
+        openCommands: ['start "" windsurf {{path}} {{file}}'],
         checkCommands: ['windsurf'],
       },
       linux: {
-        openCommands: ['windsurf {{path}}'],
+        openCommands: ['windsurf {{path}} {{file}}'],
         checkCommands: ['windsurf'],
       },
     },
@@ -148,7 +149,7 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: [
-          'command -v xed >/dev/null 2>&1 && xed {{path}}',
+          'command -v xed >/dev/null 2>&1 && xed {{path}} {{file}}',
           'open -n -b com.apple.dt.Xcode --args {{path}}',
           'open -n -a "Xcode" {{path}}',
         ],
@@ -234,12 +235,12 @@ const _OPEN_IN_APPS = {
     autoInstall: true,
     platforms: {
       darwin: {
-        openCommands: ['command -v zed >/dev/null 2>&1 && zed {{path}}', 'open -a "Zed" {{path}}'],
+        openCommands: ['command -v zed >/dev/null 2>&1 && zed {{path}} {{file}}', 'open -a "Zed" {{path}}'],
         checkCommands: ['zed'],
         appNames: ['Zed'],
       },
       linux: {
-        openCommands: ['zed {{path}}', 'xdg-open {{path}}'],
+        openCommands: ['zed {{path}} {{file}}', 'xdg-open {{path}}'],
         checkCommands: ['zed'],
       },
     },
@@ -252,7 +253,7 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: [
-          'command -v kiro >/dev/null 2>&1 && kiro {{path}}',
+          'command -v kiro >/dev/null 2>&1 && kiro {{path}} {{file}}',
           'open -a "Kiro" {{path}}',
         ],
         checkCommands: ['kiro'],
@@ -260,11 +261,11 @@ const _OPEN_IN_APPS = {
         appNames: ['Kiro'],
       },
       win32: {
-        openCommands: ['start "" kiro {{path}}'],
+        openCommands: ['start "" kiro {{path}} {{file}}'],
         checkCommands: ['kiro'],
       },
       linux: {
-        openCommands: ['kiro {{path}}'],
+        openCommands: ['kiro {{path}} {{file}}'],
         checkCommands: ['kiro'],
       },
     },
@@ -277,18 +278,18 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: [
-          'command -v antigravity >/dev/null 2>&1 && antigravity {{path}}',
+          'command -v antigravity >/dev/null 2>&1 && antigravity {{path}} {{file}}',
           'open -a "Antigravity" {{path}}',
         ],
         checkCommands: ['antigravity'],
         appNames: ['Antigravity'],
       },
       win32: {
-        openCommands: ['start "" antigravity {{path}}'],
+        openCommands: ['start "" antigravity {{path}} {{file}}'],
         checkCommands: ['antigravity'],
       },
       linux: {
-        openCommands: ['antigravity {{path}}'],
+        openCommands: ['antigravity {{path}} {{file}}'],
         checkCommands: ['antigravity'],
       },
     },
@@ -305,11 +306,11 @@ const _OPEN_IN_APPS = {
         appNames: ['IntelliJ IDEA'],
       },
       win32: {
-        openCommands: ['idea64 {{path}}', 'idea {{path}}'],
+        openCommands: ['idea64 {{path}} {{file}}', 'idea {{path}} {{file}}'],
         checkCommands: ['idea64', 'idea'],
       },
       linux: {
-        openCommands: ['idea {{path}}'],
+        openCommands: ['idea {{path}} {{file}}'],
         checkCommands: ['idea'],
       },
     },
@@ -326,11 +327,11 @@ const _OPEN_IN_APPS = {
         appNames: ['WebStorm'],
       },
       win32: {
-        openCommands: ['webstorm64 {{path}}', 'webstorm {{path}}'],
+        openCommands: ['webstorm64 {{path}} {{file}}', 'webstorm {{path}} {{file}}'],
         checkCommands: ['webstorm64', 'webstorm'],
       },
       linux: {
-        openCommands: ['webstorm {{path}}'],
+        openCommands: ['webstorm {{path}} {{file}}'],
         checkCommands: ['webstorm'],
       },
     },
@@ -347,11 +348,11 @@ const _OPEN_IN_APPS = {
         appNames: ['PyCharm'],
       },
       win32: {
-        openCommands: ['pycharm64 {{path}}', 'pycharm {{path}}'],
+        openCommands: ['pycharm64 {{path}} {{file}}', 'pycharm {{path}} {{file}}'],
         checkCommands: ['pycharm64', 'pycharm'],
       },
       linux: {
-        openCommands: ['pycharm {{path}}'],
+        openCommands: ['pycharm {{path}} {{file}}'],
         checkCommands: ['pycharm'],
       },
     },
@@ -368,11 +369,11 @@ const _OPEN_IN_APPS = {
         appNames: ['RustRover'],
       },
       win32: {
-        openCommands: ['rustrover64 {{path}}', 'rustrover {{path}}'],
+        openCommands: ['rustrover64 {{path}} {{file}}', 'rustrover {{path}} {{file}}'],
         checkCommands: ['rustrover64', 'rustrover'],
       },
       linux: {
-        openCommands: ['rustrover {{path}}'],
+        openCommands: ['rustrover {{path}} {{file}}'],
         checkCommands: ['rustrover'],
       },
     },

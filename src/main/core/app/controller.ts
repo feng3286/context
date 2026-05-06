@@ -24,6 +24,7 @@ export const appController = createRPCController({
   openIn: async (args: {
     app: OpenInAppId;
     path: string;
+    filePath?: string;
     isRemote?: boolean;
     sshConnectionId?: string | null;
   }) => {

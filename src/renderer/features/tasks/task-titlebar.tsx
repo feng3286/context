@@ -13,6 +13,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useMemo } from 'react';
 import {
   asMounted,
   getProjectStore,
@@ -116,6 +117,20 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
   const projectName = projectDisplayName(getProjectStore(projectId));
 
   const isRemoteProject = projectStore?.data.type === 'ssh';
+
+  const activeFile = useMemo(() => {
+    if (view === 'editor') {
+      const file = taskView.editorView.activeFilePath;
+      return file ? file : null;
+    }
+    if (view === 'diff') {
+      const active = taskView.diffView.activeFile;
+      return active?.path ?? null;
+    }
+    return null;
+  }, [view, taskView]);
+  const activeFilePath = activeFile ?? null;
+
   return (
     <Titlebar
       leftSlot={
@@ -134,7 +149,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 <MicroLabel className="text-foreground-passive items-center flex">Task</MicroLabel>
                 <span className="text-sm tracking-tight">{taskDisplayName(taskStore)}</span>
               </div>
-              <OpenInMenu path={provisionedTask.path} />
+              <OpenInMenu path={provisionedTask.path} activeFile={activeFilePath} />
               <div className="flex flex-col gap-1 border border-border rounded-md p-2">
                 <span className="flex items-center gap-1 text-foreground-muted">
                   <GitBranch className="size-3.5" />
@@ -279,7 +294,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
         <div className="flex items-center gap-2 mr-2">
           <DevServerPills projectId={projectId} taskId={taskId} />
           {!isRemoteProject && (
-            <OpenInMenu path={provisionedTask.path} className="h-7  bg-background" />
+            <OpenInMenu path={provisionedTask.path} activeFile={activeFilePath} className="h-7  bg-background" />
           )}
           <ToggleGroup
             disabled={delayedIsPending}

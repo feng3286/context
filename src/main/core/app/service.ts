@@ -161,10 +161,11 @@ class AppService {
   async openIn(args: {
     app: OpenInAppId;
     path: string;
+    filePath?: string;
     isRemote?: boolean;
     sshConnectionId?: string | null;
   }): Promise<void> {
-    const { path: target, app: appId, isRemote = false, sshConnectionId } = args;
+    const { path: target, app: appId, filePath, isRemote = false, sshConnectionId } = args;
 
     if (!target || typeof target !== 'string' || !appId) {
       throw new Error('Invalid arguments');
@@ -186,7 +187,7 @@ class AppService {
       return;
     }
 
-    await this.openInLocal({ label, target, platformConfig });
+    await this.openInLocal({ label, target, platformConfig, filePath });
   }
 
   private async openInRemote(args: {
@@ -278,8 +279,9 @@ class AppService {
     label: string;
     target: string;
     platformConfig: PlatformConfig | undefined;
+    filePath?: string;
   }): Promise<void> {
-    const { label, target, platformConfig } = args;
+    const { label, target, platformConfig, filePath } = args;
 
     if (platformConfig?.openUrls) {
       for (const urlTemplate of platformConfig.openUrls) {
@@ -301,7 +303,17 @@ class AppService {
     const quoted = (p: string) => `'${p.replace(/'/g, "'\\''")}'`;
     const commands: string[] = platformConfig?.openCommands ?? [];
     const command = commands
-      .map((cmd) => cmd.replace('{{path}}', quoted(target)).replace('{{path_raw}}', target))
+      .map((cmd) => {
+        let c = cmd.replace('{{path}}', quoted(target)).replace('{{path_raw}}', target);
+        // If a file path is provided, replace {{file}} with the quoted file path.
+        // Otherwise remove {{file}} and clean up any double spaces left behind.
+        if (filePath) {
+          c = c.replace('{{file}}', quoted(filePath));
+        } else {
+          c = c.replace(/\{\{file\}\}/g, '').replace(/\s{2,}/g, ' ').trim();
+        }
+        return c;
+      })
       .join(' || ');
 
     if (!command) throw new Error('Unsupported platform or app');

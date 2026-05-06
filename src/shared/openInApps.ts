@@ -80,11 +80,11 @@ const _OPEN_IN_APPS = {
         appNames: ['Cursor'],
       },
       win32: {
-        openCommands: ['start "" cursor {{path}} {{file}}'],
+        openCommands: ['start "" cursor {{path}} --goto {{file}}'],
         checkCommands: ['cursor'],
       },
       linux: {
-        openCommands: ['cursor {{path}} {{file}}'],
+        openCommands: ['cursor {{path}} --goto {{file}}'],
         checkCommands: ['cursor'],
       },
     },
@@ -98,7 +98,7 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: [
-          'command -v code >/dev/null 2>&1 && code {{path}} {{file}}',
+          'command -v code >/dev/null 2>&1 && code {{path}} --goto {{file}}',
           'open -n -b com.microsoft.VSCode --args {{path}}',
           'open -n -a "Visual Studio Code" {{path}}',
         ],
@@ -107,11 +107,11 @@ const _OPEN_IN_APPS = {
         appNames: ['Visual Studio Code'],
       },
       win32: {
-        openCommands: ['start "" code {{path}} {{file}}', 'start "" code-insiders {{path}}'],
+        openCommands: ['start "" code {{path}} --goto {{file}}', 'start "" code-insiders {{path}}'],
         checkCommands: ['code', 'code-insiders'],
       },
       linux: {
-        openCommands: ['code {{path}} {{file}}', 'code-insiders {{path}}'],
+        openCommands: ['code {{path}} --goto {{file}}', 'code-insiders {{path}}'],
         checkCommands: ['code', 'code-insiders'],
       },
     },
@@ -124,7 +124,7 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: [
-          'command -v windsurf >/dev/null 2>&1 && windsurf {{path}} {{file}}',
+          'command -v windsurf >/dev/null 2>&1 && windsurf {{path}} --goto {{file}}',
           'open -n -b com.exafunction.windsurf --args {{path}}',
           'open -n -a "Windsurf" {{path}}',
         ],
@@ -133,11 +133,11 @@ const _OPEN_IN_APPS = {
         appNames: ['Windsurf'],
       },
       win32: {
-        openCommands: ['start "" windsurf {{path}} {{file}}'],
+        openCommands: ['start "" windsurf {{path}} --goto {{file}}'],
         checkCommands: ['windsurf'],
       },
       linux: {
-        openCommands: ['windsurf {{path}} {{file}}'],
+        openCommands: ['windsurf {{path}} --goto {{file}}'],
         checkCommands: ['windsurf'],
       },
     },

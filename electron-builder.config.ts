@@ -23,7 +23,6 @@ const config: Configuration = {
   files: ['out/**/*', 'node_modules/**/*', 'drizzle/**/*'],
   asarUnpack: [
     'node_modules/better-sqlite3/**',
-    'node_modules/node-pty/**',
     'node_modules/@parcel/watcher/**',
     '**/*.node',
   ],
@@ -56,12 +55,12 @@ const config: Configuration = {
       { target: 'nsis', arch: ['x64'] },
       { target: 'msi', arch: ['x64'] },
     ],
-    azureSignOptions: {
-      publisherName: 'General Action, Inc.',
-      endpoint: 'https://eus.codesigning.azure.net/',
-      certificateProfileName: 'emdash-public',
-      codeSigningAccountName: 'emdash',
-    },
+    // azureSignOptions: {
+    //   publisherName: 'General Action, Inc.',
+    //   endpoint: 'https://eus.codesigning.azure.net/',
+    //   certificateProfileName: 'emdash-public',
+    //   codeSigningAccountName: 'emdash',
+    // },
   },
   msi: {
     oneClick: false,

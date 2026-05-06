@@ -121,14 +121,16 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
   const activeFile = useMemo(() => {
     if (view === 'editor') {
       const file = taskView.editorView.activeFilePath;
-      return file ? file : null;
+      if (file) return `${provisionedTask.path}/${file}`;
+      return null;
     }
     if (view === 'diff') {
       const active = taskView.diffView.activeFile;
-      return active?.path ?? null;
+      if (active?.path) return `${provisionedTask.path}/${active.path}`;
+      return null;
     }
     return null;
-  }, [view, taskView]);
+  }, [view, taskView, provisionedTask.path]);
   const activeFilePath = activeFile ?? null;
 
   return (

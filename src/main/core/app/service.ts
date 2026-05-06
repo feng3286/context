@@ -300,7 +300,10 @@ class AppService {
       );
     }
 
-    const quoted = (p: string) => `'${p.replace(/'/g, "'\\''")}'`;
+    const quoted = (p: string) =>
+      process.platform === 'win32'
+        ? `"${p.replace(/"/g, '""')}"`
+        : `'${p.replace(/'/g, "'\\''")}'`;
     const commands: string[] = platformConfig?.openCommands ?? [];
     const command = commands
       .map((cmd) => {

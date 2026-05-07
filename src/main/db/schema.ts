@@ -422,11 +422,43 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   }),
 }));
 
+export const workspacesRelations = relations(workspaces, ({ many }) => ({
+  workspaceProjects: many(workspaceProjects),
+  tasks: many(tasks),
+}));
+
+export const workspaceProjectsRelations = relations(workspaceProjects, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceProjects.workspaceId],
+    references: [workspaces.id],
+  }),
+  project: one(projects, {
+    fields: [workspaceProjects.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const taskProjectsRelations = relations(taskProjects, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskProjects.taskId],
+    references: [tasks.id],
+  }),
+  project: one(projects, {
+    fields: [taskProjects.projectId],
+    references: [projects.id],
+  }),
+}));
+
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
   project: one(projects, {
     fields: [tasks.projectId],
     references: [projects.id],
   }),
+  workspace: one(workspaces, {
+    fields: [tasks.workspaceId],
+    references: [workspaces.id],
+  }),
+  taskProjects: many(taskProjects),
   conversations: many(conversations),
 }));
 

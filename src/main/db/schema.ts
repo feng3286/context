@@ -148,6 +148,9 @@ export const tasks = sqliteTable(
     projectId: text('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    workDir: text('work_dir'),
     name: text('name').notNull(),
     status: text('status').notNull(),
     sourceBranch: text('source_branch', { mode: 'json' }).$type<StoredBranch>(),
@@ -168,6 +171,7 @@ export const tasks = sqliteTable(
   },
   (table) => ({
     projectIdIdx: index('idx_tasks_project_id').on(table.projectId),
+    workspaceIdIdx: index('idx_tasks_workspace_id').on(table.workspaceId),
   })
 );
 
@@ -444,6 +448,10 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 export type SshConnectionRow = typeof sshConnections.$inferSelect;
 export type SshConnectionInsert = typeof sshConnections.$inferInsert;
 export type ProjectRow = typeof projects.$inferSelect;
+export type WorkspaceRow = typeof workspaces.$inferSelect;
+export type WorkspaceInsert = typeof workspaces.$inferInsert;
+export type WorkspaceProjectRow = typeof workspaceProjects.$inferSelect;
+export type TaskProjectRow = typeof taskProjects.$inferInsert;
 export type TaskRow = typeof tasks.$inferSelect;
 export type ConversationRow = typeof conversations.$inferSelect;
 export type TerminalRow = typeof terminals.$inferSelect;

@@ -1,4 +1,4 @@
-import { FolderPlus, LayoutGrid, MessageSquareShare, Plug, Puzzle, Settings } from 'lucide-react';
+import { FolderPlus, MessageSquareShare, Plus, Plug, Puzzle, Settings } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
 import {
@@ -9,7 +9,6 @@ import {
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { ShortcutHint } from '@renderer/lib/ui/shortcut-hint';
 import { SidebarPinnedTaskList } from './pinned-task-list';
-import { ProjectsGroupLabel } from './projects-group-label';
 import {
   SidebarContainer,
   SidebarContent,
@@ -20,8 +19,8 @@ import {
   SidebarMenuButton,
 } from './sidebar-primitives';
 import { SidebarSpace } from './sidebar-space';
-import { SidebarVirtualList } from './sidebar-virtual-list';
 import { UpdateSection } from './update-section';
+import { WorkspaceSidebarList } from '@renderer/features/workspaces/components/workspace-sidebar-list';
 
 export const LeftSidebar: React.FC = observer(function LeftSidebar() {
   const { navigate } = useNavigate();
@@ -29,6 +28,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
 
   const showAddProjectModal = useShowModal('addProjectModal');
   const showFeedbackModal = useShowModal('feedbackModal');
+  const showCreateWorkspaceModal = useShowModal('createWorkspaceModal');
 
   return (
     <div className="flex flex-col h-full bg-background-tertiary text-foreground-tertiary-muted">
@@ -37,16 +37,29 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
         <SidebarContent className="flex flex-col">
           <SidebarPinnedTaskList />
           <SidebarGroup className="mb-0 min-h-0 flex-1 flex flex-col">
-            <ProjectsGroupLabel />
+            <div className="px-3 py-1 text-xs font-medium text-foreground-tertiary-muted uppercase tracking-wider">
+              Workspaces
+            </div>
             <SidebarGroupContent className="min-h-0 flex-1 flex flex-col">
               <SidebarMenu className="flex-1 min-h-0 flex flex-col">
-                <SidebarVirtualList />
+                <WorkspaceSidebarList />
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
+            <SidebarMenuButton
+              isActive={false}
+              onClick={() => showCreateWorkspaceModal({})}
+              aria-label="Create Workspace"
+              className="w-full justify-between"
+            >
+              <span className="flex items-center gap-2 min-w-0 w-full">
+                <Plus className="h-5 w-5 sm:h-4 sm:w-4 shrink-0" />
+                <span className="truncate min-w-0">Create Workspace</span>
+              </span>
+            </SidebarMenuButton>
             <SidebarMenuButton
               isActive={false}
               onClick={() => showAddProjectModal({})}
@@ -58,15 +71,6 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
                 <span className="truncate min-w-0">Add Project</span>
               </span>
               <ShortcutHint settingsKey="newProject" />
-            </SidebarMenuButton>
-            <SidebarMenuButton
-              isActive={isCurrentView(currentView, 'home')}
-              onClick={() => navigate('home')}
-              aria-label="Workspaces"
-              className="w-full justify-start"
-            >
-              <LayoutGrid className="h-5 w-5 sm:h-4 sm:w-4" />
-              Workspaces
             </SidebarMenuButton>
             <SidebarMenuButton
               isActive={isCurrentView(currentView, 'skills')}

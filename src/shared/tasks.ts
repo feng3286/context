@@ -20,7 +20,9 @@ export type Issue = {
 
 export type Task = {
   id: string;
-  projectId: string;
+  projectId: string; // Keep for backward compatibility
+  workspaceId?: string; // NEW: link to workspace
+  workDir?: string; // NEW: task-specific work directory
   name: string;
   status: TaskLifecycleStatus;
   sourceBranch: Branch | undefined;
@@ -60,7 +62,11 @@ export type CreateTaskStrategy =
 
 export type CreateTaskParams = {
   id: string;
-  projectId: string;
+  projectId: string; // Keep for backward compatibility (single-project tasks)
+  workspaceId?: string; // NEW: for multi-project tasks
+  projectIds?: string[]; // NEW: multi-project task projects
+  primaryProjectId?: string; // NEW: the project that determines sourceBranch
+  workDir?: string; // NEW: task-specific work directory
   name: string;
   /** The branch to fork the new worktree from (not used for `from-pull-request` strategy) */
   sourceBranch: Branch;

@@ -1,4 +1,4 @@
-import { FolderPlus, MessageSquareShare, Plug, Puzzle, Settings } from 'lucide-react';
+import { FolderPlus, LayoutGrid, MessageSquareShare, Plug, Puzzle, Settings } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
 import {
@@ -58,6 +58,15 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
                 <span className="truncate min-w-0">Add Project</span>
               </span>
               <ShortcutHint settingsKey="newProject" />
+            </SidebarMenuButton>
+            <SidebarMenuButton
+              isActive={isCurrentView(currentView, 'home')}
+              onClick={() => navigate('home')}
+              aria-label="Workspaces"
+              className="w-full justify-start"
+            >
+              <LayoutGrid className="h-5 w-5 sm:h-4 sm:w-4" />
+              Workspaces
             </SidebarMenuButton>
             <SidebarMenuButton
               isActive={isCurrentView(currentView, 'skills')}

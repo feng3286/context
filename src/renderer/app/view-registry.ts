@@ -5,10 +5,11 @@ import { projectView } from '@renderer/features/projects/view';
 import { settingsView } from '@renderer/features/settings/settings-view';
 import { skillsView } from '@renderer/features/skills/skills-view';
 import { taskView } from '@renderer/features/tasks/view';
+import { workspaceListView } from '@renderer/features/workspaces/workspace-list-view';
 
 // Define views here so we can use them in the navigate function
 export const views = {
-  home: homeView,
+  home: workspaceListView,
   skills: skillsView,
   mcp: mcpView,
   project: projectView,

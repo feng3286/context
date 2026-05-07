@@ -63,7 +63,6 @@ export const workspaces = sqliteTable(
   {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
-    workDir: text('work_dir'),
     createdAt: text('created_at')
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),

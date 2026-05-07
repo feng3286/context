@@ -41,7 +41,6 @@ export async function migrateToWorkspace(): Promise<void> {
     await db.insert(workspaces).values({
       id: workspaceId,
       name: project.name,
-      workDir: null,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
     });

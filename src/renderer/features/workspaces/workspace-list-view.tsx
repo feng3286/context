@@ -69,9 +69,6 @@ function WorkspaceCard({ workspace, onClick }: { workspace: Workspace; onClick: 
       className="flex flex-col p-4 rounded-lg border border-border bg-background hover:bg-background-1 transition-colors"
     >
       <span className="text-lg font-semibold">{workspace.name}</span>
-      {workspace.workDir && (
-        <span className="text-sm text-muted-foreground truncate">{workspace.workDir}</span>
-      )}
     </button>
   );
 }

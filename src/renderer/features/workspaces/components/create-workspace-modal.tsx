@@ -21,7 +21,6 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
 }: CreateWorkspaceModalProps) {
   const { navigate } = useNavigate();
   const [name, setName] = useState('');
-  const [workDir, setWorkDir] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +37,6 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
       const id = await workspaceManagerStore.createWorkspace({
         id: crypto.randomUUID(),
         name: name.trim(),
-        workDir: workDir.trim() || undefined,
       });
       onSuccess(void 0);
       navigate('workspace', { workspaceId: id });
@@ -82,20 +80,6 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
             placeholder="My Workspace"
             autoFocus
           />
-        </Field>
-
-        <Field>
-          <FieldLabel>Work Directory (optional)</FieldLabel>
-          <input
-            type="text"
-            value={workDir}
-            onChange={(e) => setWorkDir(e.target.value)}
-            className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="/path/to/worktrees"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Default directory for task worktrees in this workspace
-          </p>
         </Field>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}

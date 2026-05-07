@@ -9,7 +9,6 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<Wo
     .values({
       id: params.id,
       name: params.name,
-      workDir: params.workDir ?? null,
     })
     .returning();
 

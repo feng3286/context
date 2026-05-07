@@ -2,7 +2,6 @@
 CREATE TABLE `workspaces` (
   `id` text PRIMARY KEY NOT NULL,
   `name` text NOT NULL,
-  `work_dir` text,
   `created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
   `updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -39,9 +38,7 @@ CREATE INDEX `idx_task_projects_task_id` ON `task_projects` (`task_id`);
 CREATE INDEX `idx_task_projects_project_id` ON `task_projects` (`project_id`);
 --> statement-breakpoint
 
--- Add workspace_id and work_dir columns to tasks table
+-- Add workspace_id column to tasks table
 ALTER TABLE `tasks` ADD COLUMN `workspace_id` text REFERENCES `workspaces`(`id`) ON DELETE cascade;
---> statement-breakpoint
-ALTER TABLE `tasks` ADD COLUMN `work_dir` text;
 --> statement-breakpoint
 CREATE INDEX `idx_tasks_workspace_id` ON `tasks` (`workspace_id`);

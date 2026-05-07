@@ -11,8 +11,7 @@ export async function updateWorkspace(
   const [row] = await db
     .update(workspaces)
     .set({
-      ...params,
-      workDir: params.workDir ?? null,
+      name: params.name,
       updatedAt: sql`CURRENT_TIMESTAMP`,
     })
     .where(eq(workspaces.id, id))

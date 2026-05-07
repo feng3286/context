@@ -1,11 +1,7 @@
 import { makeObservable, observable, runInAction } from 'mobx';
 import type { CreateWorkspaceParams, Workspace } from '@shared/workspaces';
 import { rpc } from '@renderer/lib/ipc';
-import {
-  createUnloadedWorkspace,
-  WorkspaceStoreClass,
-  type WorkspaceStore,
-} from './workspace-store';
+import { WorkspaceStoreClass, type WorkspaceStore } from './workspace-store';
 
 export class WorkspaceManagerStore {
   workspaces = observable.map<string, WorkspaceStore>();
@@ -26,7 +22,7 @@ export class WorkspaceManagerStore {
     const workspaceList = await rpc.workspace.listWorkspaces();
     runInAction(() => {
       for (const w of workspaceList) {
-        this.workspaces.set(w.id, createUnloadedWorkspace(w));
+        this.workspaces.set(w.id, new WorkspaceStoreClass(w));
       }
     });
   }
@@ -34,7 +30,7 @@ export class WorkspaceManagerStore {
   async createWorkspace(params: CreateWorkspaceParams): Promise<string> {
     const workspace = await rpc.workspace.createWorkspace(params);
     runInAction(() => {
-      this.workspaces.set(workspace.id, createUnloadedWorkspace(workspace));
+      this.workspaces.set(workspace.id, new WorkspaceStoreClass(workspace));
     });
     return workspace.id;
   }

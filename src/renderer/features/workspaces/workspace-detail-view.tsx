@@ -43,8 +43,7 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
   useEffect(() => {
     if (store && store.status === 'unloaded') {
       // Load projects for this workspace
-      const storeClass = store as unknown as WorkspaceStoreClass;
-      storeClass.load();
+      (store as WorkspaceStoreClass).load();
     }
   }, [store]);
 

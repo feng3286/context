@@ -1,6 +1,6 @@
 import { makeObservable, observable, runInAction } from 'mobx';
-import type { Workspace } from '@shared/workspaces';
 import type { Project } from '@shared/projects';
+import type { Workspace } from '@shared/workspaces';
 import { rpc } from '@renderer/lib/ipc';
 
 export type WorkspaceLifecycleStatus = 'unloaded' | 'loading' | 'ready' | 'error';

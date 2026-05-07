@@ -35,7 +35,9 @@ export class WorktreeService {
     this.exec('git', ['worktree', 'prune'], { cwd: this.repoPath }).catch(() => {});
     // Enable long paths on Windows to avoid MAX_PATH (260 char) limit
     if (process.platform === 'win32') {
-      this.exec('git', ['config', 'core.longpaths', 'true'], { cwd: this.repoPath }).catch(() => {});
+      this.exec('git', ['config', 'core.longpaths', 'true'], { cwd: this.repoPath }).catch(
+        () => {}
+      );
     }
   }
 

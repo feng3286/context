@@ -1,7 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db } from '../client';
-import { workspaces, workspaceProjects, taskProjects, tasks, projects } from '../schema';
-import { randomUUID } from 'node:crypto';
+import { projects, taskProjects, tasks, workspaceProjects, workspaces } from '../schema';
 
 /**
  * Data migration to convert existing Projects into Workspaces.
@@ -58,10 +58,7 @@ export async function migrateToWorkspace(): Promise<void> {
 
     for (const task of projectTasks) {
       // Set workspaceId on task
-      await db
-        .update(tasks)
-        .set({ workspaceId })
-        .where(eq(tasks.id, task.id));
+      await db.update(tasks).set({ workspaceId }).where(eq(tasks.id, task.id));
 
       // Link task to project via task_projects
       await db.insert(taskProjects).values({

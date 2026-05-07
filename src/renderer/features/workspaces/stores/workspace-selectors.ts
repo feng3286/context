@@ -1,6 +1,6 @@
 import type { Project } from '@shared/projects';
 import { workspaceManagerStore } from './workspace-manager';
-import type { WorkspaceStore, ReadyWorkspaceStore } from './workspace-store';
+import type { ReadyWorkspaceStore, WorkspaceStore } from './workspace-store';
 
 export function getWorkspaceStore(id: string): WorkspaceStore | undefined {
   return workspaceManagerStore.getWorkspace(id);

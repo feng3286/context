@@ -1,8 +1,8 @@
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import { workspaceManagerStore } from '../stores/workspace-manager';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal, type BaseModalProps } from '@renderer/lib/modal/modal-provider';
+import { ConfirmButton } from '@renderer/lib/ui/confirm-button';
 import {
   DialogContentArea,
   DialogFooter,
@@ -11,7 +11,7 @@ import {
 } from '@renderer/lib/ui/dialog';
 import { Field, FieldLabel } from '@renderer/lib/ui/field';
 import { ModalLayout } from '@renderer/lib/ui/modal-layout';
-import { ConfirmButton } from '@renderer/lib/ui/confirm-button';
+import { workspaceManagerStore } from '../stores/workspace-manager';
 
 export interface CreateWorkspaceModalProps extends BaseModalProps<void> {}
 
@@ -58,7 +58,11 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
       }
       footer={
         <DialogFooter>
-          <ConfirmButton type="button" onClick={() => void handleSubmit()} disabled={!name.trim() || loading}>
+          <ConfirmButton
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={!name.trim() || loading}
+          >
             {loading ? 'Creating...' : 'Create'}
           </ConfirmButton>
         </DialogFooter>

@@ -1,13 +1,12 @@
+import { FolderPlus, Plus } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
-import { Plus, FolderPlus } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import type { Project } from '@shared/projects';
-import { getWorkspaceStore } from './stores/workspace-selectors';
-import { WorkspaceStoreClass } from './stores/workspace-store';
+import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { useNavigate, useParams } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
-import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
+import { getWorkspaceStore } from './stores/workspace-selectors';
+import { WorkspaceStoreClass } from './stores/workspace-store';
 
 interface WorkspaceViewWrapperProps {
   children: ReactNode;

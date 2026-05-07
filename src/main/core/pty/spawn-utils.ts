@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-
 import type { AgentSessionConfig } from '@shared/agent-session';
 import type { GeneralSessionConfig } from '@shared/general-session';
 import { quoteShellArg } from '@main/utils/shellEscape';
@@ -172,8 +171,7 @@ export function resolveSshCommand(
 
   // Check if the spawn params represent a shell command (shell -c "cmd")
   // args[0] could be '-c' (Unix) or '/c' (Windows cmd.exe)
-  const isShellCommand =
-    (args[0] === '-c' || args[0] === '/c') && args.length >= 2;
+  const isShellCommand = (args[0] === '-c' || args[0] === '/c') && args.length >= 2;
 
   const innerCmd = isShellCommand ? args[1] : [command, ...args].join(' ');
   const envPrefix = envVars ? buildSshEnvPrefix(envVars) : '';

@@ -8,8 +8,6 @@ export async function setTaskProjects(taskId: string, projectIds: string[]): Pro
 
   // Insert new associations
   if (projectIds.length > 0) {
-    await db.insert(taskProjects).values(
-      projectIds.map((projectId) => ({ taskId, projectId }))
-    );
+    await db.insert(taskProjects).values(projectIds.map((projectId) => ({ taskId, projectId })));
   }
 }

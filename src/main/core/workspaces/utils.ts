@@ -1,5 +1,5 @@
-import type { WorkspaceRow, WorkspaceProjectRow } from '@main/db/schema';
 import type { Workspace } from '@shared/workspaces';
+import type { WorkspaceProjectRow, WorkspaceRow } from '@main/db/schema';
 
 export function mapWorkspaceRowToWorkspace(row: WorkspaceRow): Workspace {
   return {

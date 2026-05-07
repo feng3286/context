@@ -1,7 +1,11 @@
 import { makeObservable, observable, runInAction } from 'mobx';
-import type { Workspace, CreateWorkspaceParams } from '@shared/workspaces';
+import type { CreateWorkspaceParams, Workspace } from '@shared/workspaces';
 import { rpc } from '@renderer/lib/ipc';
-import { WorkspaceStoreClass, createUnloadedWorkspace, type WorkspaceStore } from './workspace-store';
+import {
+  createUnloadedWorkspace,
+  WorkspaceStoreClass,
+  type WorkspaceStore,
+} from './workspace-store';
 
 export class WorkspaceManagerStore {
   workspaces = observable.map<string, WorkspaceStore>();

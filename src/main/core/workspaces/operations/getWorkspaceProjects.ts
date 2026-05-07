@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
+import type { LocalProject, Project, SshProject } from '@shared/projects';
 import { db } from '@main/db/client';
-import { workspaceProjects, projects } from '@main/db/schema';
-import type { LocalProject, SshProject } from '@shared/projects';
-import type { Project } from '@shared/projects';
+import { projects, workspaceProjects } from '@main/db/schema';
 
 export async function getWorkspaceProjects(workspaceId: string): Promise<Project[]> {
   const rows = await db

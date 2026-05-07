@@ -6,6 +6,8 @@ import { generateTaskName } from './generateTaskName';
 import { getBootstrapStatus } from './getBootstrapStatus';
 import { getTasks } from './getTasks';
 import { getWorkspaceSettings } from './getWorkspaceSettings';
+import { getTaskProjects } from './operations/getTaskProjects';
+import { setTaskProjects } from './operations/setTaskProjects';
 import { provisionTask } from './provisionTask';
 import { renameTask } from './renameTask';
 import { restoreTask } from './restoreTask';
@@ -13,8 +15,6 @@ import { setTaskPinned } from './setTaskPinned';
 import { teardownTask } from './teardownTask';
 import { updateLinkedIssue } from './updateLinkedIssue';
 import { updateTaskStatus } from './updateTaskStatus';
-import { getTaskProjects } from './operations/getTaskProjects';
-import { setTaskProjects } from './operations/setTaskProjects';
 
 export const taskController = createRPCController({
   createTask,

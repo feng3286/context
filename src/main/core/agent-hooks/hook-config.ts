@@ -42,12 +42,7 @@ function makeCodexNotifyCommand(): string[] {
     '-H "X-Emdash-Event-Type: notification" ' +
     '-d "$1" ' +
     '"http://127.0.0.1:$EMDASH_HOOK_PORT/hook"';
-  return [
-    'bash',
-    '-c',
-    `[ -n "$EMDASH_HOOK_PORT" ] && ${curlCmd}`,
-    '_',
-  ];
+  return ['bash', '-c', `[ -n "$EMDASH_HOOK_PORT" ] && ${curlCmd}`, '_'];
 }
 
 export class HookConfigWriter {

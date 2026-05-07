@@ -148,8 +148,7 @@ export const tasks = sqliteTable(
     projectId: text('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    workspaceId: text('workspace_id')
-      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     workDir: text('work_dir'),
     name: text('name').notNull(),
     status: text('status').notNull(),

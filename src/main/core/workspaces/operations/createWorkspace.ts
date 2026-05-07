@@ -1,6 +1,6 @@
-import { db } from '@main/db/client';
-import { workspaces, workspaceProjects } from '@main/db/schema';
 import type { CreateWorkspaceParams, Workspace } from '@shared/workspaces';
+import { db } from '@main/db/client';
+import { workspaceProjects, workspaces } from '@main/db/schema';
 import { mapWorkspaceRowToWorkspace } from '../utils';
 
 export async function createWorkspace(params: CreateWorkspaceParams): Promise<Workspace> {

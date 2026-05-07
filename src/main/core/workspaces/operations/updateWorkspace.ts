@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
+import type { UpdateWorkspaceParams, Workspace } from '@shared/workspaces';
 import { db } from '@main/db/client';
 import { workspaces } from '@main/db/schema';
-import type { UpdateWorkspaceParams, Workspace } from '@shared/workspaces';
 import { mapWorkspaceRowToWorkspace } from '../utils';
 
 export async function updateWorkspace(

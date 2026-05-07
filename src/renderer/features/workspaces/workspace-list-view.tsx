@@ -1,11 +1,11 @@
+import { FolderOpen, Plus } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
-import { FolderOpen, Plus } from 'lucide-react';
 import type { Workspace } from '@shared/workspaces';
-import { workspaceManagerStore } from './stores/workspace-manager';
+import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
-import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
+import { workspaceManagerStore } from './stores/workspace-manager';
 
 export const WorkspaceListTitlebar = observer(function WorkspaceListTitlebar() {
   return <Titlebar />;

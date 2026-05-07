@@ -28,9 +28,7 @@ export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel()
   };
 
   const handleWorkspaceClick = (workspaceId: string) => {
-    // For now, navigate to project view with workspace context
-    // This will be updated to navigate to workspace detail view in Task 14
-    navigate('project', { projectId: workspaceId });
+    navigate('workspace', { workspaceId });
   };
 
   return (

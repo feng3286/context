@@ -13,6 +13,8 @@ import { setTaskPinned } from './setTaskPinned';
 import { teardownTask } from './teardownTask';
 import { updateLinkedIssue } from './updateLinkedIssue';
 import { updateTaskStatus } from './updateTaskStatus';
+import { getTaskProjects } from './operations/getTaskProjects';
+import { setTaskProjects } from './operations/setTaskProjects';
 
 export const taskController = createRPCController({
   createTask,
@@ -29,4 +31,6 @@ export const taskController = createRPCController({
   updateLinkedIssue,
   updateTaskStatus,
   setTaskPinned,
+  getTaskProjects,
+  setTaskProjects,
 });

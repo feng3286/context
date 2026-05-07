@@ -58,6 +58,24 @@ export const projects = sqliteTable(
   })
 );
 
+export const workspaces = sqliteTable(
+  'workspaces',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    workDir: text('work_dir'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    nameIdx: uniqueIndex('idx_workspaces_name').on(table.name),
+  })
+);
+
 export const projectRemotes = sqliteTable(
   'project_remotes',
   {

@@ -76,6 +76,26 @@ export const workspaces = sqliteTable(
   })
 );
 
+export const workspaceProjects = sqliteTable(
+  'workspace_projects',
+  {
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    addedAt: text('added_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.workspaceId, table.projectId] }),
+    workspaceIdIdx: index('idx_workspace_projects_workspace_id').on(table.workspaceId),
+    projectIdIdx: index('idx_workspace_projects_project_id').on(table.projectId),
+  })
+);
+
 export const projectRemotes = sqliteTable(
   'project_remotes',
   {

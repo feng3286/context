@@ -41,7 +41,13 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
       onSuccess(void 0);
       navigate('workspace', { workspaceId: id });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create workspace');
+      const message = err instanceof Error ? err.message : 'Failed to create workspace';
+      // Provide friendly error message for common cases
+      if (message.includes('UNIQUE constraint failed') || message.includes('SQLITE_CONSTRAINT_UNIQUE')) {
+        setError('A workspace with this name already exists');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }

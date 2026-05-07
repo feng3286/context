@@ -4,6 +4,9 @@ dist/
 out/
 /release/
 
+# Development data (separate dev database)
+.dev-data/
+
 # Logs
 *.log
 npm-debug.log*

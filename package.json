@@ -7,7 +7,7 @@
   "packageManager": "pnpm@10.28.2",
   "scripts": {
     "d": "pnpm install && pnpm run dev",
-    "dev": "electron-vite dev",
+    "dev": "cross-env EMDASH_DB_FILE=.dev-data/emdash.db electron-vite dev",
     "dev:debug": "VITE_LOG_LEVEL=debug electron-vite dev",
     "dev:main": "electron-vite dev --watch main",
     "dev:renderer": "electron-vite dev --watch renderer",

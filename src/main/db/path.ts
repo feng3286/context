@@ -1,5 +1,4 @@
-import { dirname, resolve } from 'node:path';
-import { existsSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { app } from 'electron';
 import { resolveDefaultDatabasePath } from './database-file';
 import { CURRENT_DB_FILENAME, PREVIOUS_DB_FILENAME } from './default-path';
@@ -11,13 +10,7 @@ export interface ResolveDatabasePathOptions {
 export function resolveDatabasePath(options: ResolveDatabasePathOptions = {}): string {
   const explicitDbFile = process.env.EMDASH_DB_FILE?.trim();
   if (explicitDbFile) {
-    const resolvedPath = resolve(explicitDbFile);
-    // Ensure directory exists for explicit path (e.g., dev database)
-    const dir = dirname(resolvedPath);
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-    return resolvedPath;
+    return resolve(explicitDbFile);
   }
 
   return resolveDefaultDatabasePath(options.userDataPath ?? app.getPath('userData'));

@@ -4,6 +4,7 @@ import { FolderOpen, Plus } from 'lucide-react';
 import type { Workspace } from '@shared/workspaces';
 import { workspaceManagerStore } from './stores/workspace-manager';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
+import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 
 export const WorkspaceListTitlebar = observer(function WorkspaceListTitlebar() {
@@ -12,8 +13,7 @@ export const WorkspaceListTitlebar = observer(function WorkspaceListTitlebar() {
 
 export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel() {
   const { navigate } = useNavigate();
-  // TODO: Uncomment when createWorkspaceModal is created in Task 15
-  // const showCreateWorkspaceModal = useShowModal('createWorkspaceModal');
+  const showCreateWorkspaceModal = useShowModal('createWorkspaceModal');
 
   useEffect(() => {
     workspaceManagerStore.load();
@@ -22,9 +22,7 @@ export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel()
   const workspaces = Array.from(workspaceManagerStore.workspaces.values());
 
   const handleCreateWorkspace = () => {
-    // TODO: Replace with modal when createWorkspaceModal is created in Task 15
-    // showCreateWorkspaceModal({});
-    console.log('Create workspace modal not yet implemented - Task 15');
+    showCreateWorkspaceModal({});
   };
 
   const handleWorkspaceClick = (workspaceId: string) => {

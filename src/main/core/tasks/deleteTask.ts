@@ -63,44 +63,39 @@ export async function deleteTask(projectId: string, taskId: string): Promise<voi
   // This ensures we delete the correct worktree even if the user changed
   // the defaultWorktreeDirectory setting after the task was created
 
-  // For multi-project tasks: use the task's workDir for worktree cleanup
-  if (taskProjectRows.length > 0 && workDir) {
-    // Use the task's workDir for worktree cleanup
+  // For multi-project tasks: delete worktrees from task_projects.worktreePath
+  if (taskProjectRows.length > 0) {
     for (const row of taskProjectRows) {
-      const rowProject = projectManager.getProject(row.projectId);
-      if (rowProject) {
-        try {
-          await rowProject.removeWorktreeAtPath(workDir);
-          log.info('deleteTask: removed worktree', {
+      if (row.worktreePath) {
+        const rowProject = projectManager.getProject(row.projectId);
+        if (rowProject) {
+          try {
+            await rowProject.removeWorktreeAtPath(row.worktreePath);
+            log.info('deleteTask: removed worktree', {
+              taskId,
+              projectId: row.projectId,
+              worktreePath: row.worktreePath,
+            });
+          } catch (e) {
+            log.warn('deleteTask: worktree removal failed, trying direct removal', {
+              taskId,
+              projectId: row.projectId,
+              worktreePath: row.worktreePath,
+              error: String(e),
+            });
+            // Fallback: try direct filesystem removal
+            await removeWorktreeDirectly(row.worktreePath);
+          }
+        } else {
+          // Project not in projectManager - try direct filesystem removal
+          log.info('deleteTask: project not in projectManager, using direct removal', {
             taskId,
             projectId: row.projectId,
-            workDir,
+            worktreePath: row.worktreePath,
           });
-        } catch (e) {
-          log.warn('deleteTask: worktree removal failed, trying direct removal', {
-            taskId,
-            projectId: row.projectId,
-            workDir,
-            error: String(e),
-          });
-          // Fallback: try direct filesystem removal
-          await removeWorktreeDirectly(workDir);
+          await removeWorktreeDirectly(row.worktreePath);
         }
-        // Only need to remove the worktree once
-        break;
       }
-    }
-
-    // If no project found in projectManager, try direct removal
-    const hasProjectManager = taskProjectRows.some(
-      (row) => projectManager.getProject(row.projectId) !== null
-    );
-    if (!hasProjectManager) {
-      log.info('deleteTask: no project in projectManager, using direct removal', {
-        taskId,
-        workDir,
-      });
-      await removeWorktreeDirectly(workDir);
     }
 
     // Delete branches for multi-project tasks

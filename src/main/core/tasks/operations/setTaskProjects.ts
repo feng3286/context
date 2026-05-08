@@ -14,16 +14,15 @@ export async function setTaskProjects(
   // Delete existing associations
   await db.delete(taskProjects).where(eq(taskProjects.taskId, taskId));
 
-  // Insert new associations (no worktreePath in new schema)
+  // Insert new associations
   if (projects.length > 0) {
-    // Handle both string[] and TaskProjectEntry[] formats
     const values =
       typeof projects[0] === 'string'
         ? (projects as string[]).map((projectId) => ({ taskId, projectId }))
         : (projects as TaskProjectEntry[]).map((entry) => ({
             taskId,
             projectId: entry.projectId,
-            // worktreePath intentionally NOT stored anymore
+            worktreePath: entry.worktreePath ?? null,
           }));
     await db.insert(taskProjects).values(values);
   }

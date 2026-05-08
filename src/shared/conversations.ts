@@ -2,7 +2,8 @@ import { AgentProviderId } from '@shared/agent-provider-registry';
 
 export type Conversation = {
   id: string;
-  taskId: string; // Only taskId binding - conversation context spans all projects in a multi-project task
+  projectId?: string; // Optional for multi-project tasks
+  taskId: string;
   providerId: AgentProviderId;
   title: string;
   resume?: boolean;
@@ -16,7 +17,8 @@ export type RenameConversationParams = {
 
 export type CreateConversationParams = {
   id: string;
-  taskId: string; // Only taskId - conversation binds to task, not project
+  projectId?: string; // Optional for multi-project tasks
+  taskId: string;
   provider: AgentProviderId;
   title: string;
   autoApprove?: boolean;

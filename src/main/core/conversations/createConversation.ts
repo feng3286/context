@@ -2,9 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { Conversation, CreateConversationParams } from '@shared/conversations';
 import { db } from '@main/db/client';
-import { conversations } from '@main/db/schema';
+import { conversations, projects, taskProjects, tasks } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
-import { resolveTaskByTaskId } from '../projects/utils';
+import { projectManager } from '../projects/project-manager';
+import { resolveTask } from '../projects/utils';
 import { mapConversationRowToConversation } from './utils';
 
 export async function createConversation(params: CreateConversationParams): Promise<Conversation> {
@@ -20,10 +21,31 @@ export async function createConversation(params: CreateConversationParams): Prom
       ? undefined
       : JSON.stringify({ autoApprove: params.autoApprove });
 
+  // Determine projectId for the conversation
+  let projectId = params.projectId;
+  if (!projectId) {
+    // For multi-project tasks, get the first project from task_projects table
+    const [taskRow] = await db.select().from(tasks).where(eq(tasks.id, params.taskId)).limit(1);
+
+    if (taskRow?.workspaceId) {
+      // This is a workspace task - get the first associated project
+      const [firstProject] = await db
+        .select({ projectId: taskProjects.projectId })
+        .from(taskProjects)
+        .where(eq(taskProjects.taskId, params.taskId))
+        .limit(1);
+      projectId = firstProject?.projectId ?? taskRow.projectId;
+    } else {
+      // Legacy single-project task
+      projectId = taskRow?.projectId;
+    }
+  }
+
   const [row] = await db
     .insert(conversations)
     .values({
       id,
+      projectId: projectId ?? null,
       taskId: params.taskId,
       title: params.title,
       provider: params.provider,
@@ -33,23 +55,27 @@ export async function createConversation(params: CreateConversationParams): Prom
     })
     .returning();
 
-  const task = resolveTaskByTaskId(params.taskId);
-  if (!task) {
+  // Resolve task - for multi-project tasks, use the first project
+  const task = projectId ? resolveTask(projectId, params.taskId) : null;
+  if (!task && projectId) {
     throw new Error('Task not found');
   }
 
   const conversation = mapConversationRowToConversation(row);
 
-  await task.conversations.startSession(
-    conversation,
-    params.initialSize,
-    false,
-    params.initialPrompt
-  );
+  if (task) {
+    await task.conversations.startSession(
+      conversation,
+      params.initialSize,
+      false,
+      params.initialPrompt
+    );
+  }
 
   capture('conversation_created', {
     provider: params.provider,
     is_first_in_task: existingConversation === undefined,
+    project_id: projectId,
     task_id: params.taskId,
     conversation_id: id,
   });

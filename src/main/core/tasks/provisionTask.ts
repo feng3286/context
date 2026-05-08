@@ -48,22 +48,23 @@ export async function provisionTask(taskId: string) {
     .where(eq(taskProjects.taskId, taskId));
 
   if (task.workspaceId) {
-    // Multi-project task: workDir is the task base directory
-    workDir = task.workDir;
+    // Multi-project task: get worktree path for the primary project
+    const [taskProjectRow] = taskProjectRows;
+
+    // Use the stored worktree path for this project
+    workDir = taskProjectRow?.worktreePath ?? task.workDir;
     // For conversations, use the task base directory (parent of all worktrees)
     taskBaseDir = task.workDir;
 
     // Ensure workspaces are provisioned in ALL associated projects' providers
     // Each project needs a workspace with the same workspaceId (from taskBranch)
-    // using the same worktree path from the task's workDir
+    // but pointing to that project's specific worktree path
     const workspaceId = workspaceKey(task.taskBranch);
-    if (workDir) {
-      for (const row of taskProjectRows) {
-        const rowProject = projectManager.getProject(row.projectId);
-        if (rowProject) {
-          // Ensure workspace exists in this project's provider
-          await rowProject.ensureWorkspace(workspaceId, workDir);
-        }
+    for (const row of taskProjectRows) {
+      const rowProject = projectManager.getProject(row.projectId);
+      if (rowProject && row.worktreePath) {
+        // Ensure workspace exists in this project's provider
+        await rowProject.ensureWorkspace(workspaceId, row.worktreePath);
       }
     }
   } else {

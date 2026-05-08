@@ -208,14 +208,16 @@ export class LocalProjectProvider implements ProjectProvider {
       const scripts = taskLevelSettings.scripts;
 
       const workspaceTerminals = new LocalTerminalProvider({
-        taskWorkDir: workDir,
-        taskId: workspaceId,
+        projectId: this.project.id,
+        scopeId: workspaceId,
+        taskPath: workDir,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
         taskEnvVars: bootstrapTaskEnvVars,
       });
       const lifecycleService = new WorkspaceLifecycleService({
+        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
@@ -282,7 +284,8 @@ export class LocalProjectProvider implements ProjectProvider {
       const shellSetup = taskLevelSettings.shellSetup ?? projectSettings.shellSetup;
 
       const conversationProvider = new LocalConversationProvider({
-        taskWorkDir: effectiveTaskPath,
+        projectId: this.project.id,
+        taskPath: effectiveTaskPath,
         taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
@@ -291,8 +294,9 @@ export class LocalProjectProvider implements ProjectProvider {
       });
 
       const terminalProvider = new LocalTerminalProvider({
-        taskWorkDir: workspace.path,
-        taskId: task.id,
+        projectId: this.project.id,
+        scopeId: task.id,
+        taskPath: workspace.path,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
@@ -406,14 +410,16 @@ export class LocalProjectProvider implements ProjectProvider {
       const defaultBranch = await this.settings.getDefaultBranch();
 
       const workspaceTerminals = new LocalTerminalProvider({
-        taskWorkDir: worktreePath,
-        taskId: workspaceId,
+        projectId: this.project.id,
+        scopeId: workspaceId,
+        taskPath: worktreePath,
         tmux: projectSettings.tmux ?? false,
         shellSetup: projectSettings.shellSetup,
         exec,
         taskEnvVars: {},
       });
       const lifecycleService = new WorkspaceLifecycleService({
+        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
@@ -528,7 +534,7 @@ export class LocalProjectProvider implements ProjectProvider {
     }
   }
 
-  private async resolveTaskWorkDir(task: Task, taskWorkDir?: string): Promise<string> {
+  private async resolveTaskWorkDir(task: Task, customWorkDir?: string): Promise<string> {
     if (!task.taskBranch) {
       return this.project.path;
     }
@@ -550,14 +556,10 @@ export class LocalProjectProvider implements ProjectProvider {
       return result.data;
     }
 
-    // Compute worktree path: {taskWorkDir}/{projectName}/
-    // Use provided taskWorkDir or fall back to task.workDir
-    const effectiveTaskWorkDir = taskWorkDir ?? task.workDir;
     const result = await this.worktreeService.checkoutBranchWorktree(
       task.sourceBranch,
       task.taskBranch,
-      effectiveTaskWorkDir,
-      this.project.name
+      customWorkDir
     );
     if (!result.success) {
       throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);

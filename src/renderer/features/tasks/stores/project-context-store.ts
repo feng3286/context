@@ -12,12 +12,14 @@ import { FilesStore } from '../editor/stores/files-store';
 export class ProjectContext {
   readonly projectId: string;
   readonly projectName: string;
+  readonly worktreePath: string | null;
   readonly git: GitStore;
   readonly files: FilesStore;
 
   constructor(context: TaskProjectContext, workspaceId: string, repositoryStore: RepositoryStore) {
     this.projectId = context.projectId;
     this.projectName = context.projectName;
+    this.worktreePath = context.worktreePath;
     // Use the task's workspaceId for git/files stores
     // The workspaceId is derived from taskBranch which is shared across all projects
     this.git = new GitStore(context.projectId, workspaceId, repositoryStore);

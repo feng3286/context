@@ -147,41 +147,27 @@ export class WorktreeService {
   async checkoutBranchWorktree(
     sourceBranch: Branch | undefined,
     branchName: string,
-    taskWorkDir?: string,
-    projectName?: string
+    customWorkDir?: string
   ): Promise<Result<string, ServeWorktreeError>> {
     await this.ensureWorktreePoolDirExists();
     return this.enqueueGitOp(() =>
-      this.doCheckoutBranchWorktree(sourceBranch, branchName, taskWorkDir, projectName)
+      this.doCheckoutBranchWorktree(sourceBranch, branchName, customWorkDir)
     );
   }
 
   private async doCheckoutBranchWorktree(
     sourceBranch: Branch | undefined,
     branchName: string,
-    taskWorkDir?: string,
-    projectName?: string
+    customWorkDir?: string
   ): Promise<Result<string, ServeWorktreeError>> {
     const checkedOutPath = await this.findCheckedOutPathForBranch(branchName);
     if (checkedOutPath) {
       return ok(checkedOutPath);
     }
 
-    // Compute worktree path: {taskWorkDir}/{projectName}/ when both are provided
-    // Fall back to legacy {worktreePoolPath}/{branchName} for backward compatibility
-    // Safeguard: if taskWorkDir already ends with projectName, use it directly
-    // (handles case where caller passes full path during migration period)
-    let targetPath: string;
-    if (taskWorkDir && projectName) {
-      // Check if taskWorkDir already ends with projectName to avoid double-naming
-      if (taskWorkDir.endsWith(projectName) || taskWorkDir.endsWith(`${projectName}/`)) {
-        targetPath = taskWorkDir;
-      } else {
-        targetPath = path.join(taskWorkDir, projectName);
-      }
-    } else {
-      targetPath = path.join(this.worktreePoolPath, branchName);
-    }
+    // If customWorkDir is provided, use it directly as the target path
+    // Otherwise, use default pool path + branchName
+    const targetPath = customWorkDir ?? path.join(this.worktreePoolPath, branchName);
     if (await this.rootFs.exists(targetPath)) {
       if (await this.isValidWorktree(targetPath)) return ok(targetPath);
       await this.rootFs.remove(targetPath, { recursive: true }).catch(() => {});

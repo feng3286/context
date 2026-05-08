@@ -83,8 +83,8 @@ export class ProvisionedTask {
       repositoryStore
     );
     this.devServers = new DevServerStore(taskData.id, this.workspaceId);
-    this.conversations = new ConversationManagerStore(taskData.id);
-    this.terminals = new TerminalManagerStore(taskData.id);
+    this.conversations = new ConversationManagerStore(taskData.projectId, taskData.id);
+    this.terminals = new TerminalManagerStore(taskData.projectId, taskData.id);
     this.draftComments = new DraftCommentsStore(taskData.id);
 
     // For multi-project tasks, create ProjectContextStore

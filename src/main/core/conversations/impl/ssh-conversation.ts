@@ -1,7 +1,7 @@
 import type { AgentSessionConfig } from '@shared/agent-session';
 import { Conversation } from '@shared/conversations';
 import { agentSessionExitedChannel } from '@shared/events/agentEvents';
-import { makeConversationSessionId } from '@shared/ptySessionId';
+import { makePtySessionId } from '@shared/ptySessionId';
 import { wireAgentClassifier } from '@main/core/agent-hooks/classifier-wiring';
 import { claudeTrustService } from '@main/core/agent-hooks/claude-trust-service';
 import type { ConversationProvider } from '@main/core/conversations/types';
@@ -26,7 +26,8 @@ export class SshConversationProvider implements ConversationProvider {
   private sessions = new Map<string, Pty>();
   private knownSessionIds = new Set<string>();
   private respawnCounts = new Map<string, number>();
-  private readonly taskWorkDir: string;
+  private readonly projectId: string;
+  private readonly taskPath: string;
   private readonly taskId: string;
   private readonly taskEnvVars: Record<string, string>;
   private readonly tmux: boolean = false;
@@ -35,7 +36,8 @@ export class SshConversationProvider implements ConversationProvider {
   private readonly proxy: SshClientProxy;
 
   constructor({
-    taskWorkDir,
+    projectId,
+    taskPath,
     taskId,
     taskEnvVars = {},
     tmux = false,
@@ -43,7 +45,8 @@ export class SshConversationProvider implements ConversationProvider {
     exec,
     proxy,
   }: {
-    taskWorkDir: string;
+    projectId: string;
+    taskPath: string;
     taskId: string;
     taskEnvVars?: Record<string, string>;
     tmux?: boolean;
@@ -51,7 +54,8 @@ export class SshConversationProvider implements ConversationProvider {
     exec: ExecFn;
     proxy: SshClientProxy;
   }) {
-    this.taskWorkDir = taskWorkDir;
+    this.projectId = projectId;
+    this.taskPath = taskPath;
     this.taskId = taskId;
     this.taskEnvVars = taskEnvVars;
     this.tmux = tmux;
@@ -66,14 +70,15 @@ export class SshConversationProvider implements ConversationProvider {
     isResuming: boolean = false,
     initialPrompt?: string
   ): Promise<void> {
-    const sessionId = makeConversationSessionId(this.taskId, conversation.id);
+    // Use this.projectId for session ID generation (conversation.projectId may be undefined for multi-project tasks)
+    const sessionId = makePtySessionId(this.projectId, conversation.taskId, conversation.id);
     this.knownSessionIds.add(sessionId);
 
     if (this.sessions.has(sessionId)) return;
 
     await claudeTrustService.maybeAutoTrustSsh({
       providerId: conversation.providerId,
-      cwd: this.taskWorkDir,
+      cwd: this.taskPath,
       exec: this.exec,
       remoteFs: new SshFileSystem(this.proxy, '/'),
     });
@@ -94,7 +99,7 @@ export class SshConversationProvider implements ConversationProvider {
       providerId: conversation.providerId,
       command,
       args,
-      cwd: this.taskWorkDir,
+      cwd: this.taskPath,
       shellSetup: this.shellSetup,
       tmuxSessionName,
       autoApprove: conversation.autoApprove ?? false,
@@ -124,7 +129,7 @@ export class SshConversationProvider implements ConversationProvider {
     wireAgentClassifier({
       pty,
       providerId: conversation.providerId,
-      projectId: '',
+      projectId: this.projectId,
       taskId: conversation.taskId,
       conversationId: conversation.id,
     });
@@ -136,11 +141,13 @@ export class SshConversationProvider implements ConversationProvider {
       capture('agent_run_finished', {
         provider: conversation.providerId,
         exit_code: typeof exitCode === 'number' ? exitCode : -1,
+        project_id: this.projectId,
         task_id: conversation.taskId,
         conversation_id: conversation.id,
       });
       events.emit(agentSessionExitedChannel, {
         sessionId,
+        projectId: this.projectId,
         conversationId: conversation.id,
         taskId: conversation.taskId,
         exitCode,
@@ -175,13 +182,14 @@ export class SshConversationProvider implements ConversationProvider {
     this.sessions.set(sessionId, pty);
     capture('agent_run_started', {
       provider: conversation.providerId,
+      project_id: this.projectId,
       task_id: conversation.taskId,
       conversation_id: conversation.id,
     });
   }
 
   async stopSession(conversationId: string): Promise<void> {
-    const sessionId = makeConversationSessionId(this.taskId, conversationId);
+    const sessionId = makePtySessionId(this.projectId, this.taskId, conversationId);
     this.knownSessionIds.delete(sessionId);
     const pty = this.sessions.get(sessionId);
     if (pty) {

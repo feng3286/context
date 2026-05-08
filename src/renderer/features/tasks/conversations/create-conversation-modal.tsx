@@ -7,7 +7,7 @@ import {
 } from '@shared/agent-provider-registry';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useAgentAutoApproveDefaults } from '@renderer/features/tasks/hooks/useAgentAutoApproveDefaults';
-import { asProvisioned, getTaskStore } from '@renderer/features/tasks/stores/task-selectors';
+import { asProvisioned, findTaskStoreByTaskId } from '@renderer/features/tasks/stores/task-selectors';
 import { AgentSelector } from '@renderer/lib/components/agent-selector/agent-selector';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
 import { getPaneContainer } from '@renderer/lib/pty/pane-sizing-context';
@@ -33,11 +33,9 @@ function getConversationsPaneSize() {
 export const CreateConversationModal = observer(function CreateConversationModal({
   connectionId,
   onSuccess,
-  projectId,
   taskId,
 }: BaseModalProps<{ conversationId: string }> & {
   connectionId?: string;
-  projectId: string;
   taskId: string;
 }) {
   const [providerOverride, setProviderOverride] = useState<AgentProviderId | null>(null);
@@ -59,7 +57,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
     installedProviderIds,
     availabilityKnown,
   });
-  const conversationMgr = asProvisioned(getTaskStore(projectId, taskId))?.conversations;
+  const conversationMgr = asProvisioned(findTaskStoreByTaskId(taskId))?.conversations;
   const autoApproveDefaults = useAgentAutoApproveDefaults();
   const skipPermissions = providerId ? autoApproveDefaults.getDefault(providerId) : false;
   const titleProviderId = providerId ?? defaultProviderId;
@@ -72,7 +70,6 @@ export const CreateConversationModal = observer(function CreateConversationModal
     if (createDisabled || !conversationMgr || !providerId) return;
     const id = crypto.randomUUID();
     conversationMgr.createConversation({
-      projectId,
       taskId,
       id,
       autoApprove: skipPermissions,
@@ -87,7 +84,6 @@ export const CreateConversationModal = observer(function CreateConversationModal
     providerId,
     title,
     onSuccess,
-    projectId,
     taskId,
     skipPermissions,
   ]);

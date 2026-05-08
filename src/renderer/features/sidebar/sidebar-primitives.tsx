@@ -66,15 +66,21 @@ SidebarMenu.displayName = 'SidebarMenu';
 export const SidebarItemMiniButton = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, ...props }, ref) => (
+>(({ className, onClick, ...props }, ref) => (
   <button
     ref={ref}
     className={cn(
       'w-6 h-6 flex items-center justify-center text-foreground-tertiary-muted hover:text-foreground-tertiary rounded-md hover:bg-background-tertiary-2 group-data-[active=true]/row:hover:bg-background-tertiary-3',
       className
     )}
-    onMouseDown={(e) => e.preventDefault()}
-    onPointerDown={(e) => e.stopPropagation()}
+    onMouseDown={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }}
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick?.(e);
+    }}
     {...props}
   />
 ));

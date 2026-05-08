@@ -1,5 +1,5 @@
 import type { GeneralSessionConfig } from '@shared/general-session';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeTerminalSessionId } from '@shared/ptySessionId';
 import { Terminal } from '@shared/terminals';
 import { Pty } from '@main/core/pty/pty';
 import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
@@ -31,9 +31,8 @@ export class SshTerminalProvider implements TerminalProvider {
   private knownSessionIds = new Set<string>();
   private respawnCounts = new Map<string, number>();
   private terminals = new Map<string, Terminal>();
-  private readonly projectId: string;
-  private readonly scopeId: string;
-  private readonly taskPath: string;
+  private readonly taskWorkDir: string;
+  private readonly taskId: string;
   private readonly taskEnvVars: Record<string, string>;
   private readonly tmux: boolean;
   private readonly shellSetup?: string;
@@ -41,27 +40,24 @@ export class SshTerminalProvider implements TerminalProvider {
   private readonly proxy: SshClientProxy;
 
   constructor({
-    projectId,
-    scopeId,
-    taskPath,
+    taskWorkDir,
+    taskId,
     taskEnvVars = {},
     tmux = false,
     shellSetup,
     exec,
     proxy,
   }: {
-    projectId: string;
-    scopeId: string;
-    taskPath: string;
+    taskWorkDir: string;
+    taskId: string;
     taskEnvVars?: Record<string, string>;
     tmux?: boolean;
     shellSetup?: string;
     exec: ExecFn;
     proxy: SshClientProxy;
   }) {
-    this.projectId = projectId;
-    this.scopeId = scopeId;
-    this.taskPath = taskPath;
+    this.taskWorkDir = taskWorkDir;
+    this.taskId = taskId;
     this.taskEnvVars = taskEnvVars;
     this.tmux = tmux;
     this.shellSetup = shellSetup;
@@ -109,7 +105,7 @@ export class SshTerminalProvider implements TerminalProvider {
     command: { command: string; args: string[] } | undefined,
     policy: SpawnPolicy
   ): Promise<void> {
-    const sessionId = makePtySessionId(terminal.projectId, terminal.taskId, terminal.id);
+    const sessionId = makeTerminalSessionId(terminal.taskId, terminal.id);
     this.knownSessionIds.add(sessionId);
     if (this.sessions.has(sessionId)) return;
     if (policy.trackForRehydrate) {
@@ -117,8 +113,8 @@ export class SshTerminalProvider implements TerminalProvider {
     }
 
     const cfg: GeneralSessionConfig = {
-      taskId: this.scopeId,
-      cwd: this.taskPath,
+      taskId: this.taskId,
+      cwd: this.taskWorkDir,
       shellSetup: this.shellSetup,
       tmuxSessionName: this.tmux ? makeTmuxSessionName(sessionId) : undefined,
       command: command?.command,
@@ -146,7 +142,7 @@ export class SshTerminalProvider implements TerminalProvider {
     if (policy.watchDevServer) {
       wireTerminalDevServerWatcher({
         pty,
-        scopeId: this.scopeId,
+        scopeId: this.taskId,
         terminalId: terminal.id,
         probe: false,
       });
@@ -197,7 +193,7 @@ export class SshTerminalProvider implements TerminalProvider {
     const terminals = Array.from(this.terminals.values());
     await Promise.all(
       terminals.map(async (terminal) => {
-        const sessionId = makePtySessionId(terminal.projectId, terminal.taskId, terminal.id);
+        const sessionId = makeTerminalSessionId(terminal.taskId, terminal.id);
         if (this.sessions.has(sessionId)) return;
         await this.spawnTerminal(terminal).catch((e) => {
           log.error('SshTerminalProvider: rehydrate failed', {
@@ -210,7 +206,7 @@ export class SshTerminalProvider implements TerminalProvider {
   }
 
   async killTerminal(terminalId: string): Promise<void> {
-    const sessionId = makePtySessionId(this.projectId, this.scopeId, terminalId);
+    const sessionId = makeTerminalSessionId(this.taskId, terminalId);
     this.knownSessionIds.delete(sessionId);
     const pty = this.sessions.get(sessionId);
     if (pty) {

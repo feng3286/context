@@ -2,6 +2,7 @@ import { Plus, Undo2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { commitRef, HEAD_REF } from '@shared/git';
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
+import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Button } from '@renderer/lib/ui/button';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
@@ -11,10 +12,24 @@ import { SectionHeader } from './components/section-header';
 import { VirtualizedChangesList } from './components/virtualized-changes-list';
 import { usePrefetchDiffModels } from './hooks/use-prefetch-diff-models';
 
-export const UnstagedSection = observer(function UnstagedSection() {
-  const { projectId } = useTaskViewContext();
+interface UnstagedSectionProps {
+  /** Optional git store override for multi-project mode */
+  gitOverride?: GitStore;
+  /** Optional project ID override for multi-project mode */
+  projectIdOverride?: string;
+  /** Hide commit card - useful for multi-project mode where commits are managed separately */
+  hideCommitCard?: boolean;
+}
+
+export const UnstagedSection = observer(function UnstagedSection({
+  gitOverride,
+  projectIdOverride,
+  hideCommitCard = false,
+}: UnstagedSectionProps) {
+  const { projectId: contextProjectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
-  const git = provisioned.workspace.git;
+  const projectId = projectIdOverride ?? contextProjectId;
+  const git = gitOverride ?? provisioned.workspace.git;
   const changesView = provisioned.taskView.diffView.changesView;
   const diffView = provisioned.taskView.diffView;
 
@@ -151,7 +166,7 @@ export const UnstagedSection = observer(function UnstagedSection() {
             onPrefetch={(change) => prefetch(change.path)}
           />
         </div>
-        {hasChanges && !hasStagedChanges && <CommitCard autoStage />}
+        {hasChanges && !hasStagedChanges && !hideCommitCard && <CommitCard autoStage />}
       </div>
     </>
   );

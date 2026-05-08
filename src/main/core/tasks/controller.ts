@@ -1,12 +1,13 @@
 import { createRPCController } from '@shared/ipc/rpc';
 import { archiveTask } from './archiveTask';
+import { createMultiProjectTask } from './createMultiProjectTask';
 import { createTask } from './createTask';
 import { deleteTask } from './deleteTask';
 import { generateTaskName } from './generateTaskName';
 import { getBootstrapStatus } from './getBootstrapStatus';
-import { getTasks } from './getTasks';
+import { getTasks, getTasksByWorkspace } from './getTasks';
 import { getWorkspaceSettings } from './getWorkspaceSettings';
-import { getTaskProjects } from './operations/getTaskProjects';
+import { getTaskProjectContexts, getTaskProjects } from './operations/getTaskProjects';
 import { setTaskProjects } from './operations/setTaskProjects';
 import { provisionTask } from './provisionTask';
 import { renameTask } from './renameTask';
@@ -18,7 +19,9 @@ import { updateTaskStatus } from './updateTaskStatus';
 
 export const taskController = createRPCController({
   createTask,
+  createMultiProjectTask,
   getTasks,
+  getTasksByWorkspace,
   deleteTask,
   generateTaskName,
   archiveTask,
@@ -32,5 +35,6 @@ export const taskController = createRPCController({
   updateTaskStatus,
   setTaskPinned,
   getTaskProjects,
+  getTaskProjectContexts,
   setTaskProjects,
 });

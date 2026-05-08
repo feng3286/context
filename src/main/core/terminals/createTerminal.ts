@@ -1,19 +1,32 @@
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { CreateTerminalParams, Terminal } from '@shared/terminals';
 import { db } from '@main/db/client';
-import { terminals } from '@main/db/schema';
+import { terminals, tasks } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
-import { resolveTask } from '../projects/utils';
+import { resolveTaskByTaskId } from '../projects/utils';
 import { mapTerminalRowToTerminal } from './core';
 
 export async function createTerminal(params: CreateTerminalParams): Promise<Terminal> {
   const { id: terminalId, initialSize = { cols: 80, rows: 24 } } = params;
 
+  // Get projectId from the task record for database insert
+  const taskRow = await db
+    .select({ projectId: tasks.projectId })
+    .from(tasks)
+    .where(eq(tasks.id, params.taskId))
+    .limit(1);
+
+  if (taskRow.length === 0) {
+    throw new Error('Task not found');
+  }
+
+  const projectId = taskRow[0].projectId;
+
   const [row] = await db
     .insert(terminals)
     .values({
       id: terminalId,
-      projectId: params.projectId,
+      projectId: projectId,
       taskId: params.taskId,
       name: params.name,
       ssh: 0,
@@ -21,7 +34,7 @@ export async function createTerminal(params: CreateTerminalParams): Promise<Term
     })
     .returning();
 
-  const task = resolveTask(params.projectId, params.taskId);
+  const task = resolveTaskByTaskId(params.taskId);
   if (!task) {
     throw new Error('Task not found');
   }
@@ -29,7 +42,6 @@ export async function createTerminal(params: CreateTerminalParams): Promise<Term
   await task.terminals.spawnTerminal(mapTerminalRowToTerminal(row), initialSize);
   capture('terminal_created', {
     terminal_id: terminalId,
-    project_id: params.projectId,
     task_id: params.taskId,
   });
 

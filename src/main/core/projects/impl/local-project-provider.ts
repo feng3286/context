@@ -131,14 +131,16 @@ export class LocalProjectProvider implements ProjectProvider {
   async provisionTask(
     task: Task,
     conversations: Conversation[],
-    terminals: Terminal[]
+    terminals: Terminal[],
+    workDir?: string,
+    taskBaseDir?: string
   ): Promise<Result<TaskProvider, ProvisionTaskError>> {
     const existing = this.tasks.get(task.id);
     if (existing) return ok(existing);
     if (this.provisioningTasks.has(task.id)) return this.provisioningTasks.get(task.id)!;
 
     const promise = withTimeout(
-      this.doProvisionTask(task, conversations, terminals),
+      this.doProvisionTask(task, conversations, terminals, workDir, taskBaseDir),
       TASK_TIMEOUT_MS
     )
       .then((taskEnv) => {
@@ -164,7 +166,9 @@ export class LocalProjectProvider implements ProjectProvider {
   private async doProvisionTask(
     task: Task,
     conversations: Conversation[],
-    terminals: Terminal[]
+    terminals: Terminal[],
+    customWorkDir?: string,
+    taskBaseDir?: string
   ): Promise<TaskProvider> {
     log.debug('LocalProjectProvider: doProvisionTask START', {
       taskId: task.id,
@@ -180,7 +184,7 @@ export class LocalProjectProvider implements ProjectProvider {
 
     const workspaceId = workspaceKey(task.taskBranch);
     const workspace = await this.workspaceRegistry.acquire(workspaceId, async () => {
-      const workDir = await this.resolveTaskWorkDir(task);
+      const workDir = await this.resolveTaskWorkDir(task, customWorkDir);
       const exec = getGitLocalExec(() => githubConnectionService.getToken());
       const workspaceFs = new LocalFileSystem(workDir);
 
@@ -204,16 +208,14 @@ export class LocalProjectProvider implements ProjectProvider {
       const scripts = taskLevelSettings.scripts;
 
       const workspaceTerminals = new LocalTerminalProvider({
-        projectId: this.project.id,
-        scopeId: workspaceId,
-        taskPath: workDir,
+        taskWorkDir: workDir,
+        taskId: workspaceId,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
         taskEnvVars: bootstrapTaskEnvVars,
       });
       const lifecycleService = new WorkspaceLifecycleService({
-        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
@@ -262,13 +264,15 @@ export class LocalProjectProvider implements ProjectProvider {
       const exec = getGitLocalExec(() => githubConnectionService.getToken());
       const projectSettings = await this.settings.get();
       const defaultBranch = await this.settings.getDefaultBranch();
+      // For multi-project tasks, use taskBaseDir (task base directory) instead of workspace.path (project worktree)
+      const effectiveTaskPath = taskBaseDir ?? workspace.path;
       const taskEnvVars = getTaskEnvVars({
         taskId: task.id,
         taskName: task.name,
-        taskPath: workspace.path,
+        taskPath: effectiveTaskPath,
         projectPath: this.project.path,
         defaultBranch,
-        portSeed: workspace.path,
+        portSeed: effectiveTaskPath,
       });
       const tmuxEnabled = projectSettings.tmux ?? false;
       const taskLevelSettings = await getEffectiveTaskSettings({
@@ -278,8 +282,7 @@ export class LocalProjectProvider implements ProjectProvider {
       const shellSetup = taskLevelSettings.shellSetup ?? projectSettings.shellSetup;
 
       const conversationProvider = new LocalConversationProvider({
-        projectId: this.project.id,
-        taskPath: workspace.path,
+        taskWorkDir: effectiveTaskPath,
         taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
@@ -288,9 +291,8 @@ export class LocalProjectProvider implements ProjectProvider {
       });
 
       const terminalProvider = new LocalTerminalProvider({
-        projectId: this.project.id,
-        scopeId: task.id,
-        taskPath: workspace.path,
+        taskWorkDir: workspace.path,
+        taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
@@ -391,6 +393,49 @@ export class LocalProjectProvider implements ProjectProvider {
     return this.workspaceRegistry.get(workspaceId);
   }
 
+  async ensureWorkspace(workspaceId: string, worktreePath: string): Promise<Workspace> {
+    const existing = this.workspaceRegistry.get(workspaceId);
+    if (existing) {
+      return existing;
+    }
+
+    return this.workspaceRegistry.acquire(workspaceId, async () => {
+      const exec = getGitLocalExec(() => githubConnectionService.getToken());
+      const workspaceFs = new LocalFileSystem(worktreePath);
+      const projectSettings = await this.settings.get();
+      const defaultBranch = await this.settings.getDefaultBranch();
+
+      const workspaceTerminals = new LocalTerminalProvider({
+        taskWorkDir: worktreePath,
+        taskId: workspaceId,
+        tmux: projectSettings.tmux ?? false,
+        shellSetup: projectSettings.shellSetup,
+        exec,
+        taskEnvVars: {},
+      });
+      const lifecycleService = new WorkspaceLifecycleService({
+        workspaceId,
+        terminals: workspaceTerminals,
+      });
+
+      const createdWorkspace: Workspace = {
+        id: workspaceId,
+        path: worktreePath,
+        fs: workspaceFs,
+        git: new GitService(worktreePath, exec, workspaceFs),
+        settings: this.settings,
+        lifecycleService,
+      };
+
+      // Register with git watcher
+      const mainDotGitAbs = path.resolve(this.project.path, '.git');
+      const relativeGitDir = await createdWorkspace.git.getWorktreeGitDir(mainDotGitAbs);
+      this._gitWatcher.registerWorktree(workspaceId, relativeGitDir);
+
+      return createdWorkspace;
+    });
+  }
+
   private async doTeardownTask(task: TaskProvider): Promise<void> {
     const wsId = workspaceKey(task.taskBranch);
     const workspace = this.workspaceRegistry.get(wsId);
@@ -454,6 +499,10 @@ export class LocalProjectProvider implements ProjectProvider {
     }
   }
 
+  async removeWorktreeAtPath(worktreePath: string): Promise<void> {
+    await this.worktreeService.removeWorktree(worktreePath);
+  }
+
   async fetch(): Promise<Result<void, FetchError>> {
     return this._gitFetchService.fetch();
   }
@@ -479,7 +528,7 @@ export class LocalProjectProvider implements ProjectProvider {
     }
   }
 
-  private async resolveTaskWorkDir(task: Task): Promise<string> {
+  private async resolveTaskWorkDir(task: Task, taskWorkDir?: string): Promise<string> {
     if (!task.taskBranch) {
       return this.project.path;
     }
@@ -501,9 +550,14 @@ export class LocalProjectProvider implements ProjectProvider {
       return result.data;
     }
 
+    // Compute worktree path: {taskWorkDir}/{projectName}/
+    // Use provided taskWorkDir or fall back to task.workDir
+    const effectiveTaskWorkDir = taskWorkDir ?? task.workDir;
     const result = await this.worktreeService.checkoutBranchWorktree(
       task.sourceBranch,
-      task.taskBranch
+      task.taskBranch,
+      effectiveTaskWorkDir,
+      this.project.name
     );
     if (!result.success) {
       throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);

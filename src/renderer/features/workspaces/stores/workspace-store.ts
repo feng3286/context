@@ -1,5 +1,7 @@
 import { makeObservable, observable, runInAction } from 'mobx';
+import type { Conversation } from '@shared/conversations';
 import type { Project } from '@shared/projects';
+import type { Task } from '@shared/tasks';
 import type { Workspace } from '@shared/workspaces';
 import { rpc } from '@renderer/lib/ipc';
 
@@ -26,6 +28,7 @@ export interface LoadingWorkspaceStore extends BaseWorkspaceStore {
 export interface ReadyWorkspaceStore extends BaseWorkspaceStore {
   status: 'ready';
   projects: Project[];
+  tasks: Task[];
 }
 
 export interface ErrorWorkspaceStore extends BaseWorkspaceStore {
@@ -41,7 +44,8 @@ export class WorkspaceStoreClass {
   data: Workspace;
   status: WorkspaceLifecycleStatus = 'unloaded';
   projects: Project[] = [];
-  error?: string;
+  tasks: Task[] = [];
+  error: string | undefined = undefined;
   private _loadPromise: Promise<void> | null = null;
 
   constructor(data: Workspace) {
@@ -50,12 +54,13 @@ export class WorkspaceStoreClass {
       data: observable,
       status: observable,
       projects: observable,
+      tasks: observable,
       error: observable,
     });
   }
 
   load(): Promise<void> {
-    if (this.status === 'ready' || this.status === 'loading') {
+    if (this.status === 'loading') {
       return this._loadPromise ?? Promise.resolve();
     }
 
@@ -63,11 +68,14 @@ export class WorkspaceStoreClass {
       this.status = 'loading';
     });
 
-    this._loadPromise = rpc.workspace
-      .getWorkspaceProjects(this.data.id)
-      .then((projects) => {
+    this._loadPromise = Promise.all([
+      rpc.workspace.getWorkspaceProjects(this.data.id),
+      rpc.tasks.getTasksByWorkspace(this.data.id),
+    ])
+      .then(([projects, tasks]) => {
         runInAction(() => {
           this.projects = projects;
+          this.tasks = tasks;
           this.status = 'ready';
           this.error = undefined;
         });
@@ -87,15 +95,20 @@ export class WorkspaceStoreClass {
 
   async addProject(projectId: string): Promise<void> {
     await rpc.workspace.addProjectToWorkspace(this.data.id, projectId);
-    runInAction(() => {
-      void this.load();
-    });
+    await this.load();
   }
 
   async removeProject(projectId: string): Promise<void> {
     await rpc.workspace.removeProjectFromWorkspace(this.data.id, projectId);
-    runInAction(() => {
-      this.projects = this.projects.filter((p) => p.id !== projectId);
-    });
+    await this.load();
+  }
+
+  async loadConversationsForTask(taskId: string): Promise<Conversation[]> {
+    return rpc.conversations.getConversationsForTask(taskId);
+  }
+
+  async deleteTask(projectId: string, taskId: string): Promise<void> {
+    await rpc.tasks.deleteTask(projectId, taskId);
+    await this.load();
   }
 }

@@ -47,16 +47,21 @@ export interface ProjectProvider {
   readonly fs: FileSystemProvider;
   getRemoteState(): Promise<ProjectRemoteState>;
   getWorkspace(workspaceId: string): Workspace | undefined;
+  /** Ensure a workspace is provisioned for the given worktree path. Used for multi-project tasks. */
+  ensureWorkspace(workspaceId: string, worktreePath: string): Promise<Workspace>;
   provisionTask(
     args: Task,
     conversations: Conversation[],
-    terminals: Terminal[]
+    terminals: Terminal[],
+    workDir?: string,
+    taskBaseDir?: string
   ): Promise<Result<TaskProvider, ProvisionTaskError>>;
   getTask(taskId: string): TaskProvider | undefined;
   getTaskBootstrapStatus(taskId: string): TaskBootstrapStatus;
   teardownTask(taskId: string): Promise<Result<void, TeardownTaskError>>;
   getWorktreeForBranch(branchName: string): Promise<string | undefined>;
   removeTaskWorktree(taskBranch: string): Promise<void>;
+  removeWorktreeAtPath(worktreePath: string): Promise<void>;
   fetch(): Promise<Result<void, FetchError>>;
   cleanup(): Promise<void>;
 }

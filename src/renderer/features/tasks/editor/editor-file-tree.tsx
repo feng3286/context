@@ -7,6 +7,7 @@ import { buildVisibleRows } from '@renderer/features/tasks/editor/stores/files-s
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
 import { cn } from '@renderer/utils/utils';
+import { MultiProjectFileTree } from './multi-project-file-tree';
 
 const FileTreeRow = observer(function FileTreeRow({
   node,
@@ -122,6 +123,13 @@ const FileTreeRow = observer(function FileTreeRow({
 
 export const EditorFileTree = observer(function EditorFileTree() {
   const taskState = useProvisionedTask();
+
+  // 多项目任务使用 MultiProjectFileTree
+  if (taskState.isMultiProject && taskState.projectContexts) {
+    return <MultiProjectFileTree />;
+  }
+
+  // 单项目任务使用原有逻辑
   const files = taskState.workspace.files;
   const editorView = taskState.taskView.editorView;
 

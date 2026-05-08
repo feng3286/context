@@ -1,0 +1,1 @@
+ALTER TABLE task_projects DROP COLUMN worktree_path;

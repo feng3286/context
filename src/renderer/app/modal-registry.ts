@@ -9,6 +9,7 @@ import { CreatePrModal } from '@renderer/features/tasks/diff-view/changes-panel/
 import { ConflictDialog } from '@renderer/features/tasks/editor/conflict-dialog';
 import { RenameTaskModal } from '@renderer/features/tasks/rename-task-modal';
 import { CreateWorkspaceModal } from '@renderer/features/workspaces/components/create-workspace-modal';
+import { SelectProjectModal } from '@renderer/features/workspaces/components/select-project-modal';
 import { AddSshConnModal } from '@renderer/lib/components/add-ssh-conn-modal';
 import { ChangeProjectConnectionModal } from '@renderer/lib/components/change-project-connection-modal';
 import { ConfirmActionDialog } from '@renderer/lib/components/confirm-action-dialog';
@@ -48,4 +49,5 @@ export const modalRegistry = {
   integrationSetupModal: createModal(IntegrationSetupModal, { size: 'md' }),
   addRemoteModal: createModal(AddRemoteModal),
   createWorkspaceModal: createModal(CreateWorkspaceModal),
+  selectProjectModal: createModal(SelectProjectModal),
 } satisfies Record<string, ModalRegistryEntry>;

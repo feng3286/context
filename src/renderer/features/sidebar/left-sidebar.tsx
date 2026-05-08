@@ -1,6 +1,7 @@
-import { FolderPlus, MessageSquareShare, Plus, Plug, Puzzle, Settings } from 'lucide-react';
+import { FolderPlus, MessageSquareShare, Plug, Plus, Puzzle, Settings } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
+import { WorkspaceSidebarList } from '@renderer/features/workspaces/components/workspace-sidebar-list';
 import {
   isCurrentView,
   useNavigate,
@@ -20,7 +21,6 @@ import {
 } from './sidebar-primitives';
 import { SidebarSpace } from './sidebar-space';
 import { UpdateSection } from './update-section';
-import { WorkspaceSidebarList } from '@renderer/features/workspaces/components/workspace-sidebar-list';
 
 export const LeftSidebar: React.FC = observer(function LeftSidebar() {
   const { navigate } = useNavigate();

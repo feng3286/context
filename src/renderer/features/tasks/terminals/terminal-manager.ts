@@ -1,17 +1,15 @@
 import { makeObservable, observable, onBecomeObserved, runInAction } from 'mobx';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeTerminalSessionId } from '@shared/ptySessionId';
 import { CreateTerminalParams, Terminal } from '@shared/terminals';
 import { rpc } from '@renderer/lib/ipc';
 import { PtySession } from '@renderer/lib/pty/pty-session';
 
 export class TerminalManagerStore {
-  private readonly projectId: string;
   private readonly taskId: string;
   private _loaded = false;
   terminals = observable.map<string, TerminalStore>();
 
-  constructor(projectId: string, taskId: string) {
-    this.projectId = projectId;
+  constructor(taskId: string) {
     this.taskId = taskId;
     makeObservable(this, {
       terminals: observable,
@@ -24,7 +22,7 @@ export class TerminalManagerStore {
 
   async load() {
     this._loaded = true;
-    const terminals = await rpc.terminals.getTerminalsForTask(this.projectId, this.taskId);
+    const terminals = await rpc.terminals.getTerminalsForTask(this.taskId);
     runInAction(() => {
       for (const terminal of terminals) {
         const store = new TerminalStore(terminal);
@@ -37,7 +35,6 @@ export class TerminalManagerStore {
   async createTerminal(params: CreateTerminalParams): Promise<Terminal> {
     const optimistic: Terminal = {
       id: params.id,
-      projectId: params.projectId,
       taskId: params.taskId,
       name: params.name,
     };
@@ -75,11 +72,7 @@ export class TerminalManagerStore {
     });
 
     try {
-      await rpc.terminals.deleteTerminal({
-        projectId: this.projectId,
-        taskId: this.taskId,
-        terminalId,
-      });
+      await rpc.terminals.deleteTerminal(this.taskId, terminalId);
       store.dispose();
     } catch (err) {
       runInAction(() => {
@@ -117,7 +110,7 @@ export class TerminalStore {
   constructor(terminal: Terminal) {
     this.data = terminal;
     this.session = new PtySession(
-      makePtySessionId(terminal.projectId, terminal.taskId, terminal.id)
+      makeTerminalSessionId(terminal.taskId, terminal.id)
     );
     makeObservable(this, { data: observable, session: observable });
   }

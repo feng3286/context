@@ -25,6 +25,20 @@ export function getTaskStore(projectId: string, taskId: string): TaskStore | und
   return getTaskManagerStore(projectId)?.tasks.get(taskId);
 }
 
+/**
+ * Find a TaskStore by taskId across all projects.
+ * Used for multi-project tasks where task is not bound to a specific projectId.
+ * Call only inside `observer` components (or other MobX reactions).
+ */
+export function findTaskStoreByTaskId(taskId: string): TaskStore | undefined {
+  const projectManager = getProjectManagerStore();
+  for (const project of projectManager.projects.values()) {
+    const taskStore = project.mountedProject?.taskManager.tasks.get(taskId);
+    if (taskStore) return taskStore;
+  }
+  return undefined;
+}
+
 /** Registered task payload (`Task`) when the row exists and is not unregistered; otherwise undefined. */
 export function getRegisteredTaskData(projectId: string, taskId: string): Task | undefined {
   const store = getTaskStore(projectId, taskId);

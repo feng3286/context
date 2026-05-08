@@ -66,6 +66,7 @@
     "@vitest/browser-playwright": "^4.1.0",
     "@vitest/browser-preview": "^4.1.0",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.24.2",
     "electron": "^40.7.0",
     "electron-builder": "^26.8.1",

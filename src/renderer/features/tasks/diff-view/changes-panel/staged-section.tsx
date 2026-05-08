@@ -2,6 +2,7 @@ import { Minus } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { commitRef, HEAD_REF } from '@shared/git';
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
+import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
 import { Button } from '@renderer/lib/ui/button';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { ActionCard } from './components/action-card';
@@ -10,10 +11,24 @@ import { SectionHeader } from './components/section-header';
 import { VirtualizedChangesList } from './components/virtualized-changes-list';
 import { usePrefetchDiffModels } from './hooks/use-prefetch-diff-models';
 
-export const StagedSection = observer(function StagedSection() {
-  const { projectId } = useTaskViewContext();
+interface StagedSectionProps {
+  /** Optional git store override for multi-project mode */
+  gitOverride?: GitStore;
+  /** Optional project ID override for multi-project mode */
+  projectIdOverride?: string;
+  /** Hide commit card - useful for multi-project mode where commits are managed separately */
+  hideCommitCard?: boolean;
+}
+
+export const StagedSection = observer(function StagedSection({
+  gitOverride,
+  projectIdOverride,
+  hideCommitCard = false,
+}: StagedSectionProps) {
+  const { projectId: contextProjectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
-  const git = provisioned.workspace.git;
+  const projectId = projectIdOverride ?? contextProjectId;
+  const git = gitOverride ?? provisioned.workspace.git;
   const changesView = provisioned.taskView.diffView.changesView;
   const diffView = provisioned.taskView.diffView;
 
@@ -99,7 +114,7 @@ export const StagedSection = observer(function StagedSection() {
             onPrefetch={(change) => prefetch(change.path)}
           />
         </div>
-        {hasChanges && <CommitCard />}
+        {hasChanges && !hideCommitCard && <CommitCard />}
       </div>
     </>
   );

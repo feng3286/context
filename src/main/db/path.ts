@@ -1,5 +1,5 @@
-import { dirname, resolve } from 'node:path';
 import { existsSync, mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { app } from 'electron';
 import { resolveDefaultDatabasePath } from './database-file';
 import { CURRENT_DB_FILENAME, PREVIOUS_DB_FILENAME } from './default-path';

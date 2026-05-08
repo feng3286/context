@@ -136,6 +136,10 @@ class ProjectManager {
     return this.providers.get(projectId);
   }
 
+  getAllProjects(): ProjectProvider[] {
+    return Array.from(this.providers.values());
+  }
+
   getProjectBootstrapStatus(projectId: string): ProjectBootstrapStatus {
     if (this.providers.has(projectId)) return { status: 'ready' };
     if (this.initializingProviders.has(projectId)) return { status: 'bootstrapping' };

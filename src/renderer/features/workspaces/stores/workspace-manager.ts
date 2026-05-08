@@ -1,10 +1,10 @@
 import { makeObservable, observable, runInAction } from 'mobx';
 import type { CreateWorkspaceParams, Workspace } from '@shared/workspaces';
 import { rpc } from '@renderer/lib/ipc';
-import { WorkspaceStoreClass, type WorkspaceStore } from './workspace-store';
+import { WorkspaceStoreClass } from './workspace-store';
 
 export class WorkspaceManagerStore {
-  workspaces = observable.map<string, WorkspaceStore>();
+  workspaces = observable.map<string, WorkspaceStoreClass>();
   private _loadPromise: Promise<void> | null = null;
 
   constructor() {
@@ -42,7 +42,7 @@ export class WorkspaceManagerStore {
     });
   }
 
-  getWorkspace(id: string): WorkspaceStore | undefined {
+  getWorkspace(id: string): WorkspaceStoreClass | undefined {
     return this.workspaces.get(id);
   }
 }

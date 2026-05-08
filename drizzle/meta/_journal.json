@@ -57,6 +57,41 @@
       "when": 1777040000000,
       "tag": "0007_add_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1777100000000,
+      "tag": "0008_add_work_dir",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1777200000000,
+      "tag": "0009_add_worktree_path",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1777300000000,
+      "tag": "0010_optional_conversation_project",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1777400000000,
+      "tag": "0011_remove_task_projects_worktree_path",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1777500000000,
+      "tag": "0012_remove_conversation_project_id",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,7 @@ import {
   isAttentionNotification,
   type NotificationType,
 } from '@shared/events/agentEvents';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeConversationSessionId } from '@shared/ptySessionId';
 import { events, rpc } from '@renderer/lib/ipc';
 import { PtySession } from '@renderer/lib/pty/pty-session';
 import { soundPlayer } from '@renderer/utils/soundPlayer';
@@ -19,10 +19,7 @@ export class ConversationManagerStore {
   private offSessionExited: (() => void) | null = null;
   conversations = observable.map<string, ConversationStore>();
 
-  constructor(
-    private readonly projectId: string,
-    private readonly taskId: string
-  ) {
+  constructor(private readonly taskId: string) {
     makeObservable(this, {
       conversations: observable,
       taskStatus: computed,
@@ -86,10 +83,7 @@ export class ConversationManagerStore {
 
   async load() {
     this._loaded = true;
-    const conversations = await rpc.conversations.getConversationsForTask(
-      this.projectId,
-      this.taskId
-    );
+    const conversations = await rpc.conversations.getConversationsForTask(this.taskId);
     runInAction(() => {
       for (const conversation of conversations) {
         const store = new ConversationStore(conversation);
@@ -118,7 +112,7 @@ export class ConversationManagerStore {
     });
 
     try {
-      await rpc.conversations.deleteConversation(this.projectId, this.taskId, conversationId);
+      await rpc.conversations.deleteConversation(this.taskId, conversationId);
       snapshot.dispose();
     } catch (err) {
       runInAction(() => {
@@ -169,7 +163,7 @@ export class ConversationStore {
   constructor(conversation: Conversation) {
     this.data = conversation;
     this.session = new PtySession(
-      makePtySessionId(conversation.projectId, conversation.taskId, conversation.id)
+      makeConversationSessionId(conversation.taskId, conversation.id)
     );
     makeObservable(this, {
       data: observable,

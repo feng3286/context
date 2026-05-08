@@ -95,6 +95,17 @@ export type CreateTaskWarning = {
   error: PushError;
 };
 
+export type CreateMultiProjectTaskParams = {
+  id: string;
+  workspaceId: string;
+  name: string;
+  taskBranch: string;
+  projectBranchSources: Array<{
+    projectId: string;
+    sourceBranch: string;
+  }>;
+};
+
 export type CreateTaskSuccess = {
   task: Task;
   warning?: CreateTaskWarning;

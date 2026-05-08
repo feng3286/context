@@ -42,7 +42,6 @@ function scriptIcon(type: ScriptType): React.ReactNode {
 }
 
 interface TerminalsTabsProps {
-  projectId: string;
   taskId: string;
   terminalTabView: TerminalTabViewStore | null;
   terminalMgr: TerminalManagerStore | null;
@@ -51,7 +50,6 @@ interface TerminalsTabsProps {
 }
 
 export const TerminalsTabs = observer(function TerminalsTabs({
-  projectId,
   taskId,
   terminalTabView,
   terminalMgr,
@@ -65,7 +63,6 @@ export const TerminalsTabs = observer(function TerminalsTabs({
     try {
       await terminalMgr.createTerminal({
         id,
-        projectId,
         taskId,
         name,
         initialSize: getTerminalsPaneSize(),

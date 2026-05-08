@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { LocalProject, Project, SshProject } from '@shared/projects';
+import type { TaskProjectContext } from '@shared/task-projects';
 import { db } from '@main/db/client';
 import { projects, taskProjects } from '@main/db/schema';
 
@@ -32,4 +33,20 @@ export async function getTaskProjects(taskId: string): Promise<Project[]> {
           updatedAt: row.project.updatedAt,
         } satisfies SshProject)
   );
+}
+
+export async function getTaskProjectContexts(taskId: string): Promise<TaskProjectContext[]> {
+  const rows = await db
+    .select({
+      projectId: projects.id,
+      projectName: projects.name,
+    })
+    .from(taskProjects)
+    .innerJoin(projects, eq(taskProjects.projectId, projects.id))
+    .where(eq(taskProjects.taskId, taskId));
+
+  return rows.map((row) => ({
+    projectId: row.projectId,
+    projectName: row.projectName,
+  }));
 }

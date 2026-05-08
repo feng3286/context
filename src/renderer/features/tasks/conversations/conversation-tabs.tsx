@@ -60,9 +60,11 @@ export const ConversationsTabs = observer(function ConversationsTabs({
               onClick={() =>
                 showCreateConversationModal({
                   connectionId,
-                  projectId,
                   taskId,
-                  onSuccess: ({ conversationId }) => conversationTabs.setActiveTab(conversationId),
+                  onSuccess: (result) => {
+                    const { conversationId } = result as { conversationId: string };
+                    conversationTabs.setActiveTab(conversationId);
+                  },
                 })
               }
             >

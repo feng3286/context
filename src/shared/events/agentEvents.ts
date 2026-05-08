@@ -23,7 +23,7 @@ export interface AgentEvent {
   source?: 'hook' | 'classifier';
   ptyId?: string;
   providerId?: string;
-  projectId: string;
+  projectId?: string; // Optional for multi-project tasks
   taskId: string;
   conversationId: string;
   timestamp: number;
@@ -46,7 +46,7 @@ export const agentEventChannel = defineEvent<AgentEventEnvelope>('agent:event');
 
 export interface AgentSessionExited {
   /** PTY session ID (= conversationId for agent sessions). */
-  projectId: string;
+  projectId?: string; // Optional for multi-project tasks
   sessionId: string;
   conversationId: string;
   taskId: string;

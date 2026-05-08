@@ -47,7 +47,9 @@ function makeTerminalProvider(): {
     async spawnLifecycleScript({ terminal }) {
       const pty = new FakePty();
       spawned.push(pty);
-      ptySessionRegistry.register(`${terminal.projectId}:${terminal.taskId}:${terminal.id}`, pty, {
+      // Use fixed projectId for test since Terminal type no longer has projectId
+      const sessionId = `test-project:${terminal.taskId}:${terminal.id}`;
+      ptySessionRegistry.register(sessionId, pty, {
         preserveBufferOnExit: true,
       });
     },
@@ -63,7 +65,6 @@ describe('WorkspaceLifecycleService', () => {
   it('respawns an interactive lifecycle shell after an exit-backed script finishes', async () => {
     const { provider, spawned } = makeTerminalProvider();
     const service = new WorkspaceLifecycleService({
-      projectId: 'project-1',
       workspaceId: 'branch:feature',
       terminals: provider,
     });

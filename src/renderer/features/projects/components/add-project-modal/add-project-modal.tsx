@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { SshConnectionSelector } from '@renderer/features/projects/components/add-project-modal/ssh-connection-selector';
 import { getProjectManagerStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
+import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { rpc } from '@renderer/lib/ipc';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal, type BaseModalProps } from '@renderer/lib/modal/modal-provider';
@@ -51,6 +52,7 @@ export interface AddProjectModalProps extends BaseModalProps<void> {
   strategy?: Strategy;
   mode?: Mode;
   connectionId?: string;
+  workspaceId?: string; // Optional: add project to this workspace after creation
 }
 
 export const AddProjectModal = observer(function AddProjectModal({
@@ -58,6 +60,7 @@ export const AddProjectModal = observer(function AddProjectModal({
   mode: modeProp,
   onClose,
   connectionId: connectionIdProp,
+  workspaceId,
 }: AddProjectModalProps) {
   const [strategy, setStrategy] = useState<Strategy>(strategyProp ?? 'local');
   const [mode, setMode] = useState<Mode>(modeProp ?? 'pick');
@@ -79,12 +82,14 @@ export const AddProjectModal = observer(function AddProjectModal({
 
   const handleAddConnection = () => {
     showSshConnModal({
-      onSuccess: ({ connectionId: newId }) =>
+      onSuccess: (result) => {
+        const { connectionId } = result as { connectionId: string };
         showAddProjectModal({
           strategy: 'ssh',
           mode,
-          connectionId: newId,
-        }),
+          connectionId,
+        });
+      },
       onClose: () =>
         showAddProjectModal({
           strategy: 'ssh',
@@ -98,12 +103,14 @@ export const AddProjectModal = observer(function AddProjectModal({
     if (!conn) return;
     showSshConnModal({
       initialConfig: conn,
-      onSuccess: () =>
+      onSuccess: (result) => {
+        const { connectionId: newId } = result as { connectionId: string };
         showAddProjectModal({
           strategy: 'ssh',
           mode,
-          connectionId: id,
-        }),
+          connectionId: newId,
+        });
+      },
       onClose: () =>
         showAddProjectModal({
           strategy: 'ssh',
@@ -148,28 +155,39 @@ export const AddProjectModal = observer(function AddProjectModal({
     (!requiresGitInitialization || pickState.initGitRepository);
 
   const handleSubmit = async () => {
+    let projectId: string | undefined;
+
     try {
       if (strategy === 'local') {
         const project = await rpc.projects.getLocalProjectByPath(pickState.path);
         if (project) {
-          navigate('project', { projectId: project.id });
-          onClose();
-          return;
+          projectId = project.id;
         }
       }
-      if (strategy === 'ssh') {
+      if (strategy === 'ssh' && !projectId) {
         const project = await rpc.projects.getSshProjectByPath(
           pickState.path,
           selectedConnectionId!
         );
         if (project) {
-          navigate('project', { projectId: project.id });
-          onClose();
-          return;
+          projectId = project.id;
         }
       }
     } catch (e) {
       log.error(e);
+    }
+
+    // If project already exists, add to workspace if specified
+    if (projectId) {
+      if (workspaceId) {
+        const store = workspaceManagerStore.getWorkspace(workspaceId);
+        if (store) {
+          await store.addProject(projectId);
+        }
+      }
+      navigate('project', { projectId });
+      onClose();
+      return;
     }
 
     const id = crypto.randomUUID();
@@ -218,6 +236,15 @@ export const AddProjectModal = observer(function AddProjectModal({
         );
         break;
     }
+
+    // Add to workspace if specified
+    if (workspaceId) {
+      const store = workspaceManagerStore.getWorkspace(workspaceId);
+      if (store) {
+        await store.addProject(id);
+      }
+    }
+
     onClose();
     navigate('project', { projectId: id });
   };

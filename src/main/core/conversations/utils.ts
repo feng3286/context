@@ -10,7 +10,6 @@ export function mapConversationRowToConversation(
     id: row.id,
     title: row.title,
     taskId: row.taskId,
-    projectId: row.projectId,
     providerId: row.provider as AgentProviderId,
     autoApprove: row.config ? JSON.parse(row.config).autoApprove : undefined,
     resume: resume,

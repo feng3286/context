@@ -4,7 +4,7 @@ import { Conversation, CreateConversationParams } from '@shared/conversations';
 import { db } from '@main/db/client';
 import { conversations } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
-import { resolveTask } from '../projects/utils';
+import { resolveTaskByTaskId } from '../projects/utils';
 import { mapConversationRowToConversation } from './utils';
 
 export async function createConversation(params: CreateConversationParams): Promise<Conversation> {
@@ -24,7 +24,6 @@ export async function createConversation(params: CreateConversationParams): Prom
     .insert(conversations)
     .values({
       id,
-      projectId: params.projectId,
       taskId: params.taskId,
       title: params.title,
       provider: params.provider,
@@ -34,7 +33,7 @@ export async function createConversation(params: CreateConversationParams): Prom
     })
     .returning();
 
-  const task = resolveTask(params.projectId, params.taskId);
+  const task = resolveTaskByTaskId(params.taskId);
   if (!task) {
     throw new Error('Task not found');
   }
@@ -47,10 +46,10 @@ export async function createConversation(params: CreateConversationParams): Prom
     false,
     params.initialPrompt
   );
+
   capture('conversation_created', {
     provider: params.provider,
     is_first_in_task: existingConversation === undefined,
-    project_id: params.projectId,
     task_id: params.taskId,
     conversation_id: id,
   });

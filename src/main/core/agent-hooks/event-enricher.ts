@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { AgentEvent } from '@shared/events/agentEvents';
 import { parsePtyId } from '@shared/ptyId';
 import { db } from '@main/db/client';
-import { conversations } from '@main/db/schema';
+import { conversations, tasks } from '@main/db/schema';
 import type { RawHookRequest } from './hook-server';
 
 function normalizePayload(
@@ -33,8 +33,9 @@ export async function enrichEvent(raw: RawHookRequest): Promise<AgentEvent> {
   }
 
   const [convRows] = await db
-    .select({ taskId: conversations.taskId, projectId: conversations.projectId })
+    .select({ taskId: conversations.taskId, projectId: tasks.projectId })
     .from(conversations)
+    .innerJoin(tasks, eq(conversations.taskId, tasks.id))
     .where(eq(conversations.id, parsed.conversationId))
     .limit(1);
 
@@ -47,7 +48,7 @@ export async function enrichEvent(raw: RawHookRequest): Promise<AgentEvent> {
     type: raw.type as AgentEvent['type'],
     ptyId: raw.ptyId,
     providerId: parsed.providerId,
-    projectId,
+    projectId: projectId ?? undefined,
     conversationId: parsed.conversationId,
     taskId,
     timestamp: Date.now(),

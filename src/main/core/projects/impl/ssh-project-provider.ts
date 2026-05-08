@@ -169,14 +169,16 @@ export class SshProjectProvider implements ProjectProvider {
   async provisionTask(
     task: Task,
     conversations: Conversation[],
-    terminals: Terminal[]
+    terminals: Terminal[],
+    workDir?: string,
+    _taskBaseDir?: string
   ): Promise<Result<TaskProvider, ProvisionTaskError>> {
     const existing = this.tasks.get(task.id);
     if (existing) return ok(existing);
     if (this.provisioningTasks.has(task.id)) return this.provisioningTasks.get(task.id)!;
 
     const promise = withTimeout(
-      this.doProvisionTask(task, conversations, terminals),
+      this.doProvisionTask(task, conversations, terminals, workDir),
       TASK_TIMEOUT_MS
     )
       .then((taskEnv) => {
@@ -202,7 +204,8 @@ export class SshProjectProvider implements ProjectProvider {
   private async doProvisionTask(
     task: Task,
     conversations: Conversation[],
-    terminals: Terminal[]
+    terminals: Terminal[],
+    workDir?: string
   ): Promise<TaskProvider> {
     log.debug('SshProjectProvider: doProvisionTask START', {
       taskId: task.id,
@@ -218,17 +221,17 @@ export class SshProjectProvider implements ProjectProvider {
 
     const workspaceId = workspaceKey(task.taskBranch);
     const workspace = await this.workspaceRegistry.acquire(workspaceId, async () => {
-      const workDir = await this.resolveTaskWorkDir(task);
-      const workspaceFs = new SshFileSystem(this.proxy, workDir);
+      const resolvedWorkDir = await this.resolveTaskWorkDir(task, workDir);
+      const workspaceFs = new SshFileSystem(this.proxy, resolvedWorkDir);
       const projectSettings = await this.settings.get();
       const defaultBranch = await this.settings.getDefaultBranch();
       const bootstrapTaskEnvVars = getTaskEnvVars({
         taskId: task.id,
         taskName: task.name,
-        taskPath: workDir,
+        taskPath: resolvedWorkDir,
         projectPath: this.project.path,
         defaultBranch,
-        portSeed: workDir,
+        portSeed: resolvedWorkDir,
       });
       const tmuxEnabled = projectSettings.tmux ?? false;
       const taskLevelSettings = await getEffectiveTaskSettings({
@@ -240,9 +243,8 @@ export class SshProjectProvider implements ProjectProvider {
       const proxy = this.proxy;
       const exec = getSshExec(proxy);
       const workspaceTerminals = new SshTerminalProvider({
-        projectId: this.project.id,
-        scopeId: workspaceId,
-        taskPath: workDir,
+        taskWorkDir: resolvedWorkDir,
+        taskId: workspaceId,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
@@ -250,16 +252,15 @@ export class SshProjectProvider implements ProjectProvider {
         taskEnvVars: bootstrapTaskEnvVars,
       });
       const lifecycleService = new WorkspaceLifecycleService({
-        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
       const workspaceGitExec = getGitSshExec(proxy, () => githubConnectionService.getToken());
       const createdWorkspace: Workspace = {
         id: workspaceId,
-        path: workDir,
+        path: resolvedWorkDir,
         fs: workspaceFs,
-        git: new GitService(workDir, workspaceGitExec, workspaceFs, false),
+        git: new GitService(resolvedWorkDir, workspaceGitExec, workspaceFs, false),
         settings: this.settings,
         lifecycleService,
       };
@@ -308,8 +309,7 @@ export class SshProjectProvider implements ProjectProvider {
       const exec = getSshExec(proxy);
 
       const conversationProvider = new SshConversationProvider({
-        projectId: this.project.id,
-        taskPath: workspace.path,
+        taskWorkDir: workspace.path,
         taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
@@ -319,9 +319,8 @@ export class SshProjectProvider implements ProjectProvider {
       });
 
       const terminalProvider = new SshTerminalProvider({
-        projectId: this.project.id,
-        scopeId: task.id,
-        taskPath: workspace.path,
+        taskWorkDir: workspace.path,
+        taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
@@ -427,6 +426,43 @@ export class SshProjectProvider implements ProjectProvider {
     return this.workspaceRegistry.get(workspaceId);
   }
 
+  async ensureWorkspace(workspaceId: string, worktreePath: string): Promise<Workspace> {
+    const existing = this.workspaceRegistry.get(workspaceId);
+    if (existing) {
+      return existing;
+    }
+
+    return this.workspaceRegistry.acquire(workspaceId, async () => {
+      const workspaceFs = new SshFileSystem(this.proxy, worktreePath);
+      const projectSettings = await this.settings.get();
+      const exec = getSshExec(this.proxy);
+      const workspaceTerminals = new SshTerminalProvider({
+        taskWorkDir: worktreePath,
+        taskId: workspaceId,
+        tmux: projectSettings.tmux ?? false,
+        shellSetup: projectSettings.shellSetup,
+        exec,
+        proxy: this.proxy,
+        taskEnvVars: {},
+      });
+      const lifecycleService = new WorkspaceLifecycleService({
+        workspaceId,
+        terminals: workspaceTerminals,
+      });
+      const workspaceGitExec = getGitSshExec(this.proxy, () => githubConnectionService.getToken());
+      const createdWorkspace: Workspace = {
+        id: workspaceId,
+        path: worktreePath,
+        fs: workspaceFs,
+        git: new GitService(worktreePath, workspaceGitExec, workspaceFs, false),
+        settings: this.settings,
+        lifecycleService,
+      };
+
+      return createdWorkspace;
+    });
+  }
+
   private async doTeardownTask(task: TaskProvider): Promise<void> {
     const wsId = workspaceKey(task.taskBranch);
     const workspace = this.workspaceRegistry.get(wsId);
@@ -486,6 +522,10 @@ export class SshProjectProvider implements ProjectProvider {
     if (worktreePath) {
       await this.worktreeService.removeWorktree(worktreePath);
     }
+  }
+
+  async removeWorktreeAtPath(worktreePath: string): Promise<void> {
+    await this.worktreeService.removeWorktree(worktreePath);
   }
 
   async fetch(): Promise<Result<void, FetchError>> {
@@ -565,7 +605,7 @@ export class SshProjectProvider implements ProjectProvider {
     }
   }
 
-  private async resolveTaskWorkDir(task: Task): Promise<string> {
+  private async resolveTaskWorkDir(task: Task, taskWorkDir?: string): Promise<string> {
     if (!task.taskBranch) {
       return this.project.path;
     }
@@ -583,9 +623,14 @@ export class SshProjectProvider implements ProjectProvider {
       return result.data;
     }
 
+    // Compute worktree path: {taskWorkDir}/{projectName}/
+    // Use provided taskWorkDir or fall back to task.workDir
+    const effectiveTaskWorkDir = taskWorkDir ?? task.workDir;
     const result = await this.worktreeService.checkoutBranchWorktree(
       task.sourceBranch,
-      task.taskBranch
+      task.taskBranch,
+      effectiveTaskWorkDir,
+      this.project.name
     );
     if (!result.success) {
       throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);

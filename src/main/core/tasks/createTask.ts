@@ -1,4 +1,5 @@
-import { sql } from 'drizzle-orm';
+import path from 'node:path';
+import { eq, sql } from 'drizzle-orm';
 import { resolveAgentAutoApprove } from '@shared/agent-auto-approve-defaults';
 import { err, ok, Result } from '@shared/result';
 import type {
@@ -8,6 +9,7 @@ import type {
   CreateTaskWarning,
   TaskLifecycleStatus,
 } from '@shared/tasks';
+import { workspaceKey } from '@shared/workspace-key';
 import { projectManager } from '@main/core/projects/project-manager';
 import { db } from '@main/db/client';
 import { tasks } from '@main/db/schema';
@@ -17,6 +19,7 @@ import type { ProvisionTaskError } from '../projects/project-provider';
 import { prQueryService } from '../pull-requests/pr-query-service';
 import { appSettingsService } from '../settings/settings-service';
 import { mapTaskRowToTask } from './core';
+import { setTaskProjects } from './operations/setTaskProjects';
 import { resolveTaskBranchName } from './resolveTaskBranchName';
 import { toStoredBranch } from './stored-branch';
 
@@ -210,10 +213,26 @@ export async function createTask(
 
   const task = mapTaskRowToTask(taskRow, prs);
 
+  // Set task-project associations if projectIds provided
+  if (params.projectIds && params.projectIds.length > 0) {
+    await setTaskProjects(params.id, params.projectIds);
+  }
+
   const provisionResult = await project.provisionTask(task, [], []);
   if (!provisionResult.success) {
     return err(mapProvisionError(provisionResult.error));
   }
+
+  // Save workDir to database for reliable cleanup later
+  // Get the actual worktree path from the workspace registry
+  if (task.taskBranch) {
+    const wsId = workspaceKey(task.taskBranch);
+    const workDir = project.getWorkspace(wsId)?.path;
+    if (workDir) {
+      await db.update(tasks).set({ workDir }).where(eq(tasks.id, params.id));
+    }
+  }
+
   capture('task_provisioned', {
     project_id: params.projectId,
     task_id: params.id,

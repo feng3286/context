@@ -4,7 +4,7 @@ import type { AgentSessionConfig } from '@shared/agent-session';
 import { Conversation } from '@shared/conversations';
 import { agentSessionExitedChannel } from '@shared/events/agentEvents';
 import { makePtyId } from '@shared/ptyId';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeConversationSessionId } from '@shared/ptySessionId';
 import { agentHookService } from '@main/core/agent-hooks/agent-hook-service';
 import { wireAgentClassifier } from '@main/core/agent-hooks/classifier-wiring';
 import { claudeTrustService } from '@main/core/agent-hooks/claude-trust-service';
@@ -32,8 +32,7 @@ export class LocalConversationProvider implements ConversationProvider {
   private sessions = new Map<string, Pty>();
   private knownSessionIds = new Set<string>();
   private respawnCounts = new Map<string, number>();
-  private readonly projectId: string;
-  private readonly taskPath: string;
+  private readonly taskWorkDir: string;
   private readonly taskId: string;
   private readonly tmux: boolean;
   private readonly shellSetup?: string;
@@ -43,30 +42,27 @@ export class LocalConversationProvider implements ConversationProvider {
   private readonly preparedHookProviders = new Map<string, boolean>();
 
   constructor({
-    projectId,
-    taskPath,
+    taskWorkDir,
     taskId,
     tmux = false,
     shellSetup,
     exec,
     taskEnvVars = {},
   }: {
-    projectId: string;
-    taskPath: string;
+    taskWorkDir: string;
     taskId: string;
     tmux?: boolean;
     shellSetup?: string;
     exec: ExecFn;
     taskEnvVars?: Record<string, string>;
   }) {
-    this.projectId = projectId;
-    this.taskPath = taskPath;
+    this.taskWorkDir = taskWorkDir;
     this.taskId = taskId;
     this.tmux = tmux;
     this.shellSetup = shellSetup;
     this.exec = exec;
     this.taskEnvVars = taskEnvVars;
-    this.hookConfigWriter = new HookConfigWriter(new LocalFileSystem(taskPath), exec);
+    this.hookConfigWriter = new HookConfigWriter(new LocalFileSystem(taskWorkDir), exec);
   }
 
   async startSession(
@@ -75,17 +71,13 @@ export class LocalConversationProvider implements ConversationProvider {
     isResuming: boolean = false,
     initialPrompt?: string
   ): Promise<void> {
-    const sessionId = makePtySessionId(
-      conversation.projectId,
-      conversation.taskId,
-      conversation.id
-    );
+    const sessionId = makeConversationSessionId(this.taskId, conversation.id);
     this.knownSessionIds.add(sessionId);
     if (this.sessions.has(sessionId)) return;
 
     await claudeTrustService.maybeAutoTrustLocal({
       providerId: conversation.providerId,
-      cwd: this.taskPath,
+      cwd: this.taskWorkDir,
       homedir: homedir(),
     });
     await this.prepareHookConfig(conversation.providerId);
@@ -106,7 +98,7 @@ export class LocalConversationProvider implements ConversationProvider {
       providerId: conversation.providerId,
       command,
       args,
-      cwd: this.taskPath,
+      cwd: this.taskWorkDir,
       shellSetup: this.shellSetup,
       tmuxSessionName,
       autoApprove: conversation.autoApprove ?? false,
@@ -122,7 +114,7 @@ export class LocalConversationProvider implements ConversationProvider {
       id: sessionId,
       command: spawnParams.command,
       args: spawnParams.args,
-      cwd: this.taskPath,
+      cwd: this.taskWorkDir,
       env: {
         ...buildAgentEnv({
           hook: port > 0 ? { port, ptyId, token } : undefined,
@@ -141,7 +133,7 @@ export class LocalConversationProvider implements ConversationProvider {
       wireAgentClassifier({
         pty,
         providerId: conversation.providerId,
-        projectId: conversation.projectId,
+        projectId: '',
         taskId: conversation.taskId,
         conversationId: conversation.id,
       });
@@ -154,13 +146,11 @@ export class LocalConversationProvider implements ConversationProvider {
       capture('agent_run_finished', {
         provider: conversation.providerId,
         exit_code: typeof exitCode === 'number' ? exitCode : -1,
-        project_id: conversation.projectId,
         task_id: conversation.taskId,
         conversation_id: conversation.id,
       });
       events.emit(agentSessionExitedChannel, {
         sessionId,
-        projectId: conversation.projectId,
         conversationId: conversation.id,
         taskId: conversation.taskId,
         exitCode,
@@ -195,7 +185,6 @@ export class LocalConversationProvider implements ConversationProvider {
     this.sessions.set(sessionId, pty);
     capture('agent_run_started', {
       provider: conversation.providerId,
-      project_id: conversation.projectId,
       task_id: conversation.taskId,
       conversation_id: conversation.id,
     });
@@ -218,14 +207,14 @@ export class LocalConversationProvider implements ConversationProvider {
     } catch (error) {
       log.warn('LocalConversationProvider: failed to prepare hook config', {
         providerId,
-        taskPath: this.taskPath,
+        taskWorkDir: this.taskWorkDir,
         error: String(error),
       });
     }
   }
 
   async stopSession(conversationId: string): Promise<void> {
-    const sessionId = makePtySessionId(this.projectId, this.taskId, conversationId);
+    const sessionId = makeConversationSessionId(this.taskId, conversationId);
     this.knownSessionIds.delete(sessionId);
     const pty = this.sessions.get(sessionId);
     if (pty) {

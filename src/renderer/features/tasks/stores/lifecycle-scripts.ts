@@ -1,6 +1,6 @@
 import { action, computed, makeObservable, observable, onBecomeObserved, runInAction } from 'mobx';
 import { ptyExitChannel } from '@shared/events/ptyEvents';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeTerminalSessionId } from '@shared/ptySessionId';
 import { createScriptTerminalId } from '@shared/terminals';
 import { events, rpc } from '@renderer/lib/ipc';
 import { PtySession } from '@renderer/lib/pty/pty-session';
@@ -30,7 +30,7 @@ export class LifecycleScriptStore {
 
   constructor(data: LifecycleScriptData, projectId: string, workspaceId: string) {
     this.data = data;
-    this.session = new PtySession(makePtySessionId(projectId, workspaceId, data.id));
+    this.session = new PtySession(makeTerminalSessionId(workspaceId, data.id));
     this.offPtyExit = events.on(ptyExitChannel, () => this.markExited(), this.session.sessionId);
     makeObservable(this, {
       data: observable,
@@ -144,8 +144,7 @@ export class LifecycleScriptsStore implements TabViewProvider<LifecycleScriptSto
     const resolved = await Promise.all(
       entries.map(async (entry) => {
         const id = await createScriptTerminalId({
-          projectId: this.projectId,
-          scopeId: this.workspaceId,
+          taskId: this.workspaceId,
           type: entry.type,
           script: entry.command,
         });

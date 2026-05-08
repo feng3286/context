@@ -2,38 +2,28 @@ import { createHash } from './utils';
 
 export type Terminal = {
   id: string;
-  projectId: string;
-  taskId: string;
+  taskId: string; // Only taskId binding - terminal belongs to task, not specific project
   ssh?: boolean;
   name: string;
 };
 
 export type CreateTerminalParams = {
   id: string;
-  projectId: string;
-  taskId: string;
+  taskId: string; // Only taskId - terminal binds to task, not project
   name: string;
   initialSize?: { cols: number; rows: number };
 };
 
 export async function createScriptTerminalId({
-  projectId,
-  scopeId,
   taskId,
   type,
   script,
 }: {
-  projectId: string;
-  scopeId?: string;
-  taskId?: string;
+  taskId: string;
   type: 'setup' | 'run' | 'teardown';
   script: string;
 }) {
-  const resolvedScopeId = scopeId ?? taskId;
-  if (!resolvedScopeId) {
-    throw new Error('createScriptTerminalId requires scopeId');
-  }
-  const key = `${projectId}::${resolvedScopeId}::${type}::${script}`;
+  const key = `${taskId}::${type}::${script}`;
   const hash = await createHash(key);
   return hash.slice(0, 32);
 }

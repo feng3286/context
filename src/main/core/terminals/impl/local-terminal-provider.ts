@@ -1,5 +1,5 @@
 import type { GeneralSessionConfig } from '@shared/general-session';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeTerminalSessionId } from '@shared/ptySessionId';
 import { Terminal } from '@shared/terminals';
 import { spawnLocalPty } from '@main/core/pty/local-pty';
 import { Pty } from '@main/core/pty/pty';
@@ -26,34 +26,30 @@ export class LocalTerminalProvider implements TerminalProvider {
   private sessions = new Map<string, Pty>();
   private knownSessionIds = new Set<string>();
   private respawnCounts = new Map<string, number>();
-  private readonly projectId: string;
-  private readonly scopeId: string;
-  private readonly taskPath: string;
+  private readonly taskWorkDir: string;
+  private readonly taskId: string;
   private readonly tmux: boolean;
   private readonly shellSetup?: string;
   private readonly exec: ExecFn;
   private readonly taskEnvVars: Record<string, string>;
 
   constructor({
-    projectId,
-    scopeId,
-    taskPath,
+    taskWorkDir,
+    taskId,
     tmux = false,
     shellSetup,
     exec,
     taskEnvVars = {},
   }: {
-    projectId: string;
-    scopeId: string;
-    taskPath: string;
+    taskWorkDir: string;
+    taskId: string;
     tmux?: boolean;
     shellSetup?: string;
     exec: ExecFn;
     taskEnvVars?: Record<string, string>;
   }) {
-    this.projectId = projectId;
-    this.scopeId = scopeId;
-    this.taskPath = taskPath;
+    this.taskWorkDir = taskWorkDir;
+    this.taskId = taskId;
     this.tmux = tmux;
     this.shellSetup = shellSetup;
     this.exec = exec;
@@ -98,13 +94,13 @@ export class LocalTerminalProvider implements TerminalProvider {
     command: { command: string; args: string[] } | undefined,
     policy: SpawnPolicy
   ): Promise<void> {
-    const sessionId = makePtySessionId(terminal.projectId, terminal.taskId, terminal.id);
+    const sessionId = makeTerminalSessionId(terminal.taskId, terminal.id);
     this.knownSessionIds.add(sessionId);
     if (this.sessions.has(sessionId)) return;
 
     const cfg: GeneralSessionConfig = {
-      taskId: this.scopeId,
-      cwd: this.taskPath,
+      taskId: this.taskId,
+      cwd: this.taskWorkDir,
       shellSetup: this.shellSetup,
       tmuxSessionName: this.tmux ? makeTmuxSessionName(sessionId) : undefined,
       command: command?.command,
@@ -116,14 +112,14 @@ export class LocalTerminalProvider implements TerminalProvider {
       id: sessionId,
       command: params.command,
       args: params.args,
-      cwd: this.taskPath,
+      cwd: this.taskWorkDir,
       env: { ...buildTerminalEnv(), ...this.taskEnvVars },
       cols: initialSize.cols,
       rows: initialSize.rows,
     });
 
     if (policy.watchDevServer) {
-      wireTerminalDevServerWatcher({ pty, scopeId: this.scopeId, terminalId: terminal.id });
+      wireTerminalDevServerWatcher({ pty, scopeId: this.taskId, terminalId: terminal.id });
     }
 
     pty.onExit(() => {
@@ -163,7 +159,7 @@ export class LocalTerminalProvider implements TerminalProvider {
   }
 
   async killTerminal(terminalId: string): Promise<void> {
-    const sessionId = makePtySessionId(this.projectId, this.scopeId, terminalId);
+    const sessionId = makeTerminalSessionId(this.taskId, terminalId);
     this.knownSessionIds.delete(sessionId);
     const pty = this.sessions.get(sessionId);
     if (pty) {

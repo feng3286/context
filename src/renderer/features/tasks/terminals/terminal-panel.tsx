@@ -59,7 +59,6 @@ export const TerminalsPanel = observer(function TerminalsPanel() {
     try {
       await terminalMgr.createTerminal({
         id,
-        projectId,
         taskId,
         name,
         initialSize: getTerminalsPaneSize(),
@@ -161,7 +160,6 @@ export const TerminalsPanel = observer(function TerminalsPanel() {
   const tabBar =
     mode === 'terminals' ? (
       <TerminalsTabs
-        projectId={projectId}
         taskId={taskId}
         terminalTabView={terminalTabView}
         terminalMgr={terminalMgr}

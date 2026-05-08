@@ -1,5 +1,5 @@
 import { ptyExitChannel } from '@shared/events/ptyEvents';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeTerminalSessionId } from '@shared/ptySessionId';
 import { createScriptTerminalId } from '@shared/terminals';
 import { events } from '@main/lib/events';
 import { ptySessionRegistry } from '../pty/pty-session-registry';
@@ -14,21 +14,17 @@ type LifecycleScript = {
 };
 
 export class WorkspaceLifecycleService {
-  private readonly projectId: string;
   private readonly workspaceId: string;
   private readonly terminals: TerminalProvider;
   private disposed = false;
 
   constructor({
-    projectId,
     workspaceId,
     terminals,
   }: {
-    projectId: string;
     workspaceId: string;
     terminals: TerminalProvider;
   }) {
-    this.projectId = projectId;
     this.workspaceId = workspaceId;
     this.terminals = terminals;
   }
@@ -38,12 +34,11 @@ export class WorkspaceLifecycleService {
     sessionId: string;
   }> {
     const terminalId = await createScriptTerminalId({
-      projectId: this.projectId,
-      scopeId: this.workspaceId,
+      taskId: this.workspaceId,
       type: script.type,
       script: script.script,
     });
-    const sessionId = makePtySessionId(this.projectId, this.workspaceId, terminalId);
+    const sessionId = makeTerminalSessionId(this.workspaceId, terminalId);
     return { terminalId, sessionId };
   }
 
@@ -57,7 +52,6 @@ export class WorkspaceLifecycleService {
     await this.terminals.spawnLifecycleScript({
       terminal: {
         id: terminalId,
-        projectId: this.projectId,
         taskId: this.workspaceId,
         name: script.type,
       },

@@ -6,6 +6,7 @@ import type { RepositoryStore } from '@renderer/features/projects/stores/reposit
 import { ConversationManagerStore } from '@renderer/features/tasks/conversations/conversation-manager';
 import { DraftCommentsStore } from '@renderer/features/tasks/diff-view/stores/draft-comments-store';
 import { DevServerStore } from '@renderer/features/tasks/stores/dev-server-store';
+import { ProjectContextStore } from '@renderer/features/tasks/stores/project-context-store';
 import { TaskViewStore } from '@renderer/features/tasks/stores/task-view';
 import type { WorkspaceStore } from '@renderer/features/tasks/stores/workspace';
 import { workspaceRegistry } from '@renderer/features/tasks/stores/workspace-registry';
@@ -45,6 +46,8 @@ export class ProvisionedTask {
   readonly _taskData: Task;
   readonly path: string;
   readonly workspaceId: string;
+  readonly isMultiProject: boolean;
+  readonly projectContexts?: ProjectContextStore;
 
   private readonly _taskStore: TaskStore;
   private _snapshotDisposer: (() => void) | null = null;
@@ -70,6 +73,9 @@ export class ProvisionedTask {
     this.workspaceId = workspaceKey(taskData.taskBranch);
     this.repositoryStore = repositoryStore;
 
+    // Check if this is a multi-project task (workspace task)
+    this.isMultiProject = !!taskData.workspaceId;
+
     this.workspace = workspaceRegistry.acquire(
       taskData.projectId,
       this.workspaceId,
@@ -77,9 +83,21 @@ export class ProvisionedTask {
       repositoryStore
     );
     this.devServers = new DevServerStore(taskData.id, this.workspaceId);
-    this.conversations = new ConversationManagerStore(taskData.projectId, taskData.id);
-    this.terminals = new TerminalManagerStore(taskData.projectId, taskData.id);
+    this.conversations = new ConversationManagerStore(taskData.id);
+    this.terminals = new TerminalManagerStore(taskData.id);
     this.draftComments = new DraftCommentsStore(taskData.id);
+
+    // For multi-project tasks, create ProjectContextStore
+    if (this.isMultiProject) {
+      this.projectContexts = new ProjectContextStore();
+      // Load project contexts asynchronously
+      this.projectContexts
+        .loadProjectContexts(taskData.id, this.workspaceId, repositoryStore)
+        .catch((e) => {
+          log.error('Failed to load project contexts', { taskId: taskData.id, error: String(e) });
+        });
+    }
+
     this.taskView = new TaskViewStore(
       {
         conversations: this.conversations,
@@ -99,6 +117,7 @@ export class ProvisionedTask {
       terminals: false,
       draftComments: false,
       taskView: false,
+      projectContexts: false,
       /** Owned by TaskStore.data — do not attach a second observable tree here */
       _taskData: false,
     });
@@ -108,6 +127,7 @@ export class ProvisionedTask {
 
   activate(): void {
     workspaceRegistry.activate(this._taskData.projectId, this.workspaceId);
+    this.projectContexts?.activate();
   }
 
   dispose(): void {
@@ -118,6 +138,7 @@ export class ProvisionedTask {
     this.draftComments.dispose();
     this.taskView.dispose();
     this.conversations.dispose();
+    this.projectContexts?.dispose();
     for (const term of this.terminals.terminals.values()) {
       term.dispose();
     }

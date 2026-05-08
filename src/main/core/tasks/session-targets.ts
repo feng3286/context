@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '@main/db/client';
-import { conversations, terminals } from '@main/db/schema';
+import { conversations, tasks, terminals } from '@main/db/schema';
 
 export type TaskSessionLeafIds = {
   conversationIds: string[];
@@ -15,7 +15,7 @@ export async function getTaskSessionLeafIds(
     db
       .select({ id: conversations.id })
       .from(conversations)
-      .where(and(eq(conversations.projectId, projectId), eq(conversations.taskId, taskId))),
+      .where(eq(conversations.taskId, taskId)),
     db
       .select({ id: terminals.id })
       .from(terminals)

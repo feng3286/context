@@ -39,9 +39,9 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
   const handleCreate = () =>
     showCreateConversationModal({
       connectionId: remoteConnectionId,
-      projectId,
       taskId,
-      onSuccess: ({ conversationId }) => {
+      onSuccess: (result) => {
+        const { conversationId } = result as { conversationId: string };
         conversationTabs.setActiveTab(conversationId);
         provisioned.taskView.setFocusedRegion('main');
       },

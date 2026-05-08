@@ -1,7 +1,20 @@
 import { projectManager } from './project-manager';
+import type { TaskProvider } from './project-provider';
 
 export function resolveTask(projectId: string, taskId: string) {
   return projectManager.getProject(projectId)?.getTask(taskId) ?? null;
+}
+
+/**
+ * Resolve a task by taskId across all projects.
+ * Used for multi-project tasks where task is not bound to a specific projectId.
+ */
+export function resolveTaskByTaskId(taskId: string): TaskProvider | undefined {
+  for (const project of projectManager.getAllProjects()) {
+    const task = project.getTask(taskId);
+    if (task) return task;
+  }
+  return undefined;
 }
 
 export function resolveWorkspace(projectId: string, workspaceId: string) {

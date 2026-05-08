@@ -1,10 +1,12 @@
-import { FolderPlus, Plus } from 'lucide-react';
+import { FolderPlus, Plus, Settings, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, type ReactNode } from 'react';
 import type { Project } from '@shared/projects';
+import { SidebarItemMiniButton } from '@renderer/features/sidebar/sidebar-primitives';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { useNavigate, useParams } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
+import { workspaceManagerStore } from './stores/workspace-manager';
 import { getWorkspaceStore } from './stores/workspace-selectors';
 import { WorkspaceStoreClass } from './stores/workspace-store';
 
@@ -42,7 +44,6 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
 
   useEffect(() => {
     if (store && store.status === 'unloaded') {
-      // Load projects for this workspace
       (store as WorkspaceStoreClass).load();
     }
   }, [store]);
@@ -59,8 +60,18 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
     return <div className="p-6 text-red-500">Error: {store.error}</div>;
   }
 
-  // Only access projects when status is ready
   const projects = store.status === 'ready' ? store.projects : [];
+
+  const handleDeleteWorkspace = async () => {
+    if (confirm('Are you sure you want to delete this workspace?')) {
+      await workspaceManagerStore.deleteWorkspace(workspaceId);
+      navigate('home');
+    }
+  };
+
+  const handleRemoveProject = async (projectId: string) => {
+    await (store as WorkspaceStoreClass).removeProject(projectId);
+  };
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
@@ -69,43 +80,62 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
         <h2 className="text-xl font-bold">{store.data.name}</h2>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => showAddProjectModal({})}
-            className="flex items-center gap-1 px-2 py-1 rounded text-sm border border-border hover:bg-background-1"
+            onClick={() => showAddProjectModal({ workspaceId })}
+            className="flex items-center gap-1 px-2 py-1 rounded text-sm border border-border hover:bg-background-tertiary-1"
           >
             <FolderPlus className="h-4 w-4" />
             Add Project
           </button>
           <button
-            onClick={() => showCreateTaskModal({ projectId: projects[0]?.id })}
+            onClick={() => showCreateTaskModal({ workspaceId })}
             className="flex items-center gap-1 px-2 py-1 rounded text-sm bg-primary text-primary-foreground"
+            disabled={projects.length === 0}
           >
             <Plus className="h-4 w-4" />
             New Task
           </button>
+          <SidebarItemMiniButton
+            onClick={() => void handleDeleteWorkspace()}
+            title="Delete workspace"
+          >
+            <Trash2 className="h-4 w-4" />
+          </SidebarItemMiniButton>
         </div>
       </div>
 
       {/* Projects List */}
       <div className="flex-1 p-4 overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">Projects</h3>
+        <h3 className="text-lg font-semibold mb-4">Projects ({projects.length})</h3>
         <div className="grid gap-2">
           {projects.map((project: Project) => (
-            <button
+            <div
               key={project.id}
-              onClick={() => navigate('project', { projectId: project.id })}
-              className="flex items-center justify-between p-3 rounded border border-border hover:bg-background-1"
+              className="flex items-center justify-between p-3 rounded border border-border hover:bg-background-tertiary-1"
             >
-              <div className="flex flex-col">
-                <span className="font-medium">{project.name}</span>
-                <span className="text-sm text-muted-foreground">{project.path}</span>
+              <button
+                onClick={() => navigate('project', { projectId: project.id })}
+                className="flex flex-col flex-1 min-w-0"
+              >
+                <span className="font-medium truncate">{project.name}</span>
+                <span className="text-sm text-muted-foreground truncate">{project.path}</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {project.type === 'ssh' ? 'SSH' : 'Local'}
+                </span>
+                <SidebarItemMiniButton
+                  onClick={() => void handleRemoveProject(project.id)}
+                  title="Remove project"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </SidebarItemMiniButton>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {project.type === 'ssh' ? 'SSH' : 'Local'}
-              </span>
-            </button>
+            </div>
           ))}
           {projects.length === 0 && (
-            <p className="text-muted-foreground">No projects in this workspace</p>
+            <p className="text-muted-foreground text-sm py-4 text-center">
+              No projects in this workspace. Add a project to start.
+            </p>
           )}
         </div>
       </div>

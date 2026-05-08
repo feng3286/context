@@ -12,14 +12,13 @@ import type {
 import { workspaceKey } from '@shared/workspace-key';
 import { projectManager } from '@main/core/projects/project-manager';
 import { db } from '@main/db/client';
-import { tasks } from '@main/db/schema';
+import { taskProjects, tasks } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 import { createConversation } from '../conversations/createConversation';
 import type { ProvisionTaskError } from '../projects/project-provider';
 import { prQueryService } from '../pull-requests/pr-query-service';
 import { appSettingsService } from '../settings/settings-service';
 import { mapTaskRowToTask } from './core';
-import { setTaskProjects } from './operations/setTaskProjects';
 import { resolveTaskBranchName } from './resolveTaskBranchName';
 import { toStoredBranch } from './stored-branch';
 
@@ -213,10 +212,16 @@ export async function createTask(
 
   const task = mapTaskRowToTask(taskRow, prs);
 
-  // Set task-project associations if projectIds provided
-  if (params.projectIds && params.projectIds.length > 0) {
-    await setTaskProjects(params.id, params.projectIds);
-  }
+  // Set task-project associations
+  const allProjectIds = params.projectIds && params.projectIds.length > 0
+    ? params.projectIds
+    : [params.projectId];
+  await db.insert(taskProjects).values(
+    allProjectIds.map((pid) => ({
+      taskId: params.id,
+      projectId: pid,
+    }))
+  );
 
   const provisionResult = await project.provisionTask(task, [], []);
   if (!provisionResult.success) {

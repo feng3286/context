@@ -38,6 +38,8 @@ export interface ActiveFile {
   modifiedRef?: GitObjectRef;
   /** Set only when group === 'pr'. Identifies the PR for store lookups. */
   prNumber?: number;
+  /** Which project this file belongs to. Used for multi-project tasks. */
+  projectId?: string;
 }
 
 export type TaskViewSnapshot = {

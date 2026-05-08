@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import type { CreateTerminalParams, Terminal } from '@shared/terminals';
 import { db } from '@main/db/client';
-import { terminals, tasks } from '@main/db/schema';
+import { tasks, terminals } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 import { resolveTaskByTaskId } from '../projects/utils';
 import { mapTerminalRowToTerminal } from './core';

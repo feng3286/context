@@ -5,7 +5,7 @@ import { gitRefChangedChannel } from '@shared/events/gitEvents';
 import type { FetchError } from '@shared/git';
 import { bareRefName } from '@shared/git-utils';
 import { LocalProject } from '@shared/projects';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeConversationSessionId, makeTerminalSessionId } from '@shared/ptySessionId';
 import { err, ok, type Result } from '@shared/result';
 import { getTaskEnvVars } from '@shared/task/envVars';
 import { Task, type TaskBootstrapStatus } from '@shared/tasks';
@@ -208,16 +208,14 @@ export class LocalProjectProvider implements ProjectProvider {
       const scripts = taskLevelSettings.scripts;
 
       const workspaceTerminals = new LocalTerminalProvider({
-        projectId: this.project.id,
-        scopeId: workspaceId,
-        taskPath: workDir,
+        taskWorkDir: workDir,
+        taskId: workspaceId,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
         taskEnvVars: bootstrapTaskEnvVars,
       });
       const lifecycleService = new WorkspaceLifecycleService({
-        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
@@ -284,8 +282,7 @@ export class LocalProjectProvider implements ProjectProvider {
       const shellSetup = taskLevelSettings.shellSetup ?? projectSettings.shellSetup;
 
       const conversationProvider = new LocalConversationProvider({
-        projectId: this.project.id,
-        taskPath: effectiveTaskPath,
+        taskWorkDir: effectiveTaskPath,
         taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
@@ -294,9 +291,8 @@ export class LocalProjectProvider implements ProjectProvider {
       });
 
       const terminalProvider = new LocalTerminalProvider({
-        projectId: this.project.id,
-        scopeId: task.id,
-        taskPath: workspace.path,
+        taskWorkDir: workspace.path,
+        taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
@@ -410,16 +406,14 @@ export class LocalProjectProvider implements ProjectProvider {
       const defaultBranch = await this.settings.getDefaultBranch();
 
       const workspaceTerminals = new LocalTerminalProvider({
-        projectId: this.project.id,
-        scopeId: workspaceId,
-        taskPath: worktreePath,
+        taskWorkDir: worktreePath,
+        taskId: workspaceId,
         tmux: projectSettings.tmux ?? false,
         shellSetup: projectSettings.shellSetup,
         exec,
         taskEnvVars: {},
       });
       const lifecycleService = new WorkspaceLifecycleService({
-        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
@@ -485,10 +479,11 @@ export class LocalProjectProvider implements ProjectProvider {
   }
 
   private async cleanupDetachedTmuxSessions(taskId: string): Promise<void> {
-    const { conversationIds, terminalIds } = await getTaskSessionLeafIds(this.project.id, taskId);
-    const sessionIds = [...conversationIds, ...terminalIds].map((leafId) =>
-      makePtySessionId(this.project.id, taskId, leafId)
-    );
+    const { conversationIds, terminalIds } = await getTaskSessionLeafIds(taskId);
+    const sessionIds = [
+      ...conversationIds.map((id) => makeConversationSessionId(taskId, id)),
+      ...terminalIds.map((id) => makeTerminalSessionId(taskId, id)),
+    ];
     await Promise.all(
       sessionIds.map((sessionId) => killTmuxSession(this.localExec, makeTmuxSessionName(sessionId)))
     );

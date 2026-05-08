@@ -1,6 +1,10 @@
 import { Loader2, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
+import {
+  getProjectStore,
+  projectDisplayName,
+} from '@renderer/features/projects/stores/project-selectors';
 import { ReorderList } from '@renderer/lib/components/reorder-list';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
 import { EditorTab } from '@renderer/lib/editor/types';
@@ -10,6 +14,17 @@ import { Separator } from '@renderer/lib/ui/separator';
 import { cn } from '@renderer/utils/utils';
 
 export type RichTab = EditorTab & { isDirty: boolean; bufferUri: string };
+
+function hasMultipleProjects(tabs: RichTab[]): boolean {
+  const seen = new Set<string>();
+  for (const tab of tabs) {
+    if (tab.projectId) {
+      seen.add(tab.projectId);
+      if (seen.size > 1) return true;
+    }
+  }
+  return false;
+}
 
 interface FileTabsProps {
   tabs: RichTab[];
@@ -32,6 +47,8 @@ export const FileTabs: React.FC<FileTabsProps> = ({
     return null;
   }
 
+  const showBadge = hasMultipleProjects(tabs);
+
   const handleReorder = (newTabs: RichTab[]) => {
     for (let toIdx = 0; toIdx < newTabs.length; toIdx++) {
       const fromIdx = tabs.findIndex((t) => t.tabId === newTabs[toIdx].tabId);
@@ -47,6 +64,7 @@ export const FileTabs: React.FC<FileTabsProps> = ({
       key={tab.tabId}
       tab={tab}
       isActive={tab.tabId === activeTabId}
+      showProjectBadge={showBadge}
       onClick={() => onTabClick(tab.tabId)}
       onDoubleClick={() => onPinTab(tab.tabId)}
       onClose={(e) => {
@@ -79,6 +97,7 @@ export const FileTabs: React.FC<FileTabsProps> = ({
 interface FileTabProps {
   tab: RichTab;
   isActive: boolean;
+  showProjectBadge: boolean;
   onClick: () => void;
   onDoubleClick: () => void;
   onClose: (e: React.MouseEvent) => void;
@@ -87,6 +106,7 @@ interface FileTabProps {
 const FileTab: React.FC<FileTabProps> = observer(function FileTab({
   tab,
   isActive,
+  showProjectBadge,
   onClick,
   onDoubleClick,
   onClose,
@@ -95,6 +115,11 @@ const FileTab: React.FC<FileTabProps> = observer(function FileTab({
   const isMonacoFile = tab.kind === 'text' || tab.kind === 'markdown' || tab.kind === 'svg';
   const modelStatus = useModelStatus(tab.bufferUri);
   const showSpinner = useDelayedBoolean(isMonacoFile && modelStatus === 'loading', 200);
+
+  const projectName =
+    showProjectBadge && tab.projectId
+      ? projectDisplayName(getProjectStore(tab.projectId))
+      : undefined;
 
   return (
     <>
@@ -119,6 +144,11 @@ const FileTab: React.FC<FileTabProps> = observer(function FileTab({
           <span className={cn('max-w-[200px] text-sm truncate p-1', tab.isPreview && 'italic')}>
             {fileName}
           </span>
+          {projectName && (
+            <span className="shrink-0 text-[10px] text-muted-foreground bg-background-2 rounded px-1 truncate max-w-[80px]">
+              {projectName}
+            </span>
+          )}
           <div className="relative size-5 flex items-center justify-center shrink-0">
             {tab.isDirty && (
               <div

@@ -60,14 +60,14 @@ export class ProjectContextStore {
     workspaceId: string,
     repositoryStore: RepositoryStore
   ): Promise<void> {
-    // Load project contexts from backend
     const contexts = await rpc.tasks.getTaskProjectContexts(taskId);
 
-    // Create ProjectContext for each project
     for (const context of contexts) {
       const projectContext = new ProjectContext(context, workspaceId, repositoryStore);
       this.projects.set(context.projectId, projectContext);
     }
+
+    this.activate();
   }
 
   setActiveProject(projectId: string | null): void {

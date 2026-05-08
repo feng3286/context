@@ -4,13 +4,8 @@ import { conversations } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 import { resolveTaskByTaskId } from '../projects/utils';
 
-export async function deleteConversation(
-  taskId: string,
-  conversationId: string
-): Promise<void> {
-  await db
-    .delete(conversations)
-    .where(eq(conversations.id, conversationId));
+export async function deleteConversation(taskId: string, conversationId: string): Promise<void> {
+  await db.delete(conversations).where(eq(conversations.id, conversationId));
 
   const task = resolveTaskByTaskId(taskId);
   await task?.conversations.stopSession(conversationId);

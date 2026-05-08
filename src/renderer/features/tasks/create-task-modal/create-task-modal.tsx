@@ -8,6 +8,7 @@ import {
   mountedProjectData,
 } from '@renderer/features/projects/stores/project-selectors';
 import { ProjectSelector } from '@renderer/features/tasks/create-task-modal/project-selector';
+import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
 import { WorkspaceStoreClass } from '@renderer/features/workspaces/stores/workspace-store';
@@ -259,6 +260,14 @@ export const CreateTaskModal = observer(function CreateTaskModal({
         const wsStore = getWorkspaceStore(workspaceId);
         if (wsStore) {
           await (wsStore as WorkspaceStoreClass).load();
+        }
+
+        // Refresh TaskManagerStore for each project so navigation finds the new task
+        for (const pid of selectedProjectIds) {
+          const taskManager = getTaskManagerStore(pid);
+          if (taskManager) {
+            await taskManager.reloadTasks();
+          }
         }
 
         // Navigate to first project's task view

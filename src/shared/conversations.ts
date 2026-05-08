@@ -2,7 +2,6 @@ import { AgentProviderId } from '@shared/agent-provider-registry';
 
 export type Conversation = {
   id: string;
-  projectId?: string; // Optional for multi-project tasks
   taskId: string;
   providerId: AgentProviderId;
   title: string;
@@ -17,7 +16,6 @@ export type RenameConversationParams = {
 
 export type CreateConversationParams = {
   id: string;
-  projectId?: string; // Optional for multi-project tasks
   taskId: string;
   provider: AgentProviderId;
   title: string;

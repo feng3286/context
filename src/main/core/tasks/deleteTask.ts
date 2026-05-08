@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
+import { and, eq } from 'drizzle-orm';
 import { projectManager } from '@main/core/projects/project-manager';
 import { viewStateService } from '@main/core/view-state/view-state-service';
 import { db } from '@main/db/client';
@@ -63,38 +63,41 @@ export async function deleteTask(projectId: string, taskId: string): Promise<voi
   // This ensures we delete the correct worktree even if the user changed
   // the defaultWorktreeDirectory setting after the task was created
 
-  // For multi-project tasks: delete worktrees from task_projects.worktreePath
-  if (taskProjectRows.length > 0) {
+  // For multi-project tasks: remove worktrees under task.workDir/{project.name}
+  if (taskProjectRows.length > 0 && task.workDir) {
     for (const row of taskProjectRows) {
-      if (row.worktreePath) {
-        const rowProject = projectManager.getProject(row.projectId);
-        if (rowProject) {
-          try {
-            await rowProject.removeWorktreeAtPath(row.worktreePath);
-            log.info('deleteTask: removed worktree', {
-              taskId,
-              projectId: row.projectId,
-              worktreePath: row.worktreePath,
-            });
-          } catch (e) {
-            log.warn('deleteTask: worktree removal failed, trying direct removal', {
-              taskId,
-              projectId: row.projectId,
-              worktreePath: row.worktreePath,
-              error: String(e),
-            });
-            // Fallback: try direct filesystem removal
-            await removeWorktreeDirectly(row.worktreePath);
-          }
-        } else {
-          // Project not in projectManager - try direct filesystem removal
-          log.info('deleteTask: project not in projectManager, using direct removal', {
+      const rowProject = projectManager.getProject(row.projectId);
+      // Look up project name for path construction (matches createMultiProjectTask)
+      const [projectRow] = await db
+        .select({ name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, row.projectId))
+        .limit(1);
+      const worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
+      if (rowProject) {
+        try {
+          await rowProject.removeWorktreeAtPath(worktreePath);
+          log.info('deleteTask: removed worktree', {
             taskId,
             projectId: row.projectId,
-            worktreePath: row.worktreePath,
+            worktreePath,
           });
-          await removeWorktreeDirectly(row.worktreePath);
+        } catch (e) {
+          log.warn('deleteTask: worktree removal failed, trying direct removal', {
+            taskId,
+            projectId: row.projectId,
+            worktreePath,
+            error: String(e),
+          });
+          await removeWorktreeDirectly(worktreePath);
         }
+      } else {
+        log.info('deleteTask: project not in projectManager, using direct removal', {
+          taskId,
+          projectId: row.projectId,
+          worktreePath,
+        });
+        await removeWorktreeDirectly(worktreePath);
       }
     }
 
@@ -134,7 +137,11 @@ export async function deleteTask(projectId: string, taskId: string): Promise<voi
           workDir,
         });
       } catch (e) {
-        log.warn('deleteTask: worktree removal failed, trying direct removal', { taskId, workDir, error: String(e) });
+        log.warn('deleteTask: worktree removal failed, trying direct removal', {
+          taskId,
+          workDir,
+          error: String(e),
+        });
         await removeWorktreeDirectly(workDir);
       }
     } else {

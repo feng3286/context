@@ -104,7 +104,6 @@ export const taskProjects = sqliteTable(
     projectId: text('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    worktreePath: text('worktree_path'), // Path to the worktree for this task-project pair
   },
   (table) => ({
     pk: primaryKey({ columns: [table.taskId, table.projectId] }),
@@ -294,7 +293,6 @@ export const conversations = sqliteTable(
   'conversations',
   {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }), // Optional for multi-project tasks
     taskId: text('task_id')
       .notNull()
       .references(() => tasks.id, { onDelete: 'cascade' }),

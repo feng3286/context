@@ -83,8 +83,8 @@ export class ProvisionedTask {
       repositoryStore
     );
     this.devServers = new DevServerStore(taskData.id, this.workspaceId);
-    this.conversations = new ConversationManagerStore(taskData.projectId, taskData.id);
-    this.terminals = new TerminalManagerStore(taskData.projectId, taskData.id);
+    this.conversations = new ConversationManagerStore(taskData.id);
+    this.terminals = new TerminalManagerStore(taskData.id);
     this.draftComments = new DraftCommentsStore(taskData.id);
 
     // For multi-project tasks, create ProjectContextStore
@@ -127,7 +127,7 @@ export class ProvisionedTask {
 
   activate(): void {
     workspaceRegistry.activate(this._taskData.projectId, this.workspaceId);
-    this.projectContexts?.activate();
+    // Note: projectContexts.activate() is now called by loadProjectContexts after loading
   }
 
   dispose(): void {

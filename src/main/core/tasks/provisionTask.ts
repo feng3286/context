@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { eq, sql } from 'drizzle-orm';
 import { workspaceKey } from '@shared/workspace-key';
 import { mapConversationRowToConversation } from '@main/core/conversations/utils';
@@ -5,7 +6,7 @@ import { projectManager } from '@main/core/projects/project-manager';
 import { formatProvisionTaskError } from '@main/core/projects/provision-task-error';
 import { mapTerminalRowToTerminal } from '@main/core/terminals/core';
 import { db } from '@main/db/client';
-import { conversations, taskProjects, tasks, terminals } from '@main/db/schema';
+import { conversations, projects, taskProjects, tasks, terminals } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 import { mapTaskRowToTask } from './core';
 
@@ -48,23 +49,24 @@ export async function provisionTask(taskId: string) {
     .where(eq(taskProjects.taskId, taskId));
 
   if (task.workspaceId) {
-    // Multi-project task: get worktree path for the primary project
-    const [taskProjectRow] = taskProjectRows;
-
-    // Use the stored worktree path for this project
-    workDir = taskProjectRow?.worktreePath ?? task.workDir;
+    // Multi-project task: worktree paths are computed as {task.workDir}/{project.name}
+    workDir = task.workDir;
     // For conversations, use the task base directory (parent of all worktrees)
     taskBaseDir = task.workDir;
 
     // Ensure workspaces are provisioned in ALL associated projects' providers
-    // Each project needs a workspace with the same workspaceId (from taskBranch)
-    // but pointing to that project's specific worktree path
     const workspaceId = workspaceKey(task.taskBranch);
     for (const row of taskProjectRows) {
       const rowProject = projectManager.getProject(row.projectId);
-      if (rowProject && row.worktreePath) {
-        // Ensure workspace exists in this project's provider
-        await rowProject.ensureWorkspace(workspaceId, row.worktreePath);
+      if (rowProject && task.workDir) {
+        // Compute worktree path: {task.workDir}/{project.name}
+        const [projectRow] = await db
+          .select({ name: projects.name })
+          .from(projects)
+          .where(eq(projects.id, row.projectId))
+          .limit(1);
+        const worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
+        await rowProject.ensureWorkspace(workspaceId, worktreePath);
       }
     }
   } else {

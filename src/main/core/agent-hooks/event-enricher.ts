@@ -33,13 +33,12 @@ export async function enrichEvent(raw: RawHookRequest): Promise<AgentEvent> {
   }
 
   const [convRows] = await db
-    .select({ taskId: conversations.taskId, projectId: conversations.projectId })
+    .select({ taskId: conversations.taskId })
     .from(conversations)
     .where(eq(conversations.id, parsed.conversationId))
     .limit(1);
 
   const taskId = convRows.taskId;
-  const projectId = convRows.projectId;
   const body = raw.body ? JSON.parse(raw.body) : {};
   const payload = normalizePayload(parsed.providerId, body);
 
@@ -47,7 +46,6 @@ export async function enrichEvent(raw: RawHookRequest): Promise<AgentEvent> {
     type: raw.type as AgentEvent['type'],
     ptyId: raw.ptyId,
     providerId: parsed.providerId,
-    projectId: projectId ?? undefined,
     conversationId: parsed.conversationId,
     taskId,
     timestamp: Date.now(),

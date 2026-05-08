@@ -175,6 +175,11 @@ export class TaskManagerStore {
     return this._loadPromise;
   }
 
+  reloadTasks(): Promise<void> {
+    this._loadPromise = null;
+    return this.loadTasks();
+  }
+
   async createTask(params: CreateTaskParams) {
     runInAction(() => {
       this.tasks.set(

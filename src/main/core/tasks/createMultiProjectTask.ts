@@ -66,9 +66,6 @@ export async function createMultiProjectTask(
 
   const task = mapTaskRowToTask(taskRow, []);
 
-  // Track worktree paths for each project
-  const worktreePaths: Map<string, string> = new Map();
-
   // Create branches and worktrees for each project
   for (const source of projectBranchSources) {
     const project = projectManager.getProject(source.projectId);
@@ -105,19 +102,13 @@ export async function createMultiProjectTask(
     if (!provisionResult.success) {
       return err(mapProvisionError(provisionResult.error.type));
     }
-
-    // Store the actual worktree path from the workspace registry
-    const wsId = workspaceKey(taskBranch);
-    const workspace = project.getWorkspace(wsId);
-    worktreePaths.set(source.projectId, workspace?.path ?? projectWorkDir);
   }
 
-  // Create task-project associations with worktree paths
+  // Create task-project associations
   await db.insert(taskProjects).values(
     projectBranchSources.map((source) => ({
       taskId: params.id,
       projectId: source.projectId,
-      worktreePath: worktreePaths.get(source.projectId) ?? null,
     }))
   );
 

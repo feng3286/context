@@ -12,9 +12,11 @@ import { MultiProjectFileTree } from './multi-project-file-tree';
 const FileTreeRow = observer(function FileTreeRow({
   node,
   style,
+  projectId,
 }: {
   node: FileNode;
   style: React.CSSProperties;
+  projectId: string;
 }) {
   const taskState = useProvisionedTask();
   const { taskView } = taskState;
@@ -33,14 +35,14 @@ const FileTreeRow = observer(function FileTreeRow({
     if (node.type === 'directory') {
       toggleExpand();
     } else {
-      editorView.openFilePreview(node.path);
+      editorView.openFilePreview(node.path, projectId);
     }
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (node.type === 'file') {
-      editorView.openFile(node.path);
+      editorView.openFile(node.path, projectId);
     }
   };
 
@@ -50,7 +52,7 @@ const FileTreeRow = observer(function FileTreeRow({
       if (node.type === 'directory') {
         toggleExpand();
       } else {
-        editorView.openFilePreview(node.path);
+        editorView.openFilePreview(node.path, projectId);
       }
     }
   };
@@ -132,6 +134,7 @@ export const EditorFileTree = observer(function EditorFileTree() {
   // 单项目任务使用原有逻辑
   const files = taskState.workspace.files;
   const editorView = taskState.taskView.editorView;
+  const projectId = taskState._taskData.projectId;
 
   const visibleRows = files
     ? buildVisibleRows(files.nodes, files.childIndex, editorView.expandedPaths)
@@ -180,6 +183,7 @@ export const EditorFileTree = observer(function EditorFileTree() {
               <FileTreeRow
                 key={node.path}
                 node={node}
+                projectId={projectId}
                 style={{
                   position: 'absolute',
                   top: vItem.start,

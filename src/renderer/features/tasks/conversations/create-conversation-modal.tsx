@@ -7,7 +7,10 @@ import {
 } from '@shared/agent-provider-registry';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useAgentAutoApproveDefaults } from '@renderer/features/tasks/hooks/useAgentAutoApproveDefaults';
-import { asProvisioned, findTaskStoreByTaskId } from '@renderer/features/tasks/stores/task-selectors';
+import {
+  asProvisioned,
+  findTaskStoreByTaskId,
+} from '@renderer/features/tasks/stores/task-selectors';
 import { AgentSelector } from '@renderer/lib/components/agent-selector/agent-selector';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
 import { getPaneContainer } from '@renderer/lib/pty/pane-sizing-context';
@@ -78,15 +81,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
       initialSize: getConversationsPaneSize(),
     });
     onSuccess({ conversationId: id });
-  }, [
-    conversationMgr,
-    createDisabled,
-    providerId,
-    title,
-    onSuccess,
-    taskId,
-    skipPermissions,
-  ]);
+  }, [conversationMgr, createDisabled, providerId, title, onSuccess, taskId, skipPermissions]);
 
   return (
     <>

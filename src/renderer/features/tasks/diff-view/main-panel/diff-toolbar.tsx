@@ -1,6 +1,10 @@
 import { AlignJustify, Columns2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
+import {
+  getProjectStore,
+  projectDisplayName,
+} from '@renderer/features/projects/stores/project-selectors';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { splitPath } from '@renderer/features/tasks/utils';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
@@ -8,7 +12,8 @@ import { Badge } from '@renderer/lib/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@renderer/lib/ui/toggle-group';
 
 export const DiffToolbar = observer(function DiffToolbar() {
-  const diffView = useProvisionedTask().taskView.diffView;
+  const provisioned = useProvisionedTask();
+  const diffView = provisioned.taskView.diffView;
   const diffStyle = diffView.diffStyle;
   const activeFile = diffView.activeFile;
 
@@ -23,6 +28,11 @@ export const DiffToolbar = observer(function DiffToolbar() {
     return undefined;
   }, [activeFile?.group]);
 
+  const projectName = useMemo(() => {
+    if (!provisioned.isMultiProject || !activeFile?.projectId) return undefined;
+    return projectDisplayName(getProjectStore(activeFile.projectId));
+  }, [provisioned.isMultiProject, activeFile?.projectId]);
+
   return (
     <div className="flex h-[41px] items-center gap-2 border-b border-border px-2 justify-between">
       <div className="flex items-center gap-3">
@@ -36,6 +46,11 @@ export const DiffToolbar = observer(function DiffToolbar() {
           </div>
         )}
         {diffSourceLabel && <Badge variant="outline">{diffSourceLabel}</Badge>}
+        {projectName && (
+          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+            {projectName}
+          </Badge>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <ToggleGroup

@@ -5,7 +5,7 @@ import { Conversation } from '@shared/conversations';
 import type { FetchError } from '@shared/git';
 import { bareRefName } from '@shared/git-utils';
 import type { SshProject } from '@shared/projects';
-import { makePtySessionId } from '@shared/ptySessionId';
+import { makeConversationSessionId, makeTerminalSessionId } from '@shared/ptySessionId';
 import { err, ok, type Result } from '@shared/result';
 import { getTaskEnvVars } from '@shared/task/envVars';
 import { Task, type TaskBootstrapStatus } from '@shared/tasks';
@@ -242,9 +242,8 @@ export class SshProjectProvider implements ProjectProvider {
       const proxy = this.proxy;
       const exec = getSshExec(proxy);
       const workspaceTerminals = new SshTerminalProvider({
-        projectId: this.project.id,
-        scopeId: workspaceId,
-        taskPath: workDir,
+        taskWorkDir: workDir,
+        taskId: workspaceId,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
@@ -252,7 +251,6 @@ export class SshProjectProvider implements ProjectProvider {
         taskEnvVars: bootstrapTaskEnvVars,
       });
       const lifecycleService = new WorkspaceLifecycleService({
-        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
@@ -310,8 +308,7 @@ export class SshProjectProvider implements ProjectProvider {
       const exec = getSshExec(proxy);
 
       const conversationProvider = new SshConversationProvider({
-        projectId: this.project.id,
-        taskPath: workspace.path,
+        taskWorkDir: workspace.path,
         taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
@@ -321,9 +318,8 @@ export class SshProjectProvider implements ProjectProvider {
       });
 
       const terminalProvider = new SshTerminalProvider({
-        projectId: this.project.id,
-        scopeId: task.id,
-        taskPath: workspace.path,
+        taskWorkDir: workspace.path,
+        taskId: task.id,
         tmux: tmuxEnabled,
         shellSetup,
         exec,
@@ -440,9 +436,8 @@ export class SshProjectProvider implements ProjectProvider {
       const projectSettings = await this.settings.get();
       const exec = getSshExec(this.proxy);
       const workspaceTerminals = new SshTerminalProvider({
-        projectId: this.project.id,
-        scopeId: workspaceId,
-        taskPath: worktreePath,
+        taskWorkDir: worktreePath,
+        taskId: workspaceId,
         tmux: projectSettings.tmux ?? false,
         shellSetup: projectSettings.shellSetup,
         exec,
@@ -450,7 +445,6 @@ export class SshProjectProvider implements ProjectProvider {
         taskEnvVars: {},
       });
       const lifecycleService = new WorkspaceLifecycleService({
-        projectId: this.project.id,
         workspaceId,
         terminals: workspaceTerminals,
       });
@@ -508,10 +502,11 @@ export class SshProjectProvider implements ProjectProvider {
   }
 
   private async cleanupDetachedTmuxSessions(taskId: string): Promise<void> {
-    const { conversationIds, terminalIds } = await getTaskSessionLeafIds(this.project.id, taskId);
-    const sessionIds = [...conversationIds, ...terminalIds].map((leafId) =>
-      makePtySessionId(this.project.id, taskId, leafId)
-    );
+    const { conversationIds, terminalIds } = await getTaskSessionLeafIds(taskId);
+    const sessionIds = [
+      ...conversationIds.map((id) => makeConversationSessionId(taskId, id)),
+      ...terminalIds.map((id) => makeTerminalSessionId(taskId, id)),
+    ];
     const exec = getSshExec(this.proxy);
     await Promise.all(
       sessionIds.map((sessionId) => killTmuxSession(exec, makeTmuxSessionName(sessionId)))

@@ -1,10 +1,10 @@
 import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import type { ProjectContext } from '@renderer/features/tasks/stores/project-context-store';
+import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
+import { cn } from '@renderer/utils/utils';
 import { StagedSection } from './staged-section';
 import { UnstagedSection } from './unstaged-section';
-import { cn } from '@renderer/utils/utils';
 
 interface ProjectChangesSectionProps {
   projectContext: ProjectContext;

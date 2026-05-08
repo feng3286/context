@@ -18,13 +18,7 @@ export class WorkspaceLifecycleService {
   private readonly terminals: TerminalProvider;
   private disposed = false;
 
-  constructor({
-    workspaceId,
-    terminals,
-  }: {
-    workspaceId: string;
-    terminals: TerminalProvider;
-  }) {
+  constructor({ workspaceId, terminals }: { workspaceId: string; terminals: TerminalProvider }) {
     this.workspaceId = workspaceId;
     this.terminals = terminals;
   }

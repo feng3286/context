@@ -28,4 +28,6 @@ export interface ManagedFile {
 export interface EditorTab extends ManagedFile {
   /** True when opened via single-click; double-click or an edit promotes it to stable. */
   isPreview: boolean;
+  /** Which project this file belongs to. Used for multi-project tasks. */
+  projectId?: string;
 }

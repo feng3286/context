@@ -109,9 +109,7 @@ export class TerminalStore {
 
   constructor(terminal: Terminal) {
     this.data = terminal;
-    this.session = new PtySession(
-      makeTerminalSessionId(terminal.taskId, terminal.id)
-    );
+    this.session = new PtySession(makeTerminalSessionId(terminal.taskId, terminal.id));
     makeObservable(this, { data: observable, session: observable });
   }
 

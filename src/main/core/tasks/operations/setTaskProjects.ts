@@ -4,7 +4,6 @@ import { taskProjects } from '@main/db/schema';
 
 export type TaskProjectEntry = {
   projectId: string;
-  worktreePath?: string;
 };
 
 export async function setTaskProjects(
@@ -22,7 +21,6 @@ export async function setTaskProjects(
         : (projects as TaskProjectEntry[]).map((entry) => ({
             taskId,
             projectId: entry.projectId,
-            worktreePath: entry.worktreePath ?? null,
           }));
     await db.insert(taskProjects).values(values);
   }

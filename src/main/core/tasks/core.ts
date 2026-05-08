@@ -12,6 +12,8 @@ export function mapTaskRowToTask(
   return {
     id: row.id,
     projectId: row.projectId,
+    workspaceId: row.workspaceId ?? undefined,
+    workDir: row.workDir ?? undefined,
     name: row.name,
     status: row.status as TaskLifecycleStatus,
     sourceBranch,

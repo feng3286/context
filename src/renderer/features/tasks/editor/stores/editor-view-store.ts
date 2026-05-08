@@ -122,14 +122,14 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
    * Opens a file as a stable tab (double-click / explicit open).
    * If the file is already open as a preview, promotes it to stable.
    */
-  openFile(filePath: string): void {
+  openFile(filePath: string, projectId?: string): void {
     const existing = this._tabs.find((t) => t.path === filePath);
     if (existing) {
       existing.isPreview = false;
       this.activeTabId = existing.tabId;
       return;
     }
-    const tab = this._makeTab(filePath, false);
+    const tab = this._makeTab(filePath, false, undefined, projectId);
     this._tabs.push(tab);
     this.activeTabId = tab.tabId;
     void this._registerModels(filePath);
@@ -141,7 +141,7 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
    * same tabId stays in the list — React sees an update, not a remove+add, so
    * there is no flash of two tabs.
    */
-  openFilePreview(filePath: string): void {
+  openFilePreview(filePath: string, projectId?: string): void {
     const existing = this._tabs.find((t) => t.path === filePath);
     if (existing) {
       this.activeTabId = existing.tabId;
@@ -166,9 +166,10 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
       prevPreview.content = '';
       prevPreview.isLoading = kind === 'image';
       prevPreview.totalSize = null;
+      prevPreview.projectId = projectId;
       this.activeTabId = prevPreview.tabId;
     } else {
-      const tab = this._makeTab(filePath, true);
+      const tab = this._makeTab(filePath, true, undefined, projectId);
       this._tabs.push(tab);
       this.activeTabId = tab.tabId;
     }
@@ -317,7 +318,12 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private _makeTab(filePath: string, isPreview: boolean, tabId?: string): EditorTab {
+  private _makeTab(
+    filePath: string,
+    isPreview: boolean,
+    tabId?: string,
+    projectId?: string
+  ): EditorTab {
     const kind = getFileKind(filePath);
     return {
       tabId: tabId ?? crypto.randomUUID(),
@@ -327,14 +333,18 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
       content: '',
       isLoading: kind === 'image',
       isPreview,
+      projectId,
     };
   }
 
   private async _registerModels(filePath: string): Promise<void> {
     const kind = getFileKind(filePath);
+    // Use the tab's projectId if set, otherwise fall back to the primary project
+    const tab = this._tabs.find((t) => t.path === filePath);
+    const effectiveProjectId = tab?.projectId ?? this.projectId;
 
     if (kind === 'image') {
-      const result = await rpc.fs.readImage(this.projectId, this.workspaceId, filePath);
+      const result = await rpc.fs.readImage(effectiveProjectId, this.workspaceId, filePath);
       runInAction(() => {
         const tab = this._tabs.find((t) => t.path === filePath);
         if (tab) {
@@ -358,7 +368,7 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
       }
 
       await modelRegistry.registerModel(
-        this.projectId,
+        effectiveProjectId,
         this.workspaceId,
         this.modelRootPath,
         filePath,
@@ -366,7 +376,7 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
         'disk'
       );
       await modelRegistry.registerModel(
-        this.projectId,
+        effectiveProjectId,
         this.workspaceId,
         this.modelRootPath,
         filePath,
@@ -374,7 +384,7 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
         'git'
       );
       await modelRegistry.registerModel(
-        this.projectId,
+        effectiveProjectId,
         this.workspaceId,
         this.modelRootPath,
         filePath,

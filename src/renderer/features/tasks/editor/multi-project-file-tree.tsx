@@ -27,7 +27,8 @@ const ProjectFileTreeRow = observer(function ProjectFileTreeRow({
   if (!projectContext) return null;
 
   const isExpanded = editorView.expandedPaths.has(node.path);
-  const isSelected = taskState.taskView.view === 'editor' && editorView.activeFilePath === node.path;
+  const isSelected =
+    taskState.taskView.view === 'editor' && editorView.activeFilePath === node.path;
   const fileStatus = projectContext.git.fileChanges?.find((c) => c.path === node.path)?.status;
   const paddingLeft = node.depth * 12 + 4;
 
@@ -39,14 +40,14 @@ const ProjectFileTreeRow = observer(function ProjectFileTreeRow({
     if (node.type === 'directory') {
       toggleExpand();
     } else {
-      editorView.openFilePreview(node.path);
+      editorView.openFilePreview(node.path, projectId);
     }
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (node.type === 'file') {
-      editorView.openFile(node.path);
+      editorView.openFile(node.path, projectId);
     }
   };
 
@@ -56,7 +57,7 @@ const ProjectFileTreeRow = observer(function ProjectFileTreeRow({
       if (node.type === 'directory') {
         toggleExpand();
       } else {
-        editorView.openFilePreview(node.path);
+        editorView.openFilePreview(node.path, projectId);
       }
     }
   };
@@ -202,7 +203,11 @@ const ProjectFileTreeSection = observer(function ProjectFileTreeSection({
               No files
             </div>
           ) : (
-            <div ref={parentRef} className="h-auto max-h-[300px] overflow-y-auto px-1 py-1" role="tree">
+            <div
+              ref={parentRef}
+              className="h-auto max-h-[300px] overflow-y-auto px-1 py-1"
+              role="tree"
+            >
               <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
                 {virtualizer.getVirtualItems().map((vItem) => {
                   const node = visibleRows[vItem.index] as FileNode;

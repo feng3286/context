@@ -67,13 +67,11 @@ function createEmissionGuard() {
 export function wireAgentClassifier({
   pty,
   providerId,
-  projectId,
   taskId,
   conversationId,
 }: {
   pty: Pty;
   providerId: AgentProviderId;
-  projectId: string;
   taskId: string;
   conversationId: string;
 }): void {
@@ -107,7 +105,6 @@ export function wireAgentClassifier({
           providerId,
           conversationId,
           taskId,
-          projectId,
           timestamp: Date.now(),
           payload: {
             message: result!.message,

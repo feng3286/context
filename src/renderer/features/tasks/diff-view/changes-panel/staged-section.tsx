@@ -1,8 +1,8 @@
 import { Minus } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { commitRef, HEAD_REF } from '@shared/git';
-import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
+import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import { Button } from '@renderer/lib/ui/button';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { ActionCard } from './components/action-card';
@@ -44,7 +44,13 @@ export const StagedSection = observer(function StagedSection({
   const prefetch = usePrefetchDiffModels(projectId, provisioned.workspaceId, 'staged', HEAD_REF);
 
   const handleSelectChange = (path: string) => {
-    diffView.setActiveFile({ path, type: 'git', group: 'staged', originalRef: commitRef('HEAD') });
+    diffView.setActiveFile({
+      path,
+      type: 'git',
+      group: 'staged',
+      originalRef: commitRef('HEAD'),
+      projectId: projectIdOverride ?? undefined,
+    });
     provisioned.taskView.setView('diff');
   };
 

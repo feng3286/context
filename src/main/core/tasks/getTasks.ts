@@ -1,20 +1,23 @@
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { Task } from '@shared/tasks';
 import { db } from '@main/db/client';
-import { conversations, taskProjects, tasks } from '@main/db/schema';
+import { conversations, tasks } from '@main/db/schema';
 import { mapTaskRowToTask } from './core';
 
 export async function getTasks(projectId?: string): Promise<Task[]> {
-  // When projectId is provided, query via task_projects to include multi-project tasks
+  // When projectId is provided, include tasks associated via task_projects OR tasks.projectId
+  // This covers both multi-project tasks (task_projects) and legacy single-project tasks
   const rows = projectId
-    ? (
-        await db
-          .select({ task: tasks })
-          .from(taskProjects)
-          .innerJoin(tasks, eq(taskProjects.taskId, tasks.id))
-          .where(eq(taskProjects.projectId, projectId))
-          .orderBy(desc(tasks.updatedAt))
-      ).map((r) => r.task)
+    ? await db
+        .select()
+        .from(tasks)
+        .where(
+          or(
+            eq(tasks.projectId, projectId),
+            sql`${tasks.id} IN (SELECT tp.task_id FROM task_projects tp WHERE tp.project_id = ${projectId})`
+          )
+        )
+        .orderBy(desc(tasks.updatedAt))
     : await db.select().from(tasks).orderBy(desc(tasks.updatedAt));
 
   if (rows.length === 0) return [];

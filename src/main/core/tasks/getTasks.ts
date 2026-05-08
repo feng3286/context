@@ -1,16 +1,20 @@
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import { Task } from '@shared/tasks';
 import { db } from '@main/db/client';
-import { conversations, tasks } from '@main/db/schema';
+import { conversations, taskProjects, tasks } from '@main/db/schema';
 import { mapTaskRowToTask } from './core';
 
 export async function getTasks(projectId?: string): Promise<Task[]> {
+  // When projectId is provided, query via task_projects to include multi-project tasks
   const rows = projectId
-    ? await db
-        .select()
-        .from(tasks)
-        .where(and(eq(tasks.projectId, projectId)))
-        .orderBy(desc(tasks.updatedAt))
+    ? (
+        await db
+          .select({ task: tasks })
+          .from(taskProjects)
+          .innerJoin(tasks, eq(taskProjects.taskId, tasks.id))
+          .where(eq(taskProjects.projectId, projectId))
+          .orderBy(desc(tasks.updatedAt))
+      ).map((r) => r.task)
     : await db.select().from(tasks).orderBy(desc(tasks.updatedAt));
 
   if (rows.length === 0) return [];

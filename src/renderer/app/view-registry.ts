@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { homeView } from '@renderer/app/home-view';
 import { mcpView } from '@renderer/features/mcp/mcp-view';
+import { projectDetailView } from '@renderer/features/projects/project-detail-view';
 import { projectView } from '@renderer/features/projects/view';
 import { settingsView } from '@renderer/features/settings/settings-view';
 import { skillsView } from '@renderer/features/skills/skills-view';
@@ -15,6 +16,7 @@ export const views = {
   skills: skillsView,
   mcp: mcpView,
   project: projectView,
+  projectDetail: projectDetailView,
   task: taskView,
   settings: settingsView,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

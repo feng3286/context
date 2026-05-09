@@ -17,7 +17,6 @@ export const SETTINGS_DEFAULTS = {
     defaultProjectsDirectory: join(homedir(), 'emdash', 'repositories'),
     defaultWorktreeDirectory: getDefaultLocalWorktreeDirectory(),
     branchPrefix: 'emdash',
-    pushOnCreate: true,
     writeAgentConfigToGitIgnore: true,
   }),
   tasks: {

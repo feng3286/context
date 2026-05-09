@@ -17,7 +17,17 @@ import { db } from '@main/db/client';
 import { taskProjects, tasks } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 import { mapTaskRowToTask } from './core';
+import { resolveTaskBranchName } from './resolveTaskBranchName';
 import { toStoredBranch } from './stored-branch';
+
+function generateBranchSuffix(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 function mapProvisionError(message: string): CreateTaskError {
   return { type: 'provision-failed', message };
@@ -26,9 +36,17 @@ function mapProvisionError(message: string): CreateTaskError {
 export async function createMultiProjectTask(
   params: CreateMultiProjectTaskParams
 ): Promise<Result<CreateTaskSuccess, CreateTaskError>> {
-  const { projectBranchSources, taskBranch, pushBranch } = params;
+  const { projectBranchSources, pushBranch } = params;
   const initialStatus: TaskLifecycleStatus = 'in_progress';
   let warning: CreateTaskWarning | undefined;
+
+  // Generate suffix and get branchPrefix
+  const suffix = generateBranchSuffix();
+  const branchPrefix = (await appSettingsService.get('localProject')).branchPrefix ?? '';
+
+  // Resolve the final task branch name with prefix and suffix
+  const rawBranch = params.taskBranch.trim();
+  const resolvedTaskBranch = resolveTaskBranchName({ rawBranch, branchPrefix, suffix });
 
   // Validate all projects exist
   for (const source of projectBranchSources) {
@@ -57,7 +75,7 @@ export async function createMultiProjectTask(
       workspaceId: params.workspaceId,
       workDir: taskBaseDir, // Store task base directory for multi-project tasks
       name: params.name,
-      taskBranch,
+      taskBranch: resolvedTaskBranch,
       status: initialStatus,
       sourceBranch: toStoredBranch({ type: 'local', branch: projectBranchSources[0].sourceBranch }),
       updatedAt: sql`CURRENT_TIMESTAMP`,
@@ -87,12 +105,16 @@ export async function createMultiProjectTask(
     }
 
     const createResult = await project.repository.createBranch(
-      taskBranch,
+      resolvedTaskBranch,
       source.sourceBranch,
       false
     );
     if (!createResult.success) {
-      return err({ type: 'branch-create-failed', branch: taskBranch, error: createResult.error });
+      return err({
+        type: 'branch-create-failed',
+        branch: resolvedTaskBranch,
+        error: createResult.error,
+      });
     }
 
     // Push branch to remote if requested
@@ -101,11 +123,14 @@ export async function createMultiProjectTask(
         project.repository.getRemotes(),
         project.repository.getConfiguredRemote(),
       ]);
-      const publishResult = await project.repository.publishBranch(taskBranch, configuredRemote);
+      const publishResult = await project.repository.publishBranch(
+        resolvedTaskBranch,
+        configuredRemote
+      );
       if (!publishResult.success) {
         warning = {
           type: 'branch-publish-failed',
-          branch: taskBranch,
+          branch: resolvedTaskBranch,
           remote: configuredRemote,
           error: publishResult.error,
         };

@@ -41,7 +41,7 @@ export async function createTask(
   params: CreateTaskParams
 ): Promise<Result<CreateTaskSuccess, CreateTaskError>> {
   const { strategy } = params;
-  const suffix = Math.random().toString(36).slice(2, 7);
+  const suffix = generateBranchSuffix();
   const branchPrefix = (await appSettingsService.get('localProject')).branchPrefix ?? '';
   const agentAutoApproveDefaults = await appSettingsService.get('agentAutoApproveDefaults');
   let warning: CreateTaskWarning | undefined;
@@ -278,4 +278,13 @@ export async function createTask(
   }
 
   return ok({ task, warning });
+}
+
+function generateBranchSuffix(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }

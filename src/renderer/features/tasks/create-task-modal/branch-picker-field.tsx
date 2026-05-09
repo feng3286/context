@@ -1,4 +1,5 @@
 import { ChevronDown, GitBranch } from 'lucide-react';
+import { useState } from 'react';
 import { BranchDisplay } from '@renderer/lib/components/branch-display';
 import { ProjectBranchSelector } from '@renderer/lib/components/project-branch-selector';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@renderer/lib/ui/collapsible';
@@ -20,6 +21,8 @@ interface BranchPickerFieldProps {
   branchName?: string;
   onBranchNameChange?: (value: string) => void;
   taskName?: string;
+  pushBranch?: boolean;
+  onPushBranchChange?: (value: boolean) => void;
 }
 
 export function BranchPickerField({
@@ -32,14 +35,14 @@ export function BranchPickerField({
   branchName,
   onBranchNameChange,
   taskName,
+  pushBranch = false,
+  onPushBranchChange,
 }: BranchPickerFieldProps) {
   const {
     createBranchAndWorktree,
     setCreateBranchAndWorktree,
     createNewBranch,
     setCreateNewBranch,
-    pushBranch,
-    setPushBranch,
   } = state;
 
   return (
@@ -106,7 +109,10 @@ export function BranchPickerField({
                   )}
                   {createNewBranch && (
                     <Field orientation="horizontal">
-                      <Switch checked={pushBranch} onCheckedChange={setPushBranch} />
+                      <Switch
+                        checked={pushBranch}
+                        onCheckedChange={onPushBranchChange ?? (() => {})}
+                      />
                       <FieldLabel>Push branch to remote</FieldLabel>
                     </Field>
                   )}

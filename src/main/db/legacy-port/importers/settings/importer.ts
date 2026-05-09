@@ -127,12 +127,6 @@ export async function portLegacySettings(
       summary.imported.push('localProject.branchPrefix');
     }
 
-    const pushOnCreate = readBoolean(repository.pushOnCreate);
-    if (pushOnCreate !== null) {
-      patch.pushOnCreate = pushOnCreate;
-      summary.imported.push('localProject.pushOnCreate');
-    }
-
     if (Object.keys(patch).length > 0) {
       try {
         await updateObjectSetting(settingsStore, 'localProject', patch);

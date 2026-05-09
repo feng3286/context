@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CheckoutModeGroup } from './checkout-mode-group';
 import { PrPickerField } from './pr-picker-field';
 import { TaskNameField } from './task-name-field';
@@ -11,6 +12,8 @@ interface FromPrContentProps {
 }
 
 export function FromPrContent({ state, projectId, nameWithOwner, disabled }: FromPrContentProps) {
+  const [pushBranch, setPushBranch] = useState(false);
+
   return (
     <div className="flex flex-col gap-4">
       <PrPickerField
@@ -22,8 +25,8 @@ export function FromPrContent({ state, projectId, nameWithOwner, disabled }: Fro
       <CheckoutModeGroup
         value={state.checkoutMode}
         onValueChange={state.setCheckoutMode}
-        pushBranch={state.branchSelection.pushBranch}
-        onPushBranchChange={state.branchSelection.setPushBranch}
+        pushBranch={pushBranch}
+        onPushBranchChange={setPushBranch}
         disabled={disabled}
         branchName={state.branchName}
         onBranchNameChange={state.setBranchName}

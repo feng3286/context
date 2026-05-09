@@ -7,7 +7,6 @@ export const localProjectSettingsSchema = z.object({
   defaultProjectsDirectory: z.string(),
   defaultWorktreeDirectory: z.string(),
   branchPrefix: z.string(),
-  pushOnCreate: z.boolean(),
   writeAgentConfigToGitIgnore: z.boolean(),
 });
 

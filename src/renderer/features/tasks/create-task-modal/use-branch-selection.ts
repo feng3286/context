@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import type { Branch } from '@shared/git';
-import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 
 export type BranchSelectionState = ReturnType<typeof useBranchSelection>;
 
@@ -10,13 +9,8 @@ export function useBranchSelection(
   isUnborn: boolean,
   currentBranchName?: string | null
 ) {
-  const { value: localProject } = useAppSettingsKey('localProject');
-  const pushOnCreateByDefault = localProject?.pushOnCreate ?? true;
-
   const [createBranchAndWorktreePreference, setCreateBranchAndWorktreePreference] = useState(true);
   const [createNewBranchPreference, setCreateNewBranchPreference] = useState(true);
-  const [pushBranchOverride, setPushBranchOverride] = useState<boolean | undefined>(undefined);
-  const pushBranch = pushBranchOverride ?? pushOnCreateByDefault;
   const createBranchAndWorktree = isUnborn ? false : createBranchAndWorktreePreference;
   const createNewBranch = createBranchAndWorktree && createNewBranchPreference;
 
@@ -44,9 +38,7 @@ export function useBranchSelection(
     },
     [selectedProjectId]
   );
-  const setPushBranch = useCallback((value: boolean) => {
-    setPushBranchOverride(value);
-  }, []);
+
   const setCreateBranchAndWorktree = useCallback(
     (value: boolean) => {
       if (isUnborn) return;
@@ -54,6 +46,7 @@ export function useBranchSelection(
     },
     [isUnborn]
   );
+
   const setCreateNewBranch = useCallback((value: boolean) => {
     setCreateNewBranchPreference(value);
   }, []);
@@ -65,7 +58,5 @@ export function useBranchSelection(
     setCreateBranchAndWorktree,
     createNewBranch,
     setCreateNewBranch,
-    pushBranch,
-    setPushBranch,
   };
 }

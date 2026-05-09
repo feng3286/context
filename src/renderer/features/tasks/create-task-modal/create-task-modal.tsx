@@ -1,12 +1,13 @@
 import { Check, ChevronRight, FolderOpen, GitBranch } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   asMounted,
   getProjectManagerStore,
   getRepositoryStore,
   mountedProjectData,
 } from '@renderer/features/projects/stores/project-selectors';
+import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { ProjectSelector } from '@renderer/features/tasks/create-task-modal/project-selector';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
@@ -173,6 +174,20 @@ export const CreateTaskModal = observer(function CreateTaskModal({
   const [loading, setLoading] = useState(false);
   const { navigate } = useNavigate();
 
+  // Get branchPrefix setting for preview
+  const { value: localProjectSettings } = useAppSettingsKey('localProject');
+  const branchPrefix = localProjectSettings?.branchPrefix ?? '';
+
+  // Generate preview suffix (matches backend logic)
+  const previewSuffix = useMemo(() => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    let result = '';
+    for (let i = 0; i < 5; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }, []); // Fixed on mount to simulate backend behavior
+
   // Initialize branch configs when projects change
   useEffect(() => {
     if (workspaceId) {
@@ -231,6 +246,15 @@ export const CreateTaskModal = observer(function CreateTaskModal({
   // Validation
   const hasProject = workspaceId ? selectedProjectIds.size > 0 : !!selectedProjectId;
   const canCreate = hasProject && taskName.trim().length > 0;
+
+  // Compute preview branch name
+  const rawBranchPreview = taskBranch.trim() || generateTaskBranch(taskName);
+  const previewBranchName = useMemo(() => {
+    if (!rawBranchPreview) return '';
+    return branchPrefix
+      ? `${branchPrefix}/${rawBranchPreview}-${previewSuffix}`
+      : `${rawBranchPreview}-${previewSuffix}`;
+  }, [rawBranchPreview, branchPrefix, previewSuffix]);
 
   const handleCreateTask = useCallback(async () => {
     if (!canCreate) return;
@@ -379,6 +403,11 @@ export const CreateTaskModal = observer(function CreateTaskModal({
             className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Auto-generated from name"
           />
+          {previewBranchName && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Final branch: <code className="rounded bg-muted/60 px-1">{previewBranchName}</code>
+            </p>
+          )}
           <p className="text-xs text-muted-foreground mt-1">
             All projects will use this branch name.
           </p>

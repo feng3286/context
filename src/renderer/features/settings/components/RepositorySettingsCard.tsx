@@ -21,11 +21,11 @@ const RepositorySettingsCard: React.FC = () => {
 
   const branchPrefix = localProject?.branchPrefix ?? '';
   const defaultWorktreeDirectory = localProject?.defaultWorktreeDirectory ?? '';
-  const pushOnCreate = localProject?.pushOnCreate ?? true;
   const writeAgentConfigToGitIgnore = localProject?.writeAgentConfigToGitIgnore ?? true;
 
   const example = useMemo(() => {
-    return `${branchPrefix}/my-feature-a3f`;
+    const suffix = 'abcde'; // Example suffix (5 random letters)
+    return branchPrefix ? `${branchPrefix}/my-feature-${suffix}` : `my-feature-${suffix}`;
   }, [branchPrefix]);
 
   return (
@@ -98,26 +98,6 @@ const RepositorySettingsCard: React.FC = () => {
           Example: <code className="rounded bg-muted/60 px-1">{example}</code>
         </div>
       </div>
-      <SettingRow
-        title="Auto-push on create"
-        description="Push the new branch to the selected project remote and set upstream after creation."
-        control={
-          <>
-            <ResetToDefaultButton
-              visible={isFieldOverridden('pushOnCreate')}
-              defaultLabel="on"
-              onReset={() => resetField('pushOnCreate')}
-              disabled={loading || saving}
-            />
-            <Switch
-              checked={pushOnCreate}
-              onCheckedChange={(checked) => update({ pushOnCreate: checked })}
-              disabled={loading || saving}
-              aria-label="Enable automatic push on create"
-            />
-          </>
-        }
-      />
       <SettingRow
         title="Auto-update .gitignore"
         description="When Emdash writes CLI hook configs, also add their paths to .gitignore."

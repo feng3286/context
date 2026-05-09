@@ -1,6 +1,14 @@
-import { Folder, Layers, MessageSquare, MoreVertical, Trash2, Wifi } from 'lucide-react';
+import {
+  ExternalLink,
+  Folder,
+  Layers,
+  MessageSquare,
+  MoreVertical,
+  Trash2,
+  Wifi,
+} from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Task } from '@shared/tasks';
 import type { Workspace } from '@shared/workspaces';
 import {
@@ -24,6 +32,15 @@ import {
 } from '@renderer/lib/ui/dropdown-menu';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { RelativeTime } from '@renderer/lib/ui/relative-time';
+
+interface ProjectDetailViewWrapperProps {
+  children: ReactNode;
+  projectId: string;
+}
+
+export function ProjectDetailViewWrapper({ children }: ProjectDetailViewWrapperProps) {
+  return <>{children}</>;
+}
 
 export const ProjectDetailTitlebar = observer(function ProjectDetailTitlebar() {
   const {
@@ -74,6 +91,31 @@ export const ProjectDetailTitlebar = observer(function ProjectDetailTitlebar() {
   return <Titlebar leftSlot={leftSlot} rightSlot={rightSlot} />;
 });
 
+function WorkspaceCard({
+  workspace,
+  onNavigate,
+}: {
+  workspace: Workspace;
+  onNavigate: () => void;
+}) {
+  return (
+    <div
+      className="group flex items-start gap-3 p-4 rounded-xl border border-border bg-background hover:bg-background-1 transition-colors cursor-pointer"
+      onClick={onNavigate}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background-2 shrink-0">
+        <Layers className="h-4 w-4 text-foreground-muted" />
+      </div>
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="font-medium truncate">{workspace.name}</span>
+        <span className="text-sm text-muted-foreground mt-0.5">
+          Created <RelativeTime value={workspace.createdAt} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel() {
   const {
     params: { projectId },
@@ -86,8 +128,10 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [remotes, setRemotes] = useState<{ name: string; url: string }[]>([]);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadingRemotes, setLoadingRemotes] = useState(true);
 
   useEffect(() => {
     if (!projectId) return;
@@ -107,6 +151,14 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
       .then((ts) => setTasks(ts))
       .catch(() => setTasks([]))
       .finally(() => setLoadingTasks(false));
+
+    // Load git remotes
+    setLoadingRemotes(true);
+    rpc.repository
+      .getRemotes(projectId)
+      .then((r) => setRemotes(r))
+      .catch(() => setRemotes([]))
+      .finally(() => setLoadingRemotes(false));
   }, [projectId]);
 
   if (!store) {
@@ -136,6 +188,8 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
 
   const isSsh = project.type === 'ssh';
   const activeTasks = tasks.filter((t) => !t.archivedAt);
+  const originRemote = remotes.find((r) => r.name === 'origin');
+  const hasRemoteUrl = originRemote?.url && originRemote.url.length > 0;
 
   const handleWorkspaceClick = (workspaceId: string) => {
     navigate('workspace', { workspaceId });
@@ -158,10 +212,16 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
                 <Folder className="h-5 w-5 text-muted-foreground" />
               )}
             </div>
-            <div>
+            <div className="flex flex-col gap-1">
               <h2 className="text-xl font-semibold">{project.name}</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">{project.path}</p>
-              <div className="flex items-center gap-2 mt-2">
+              <p className="text-sm text-muted-foreground">{project.path}</p>
+              {hasRemoteUrl && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-md">{originRemote.url}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary" className="text-xs">
                   {isSsh ? 'SSH' : 'Local'}
                 </Badge>
@@ -191,23 +251,13 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
               description="This project is not part of any workspace."
             />
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {workspaces.map((ws) => (
-                <button
+                <WorkspaceCard
                   key={ws.id}
-                  onClick={() => handleWorkspaceClick(ws.id)}
-                  className="group flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-background-1 transition-colors cursor-pointer"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-background-2 shrink-0">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="font-medium truncate text-sm">{ws.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      Created <RelativeTime value={ws.createdAt} />
-                    </span>
-                  </div>
-                </button>
+                  workspace={ws}
+                  onNavigate={() => handleWorkspaceClick(ws.id)}
+                />
               ))}
             </div>
           )}
@@ -251,6 +301,7 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
 });
 
 export const projectDetailView = {
+  WrapView: ProjectDetailViewWrapper,
   TitlebarSlot: ProjectDetailTitlebar,
   MainPanel: ProjectDetailMainPanel,
 };

@@ -349,7 +349,10 @@ const _OPEN_IN_APPS = {
       },
       win32: {
         openCommands: ['webstorm64 {{path}}', 'webstorm {{path}}'],
-        openFileCommands: ['webstorm64 --line {{line}} {{file}}', 'webstorm --line {{line}} {{file}}'],
+        openFileCommands: [
+          'webstorm64 --line {{line}} {{file}}',
+          'webstorm --line {{line}} {{file}}',
+        ],
         checkCommands: ['webstorm64', 'webstorm'],
       },
       linux: {
@@ -373,7 +376,10 @@ const _OPEN_IN_APPS = {
       },
       win32: {
         openCommands: ['pycharm64 {{path}}', 'pycharm {{path}}'],
-        openFileCommands: ['pycharm64 --line {{line}} {{file}}', 'pycharm --line {{line}} {{file}}'],
+        openFileCommands: [
+          'pycharm64 --line {{line}} {{file}}',
+          'pycharm --line {{line}} {{file}}',
+        ],
         checkCommands: ['pycharm64', 'pycharm'],
       },
       linux: {
@@ -397,7 +403,10 @@ const _OPEN_IN_APPS = {
       },
       win32: {
         openCommands: ['rustrover64 {{path}}', 'rustrover {{path}}'],
-        openFileCommands: ['rustrover64 --line {{line}} {{file}}', 'rustrover --line {{line}} {{file}}'],
+        openFileCommands: [
+          'rustrover64 --line {{line}} {{file}}',
+          'rustrover --line {{line}} {{file}}',
+        ],
         checkCommands: ['rustrover64', 'rustrover'],
       },
       linux: {

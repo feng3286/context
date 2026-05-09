@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { and, eq } from 'drizzle-orm';
-import { projectManager } from '@main/core/projects/project-manager';
 import { taskDeletedChannel } from '@shared/events/taskEvents';
+import { projectManager } from '@main/core/projects/project-manager';
 import { viewStateService } from '@main/core/view-state/view-state-service';
 import { db } from '@main/db/client';
-import { events } from '@main/lib/events';
 import { projects, taskProjects, tasks } from '@main/db/schema';
+import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
 import { capture } from '@main/lib/telemetry';
 

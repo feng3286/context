@@ -81,7 +81,9 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
   const editorView = taskState.taskView.editorView;
 
   const isProjectHeader = node.type === 'project-header';
-  const projectId = isProjectHeader ? node.projectId : taskState.projectContexts?.findProjectIdForPath?.(node.path);
+  const projectId = isProjectHeader
+    ? node.projectId
+    : taskState.projectContexts?.findProjectIdForPath?.(node.path);
   const projectContext = projectId ? taskState.projectContexts?.projects.get(projectId) : null;
 
   if (!projectContext && !isProjectHeader) return null;
@@ -97,9 +99,10 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
     taskState.taskView.view === 'editor' &&
     editorView.activeFilePath === node.path;
 
-  const fileStatus = !isProjectHeader && projectContext
-    ? projectContext.git.fileChanges?.find((c) => c.path === node.path)?.status
-    : undefined;
+  const fileStatus =
+    !isProjectHeader && projectContext
+      ? projectContext.git.fileChanges?.find((c) => c.path === node.path)?.status
+      : undefined;
 
   const paddingLeft = node.depth * 12 + 4;
 

@@ -167,7 +167,14 @@ class AppService {
     isRemote?: boolean;
     sshConnectionId?: string | null;
   }): Promise<void> {
-    const { path: target, app: appId, filePath, lineNumber, isRemote = false, sshConnectionId } = args;
+    const {
+      path: target,
+      app: appId,
+      filePath,
+      lineNumber,
+      isRemote = false,
+      sshConnectionId,
+    } = args;
 
     if (!target || typeof target !== 'string' || !appId) {
       throw new Error('Invalid arguments');
@@ -185,7 +192,16 @@ class AppService {
     }
 
     if (isRemote && sshConnectionId) {
-      await this.openInRemote({ appId, appConfig, label, target, platform, sshConnectionId, filePath, lineNumber });
+      await this.openInRemote({
+        appId,
+        appConfig,
+        label,
+        target,
+        platform,
+        sshConnectionId,
+        filePath,
+        lineNumber,
+      });
       return;
     }
 

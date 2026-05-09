@@ -185,7 +185,7 @@ export const AddProjectModal = observer(function AddProjectModal({
           await store.addProject(projectId);
         }
       }
-      navigate('project', { projectId });
+      navigate('projectDetail', { projectId });
       onClose();
       return;
     }
@@ -246,7 +246,7 @@ export const AddProjectModal = observer(function AddProjectModal({
     }
 
     onClose();
-    navigate('project', { projectId: id });
+    navigate('projectDetail', { projectId: id });
   };
 
   return (

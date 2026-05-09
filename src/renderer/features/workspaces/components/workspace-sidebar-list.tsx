@@ -302,8 +302,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                         key={project.id}
                         project={project}
                         isActive={
-                          currentView === 'project' &&
-                          projectParams.params.projectId === project.id
+                          currentView === 'project' && projectParams.params.projectId === project.id
                         }
                         onNavigate={() => navigate('project', { projectId: project.id })}
                         onRemove={() => void handleRemoveProject(store.data.id, project.id)}
@@ -339,9 +338,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                       <TaskSidebarRow
                         key={task.id}
                         task={task}
-                        isActive={
-                          currentView === 'task' && taskParams.params.taskId === task.id
-                        }
+                        isActive={currentView === 'task' && taskParams.params.taskId === task.id}
                         onClick={() => void handleTaskClick(task)}
                         onDelete={() => void handleDeleteTask(store.data.id, task)}
                       />

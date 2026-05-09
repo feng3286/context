@@ -1,9 +1,20 @@
-import { FolderPlus, Layers, MessageSquare, MoreVertical, Plus, Settings, Trash2 } from 'lucide-react';
+import {
+  FolderPlus,
+  Layers,
+  MessageSquare,
+  MoreVertical,
+  Plus,
+  Settings,
+  Trash2,
+} from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, type ReactNode } from 'react';
 import type { Project } from '@shared/projects';
 import type { Task } from '@shared/tasks';
 import { SidebarItemMiniButton } from '@renderer/features/sidebar/sidebar-primitives';
+import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
+import { useNavigate, useParams } from '@renderer/lib/layout/navigation-provider';
+import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Badge } from '@renderer/lib/ui/badge';
 import { Button } from '@renderer/lib/ui/button';
 import {
@@ -15,9 +26,6 @@ import {
 } from '@renderer/lib/ui/dropdown-menu';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { Separator } from '@renderer/lib/ui/separator';
-import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
-import { useNavigate, useParams } from '@renderer/lib/layout/navigation-provider';
-import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { workspaceManagerStore } from './stores/workspace-manager';
 import { getWorkspaceStore } from './stores/workspace-selectors';
 import { WorkspaceStoreClass } from './stores/workspace-store';
@@ -84,13 +92,7 @@ function ProjectCard({
   );
 }
 
-function TaskRowCompact({
-  task,
-  onClick,
-}: {
-  task: Task;
-  onClick: () => void;
-}) {
+function TaskRowCompact({ task, onClick }: { task: Task; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -169,11 +171,20 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => showAddProjectModal({ workspaceId })}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => showAddProjectModal({ workspaceId })}
+            >
               <FolderPlus className="size-3.5" />
               Add Project
             </Button>
-            <Button variant="default" size="sm" onClick={() => showCreateTaskModal({ workspaceId })} disabled={projects.length === 0}>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => showCreateTaskModal({ workspaceId })}
+              disabled={projects.length === 0}
+            >
               <Plus className="size-3.5" />
               New Task
             </Button>
@@ -232,7 +243,11 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
             </div>
             <div className="rounded-lg border border-border divide-y divide-border">
               {activeTasks.map((task: Task) => (
-                <TaskRowCompact key={task.id} task={task} onClick={() => void handleTaskClick(task)} />
+                <TaskRowCompact
+                  key={task.id}
+                  task={task}
+                  onClick={() => void handleTaskClick(task)}
+                />
               ))}
             </div>
           </section>

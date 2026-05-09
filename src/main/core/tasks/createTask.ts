@@ -213,9 +213,8 @@ export async function createTask(
   const task = mapTaskRowToTask(taskRow, prs);
 
   // Set task-project associations
-  const allProjectIds = params.projectIds && params.projectIds.length > 0
-    ? params.projectIds
-    : [params.projectId];
+  const allProjectIds =
+    params.projectIds && params.projectIds.length > 0 ? params.projectIds : [params.projectId];
   await db.insert(taskProjects).values(
     allProjectIds.map((pid) => ({
       taskId: params.id,

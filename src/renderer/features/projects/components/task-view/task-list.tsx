@@ -171,11 +171,11 @@ export const TaskList = observer(function TaskList() {
             <ToggleGroupItem value="archived">Archived ({archivedTasks.length})</ToggleGroupItem>
           </ToggleGroup>
           <SearchInput
-              placeholder="Search tasks…"
-              value={taskView.searchQuery}
-              onChange={(e) => taskView.setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
+            placeholder="Search tasks…"
+            value={taskView.searchQuery}
+            onChange={(e) => taskView.setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
         </div>
       </div>
 

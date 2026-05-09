@@ -14,8 +14,8 @@ export function usePickMode() {
     setPath(newPath);
     setinitGitRepository(false);
     if (!nameIsTouched) {
-      const dirName = newPath.split('/').filter(Boolean).pop() ?? '';
-      if (dirName && !nameIsTouched) setName(dirName);
+      const dirName = newPath.split(/[/\\]/).filter(Boolean).pop() ?? '';
+      if (dirName) setName(dirName);
     }
   };
 

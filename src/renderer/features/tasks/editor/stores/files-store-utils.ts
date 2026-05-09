@@ -46,7 +46,10 @@ const EXCLUDED_NAMES = new Set([
 ]);
 
 export function isExcluded(path: string): boolean {
-  return path.replace(/\\/g, '/').split('/').some((seg) => EXCLUDED_NAMES.has(seg));
+  return path
+    .replace(/\\/g, '/')
+    .split('/')
+    .some((seg) => EXCLUDED_NAMES.has(seg));
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { selectCurrentPr } from '@shared/pull-requests';
 import { type Task } from '@shared/tasks';
+import { GitBranch } from 'lucide-react';
 import { AgentStatusIndicator } from '@renderer/features/tasks/components/agent-status-indicator';
 import { TaskContextMenu } from '@renderer/features/tasks/components/task-context-menu';
 import { TaskGitDiffStats } from '@renderer/features/tasks/components/task-git-diff-stats';
@@ -9,6 +10,7 @@ import {
   getTaskManagerStore,
   taskAgentStatus,
 } from '@renderer/features/tasks/stores/task-selectors';
+import { getProjectStore } from '@renderer/features/projects/stores/project-selectors';
 import AgentLogo from '@renderer/lib/components/agent-logo';
 import { PrBadge } from '@renderer/lib/components/pr-badge';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
@@ -22,28 +24,28 @@ export type ReadyTask = TaskStore & { data: Task };
 
 export const TaskRow = observer(function TaskRow({
   task,
+  projectId,
   isSelected,
   onToggleSelect,
 }: {
   task: ReadyTask;
+  projectId: string;
   isSelected: boolean;
   onToggleSelect: () => void;
 }) {
   const { navigate } = useNavigate();
   const showRename = useShowModal('renameTaskModal');
-  const showConfirm = useShowModal('confirmActionModal');
   const taskManager = getTaskManagerStore(task.data.projectId);
+  const projectStore = getProjectStore(projectId);
+
+  // Get project name, per-project source branch, and current branch
+  const projectName = projectStore?.data?.name ?? '';
+  const sourceBranchName = task.data.projectSourceBranch ?? task.data.sourceBranch?.branch ?? null;
+  const currentBranch = task.data.taskBranch;
 
   const handleArchive = () => void taskManager?.archiveTask(task.data.id);
   const handleRestore = () => void taskManager?.restoreTask(task.data.id);
   const handleProvision = () => void taskManager?.provisionTask(task.data.id);
-  const handleDelete = () =>
-    showConfirm({
-      title: 'Delete task',
-      description: `"${task.data.name}" will be permanently deleted. This action cannot be undone.`,
-      confirmLabel: 'Delete',
-      onSuccess: () => void taskManager?.deleteTask(task.data.id),
-    });
   const handleRename = () =>
     showRename({
       projectId: task.data.projectId,
@@ -66,7 +68,6 @@ export const TaskRow = observer(function TaskRow({
       onRename={handleRename}
       onArchive={handleArchive}
       onRestore={handleRestore}
-      onDelete={handleDelete}
     >
       <button
         onClick={() => {
@@ -92,6 +93,19 @@ export const TaskRow = observer(function TaskRow({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <span className="min-w-0 text-left text-sm truncate">{task.data.name}</span>
+            <span className="text-xs text-foreground-passive shrink-0">{projectName}</span>
+            {sourceBranchName && (
+              <span className="flex items-center gap-1 text-xs text-foreground-passive shrink-0">
+                <GitBranch className="size-3" />
+                <span className="truncate">{sourceBranchName}</span>
+              </span>
+            )}
+            {currentBranch && currentBranch !== sourceBranchName && (
+              <span className="flex items-center gap-1 text-xs text-foreground-passive shrink-0">
+                <GitBranch className="size-3" />
+                <span className="truncate">{currentBranch}</span>
+              </span>
+            )}
             <TaskGitDiffStats task={task} className="text-xs shrink-0" />
             {currentPr && <PrBadge pr={currentPr} />}
           </div>

@@ -17,6 +17,8 @@ import { cn } from '@renderer/utils/utils';
 
 interface OpenInMenuProps {
   path: string;
+  filePath?: string;
+  lineNumber?: number;
   isRemote?: boolean;
   sshConnectionId?: string | null;
   className?: string;
@@ -24,6 +26,8 @@ interface OpenInMenuProps {
 
 export const OpenInMenu: React.FC<OpenInMenuProps> = ({
   path,
+  filePath,
+  lineNumber,
   className,
   isRemote = false,
   sshConnectionId = null,
@@ -51,6 +55,8 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         const res = await rpc.app.openIn({
           app: appId,
           path,
+          filePath,
+          lineNumber,
           isRemote,
           sshConnectionId: sshConnectionId ?? undefined,
         });
@@ -69,7 +75,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         });
       }
     },
-    [labels, path, isRemote, sshConnectionId, toast]
+    [labels, path, filePath, lineNumber, isRemote, sshConnectionId, toast]
   );
 
   const sortedApps = useMemo(() => {
@@ -104,7 +110,14 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
     { enabled: !!buttonAppId && !loading && openInHotkey !== null }
   );
 
-  const shortenedPath = useMemo(() => path.split('/').slice(-2).join('/'), [path]);
+  const displayPath = useMemo(() => {
+    if (filePath) {
+      // Show file name with line number when file is being opened
+      const fileName = filePath.split('/').pop() ?? filePath;
+      return lineNumber ? `${fileName}:${lineNumber}` : fileName;
+    }
+    return path.split('/').slice(-2).join('/');
+  }, [path, filePath, lineNumber]);
 
   return (
     <div
@@ -135,7 +148,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
                   }`}
                 />
               )}
-              <span>{shortenedPath}</span>
+              <span>{displayPath}</span>
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">

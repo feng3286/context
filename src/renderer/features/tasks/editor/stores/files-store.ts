@@ -161,18 +161,20 @@ export class FilesStore {
 
   /** Load a single directory level into the backing Maps. No reactivity bump. */
   private async _loadDirInternal(dirPath: string, force = false): Promise<void> {
-    if (!force && (this._loadedPaths.has(dirPath) || this._pendingPaths.has(dirPath))) return;
-    this._pendingPaths.add(dirPath);
+    // Normalize backslashes to forward slashes for consistent path keys
+    const normalized = dirPath.replace(/\\/g, '/');
+    if (!force && (this._loadedPaths.has(normalized) || this._pendingPaths.has(normalized))) return;
+    this._pendingPaths.add(normalized);
 
     try {
-      const result = await rpc.fs.listFiles(this.projectId, this.workspaceId, dirPath || '.', {
+      const result = await rpc.fs.listFiles(this.projectId, this.workspaceId, normalized || '.', {
         recursive: false,
         includeHidden: true,
       });
 
       if (!result.success) return;
 
-      this._applyEntries(dirPath, result.data.entries);
+      this._applyEntries(normalized, result.data.entries);
 
       for (const entry of result.data.entries) {
         if (entry.type === 'dir' && !isExcluded(entry.path)) {
@@ -184,7 +186,7 @@ export class FilesStore {
     } catch {
       // Silently ignore errors for individual directories
     } finally {
-      this._pendingPaths.delete(dirPath);
+      this._pendingPaths.delete(normalized);
     }
   }
 
@@ -254,32 +256,34 @@ export class FilesStore {
     let changed = false;
 
     for (const evt of watchEvents) {
-      if (isExcluded(evt.path)) continue;
+      const normPath = evt.path.replace(/\\/g, '/');
+      if (isExcluded(normPath)) continue;
 
       if (evt.type === 'create') {
-        const node = makeNode(evt.path, evt.entryType);
+        const node = makeNode(normPath, evt.entryType);
         const parentLoaded = this._loadedPaths.has(node.parentPath ?? '');
-        if (parentLoaded && !this._nodes.has(evt.path)) {
+        if (parentLoaded && !this._nodes.has(node.path)) {
           this._addNode(node);
           changed = true;
         }
       } else if (evt.type === 'delete') {
-        if (this._nodes.has(evt.path)) {
-          this._removeNode(evt.path);
+        if (this._nodes.has(normPath)) {
+          this._removeNode(normPath);
           changed = true;
         }
       } else if (evt.type === 'modify') {
-        const existing = this._nodes.get(evt.path);
+        const existing = this._nodes.get(normPath);
         if (existing) {
-          this._nodes.set(evt.path, { ...existing, mtime: new Date() });
+          this._nodes.set(normPath, { ...existing, mtime: new Date() });
           changed = true;
         }
       } else if (evt.type === 'rename' && evt.oldPath) {
-        if (this._nodes.has(evt.oldPath)) {
-          this._removeNode(evt.oldPath);
+        const normOldPath = evt.oldPath.replace(/\\/g, '/');
+        if (this._nodes.has(normOldPath)) {
+          this._removeNode(normOldPath);
           changed = true;
         }
-        const node = makeNode(evt.path, evt.entryType);
+        const node = makeNode(normPath, evt.entryType);
         const parentLoaded = this._loadedPaths.has(node.parentPath ?? '');
         if (parentLoaded) {
           this._addNode(node);

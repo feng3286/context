@@ -24,12 +24,14 @@ export const appController = createRPCController({
   openIn: async (args: {
     app: OpenInAppId;
     path: string;
+    filePath?: string;
+    lineNumber?: number;
     isRemote?: boolean;
     sshConnectionId?: string | null;
   }) => {
     try {
       await appService.openIn(args);
-      capture('open_in_external', { app: args.app });
+      capture('open_in_external', { app: args.app, has_file: Boolean(args.filePath) });
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };

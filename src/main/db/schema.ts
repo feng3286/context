@@ -104,6 +104,7 @@ export const taskProjects = sqliteTable(
     projectId: text('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    sourceBranch: text('source_branch'),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.taskId, table.projectId] }),

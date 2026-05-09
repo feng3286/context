@@ -9,7 +9,7 @@ import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-
 import { useAgentAutoApproveDefaults } from '@renderer/features/tasks/hooks/useAgentAutoApproveDefaults';
 import {
   asProvisioned,
-  findTaskStoreByTaskId,
+  getTaskStore,
 } from '@renderer/features/tasks/stores/task-selectors';
 import { AgentSelector } from '@renderer/lib/components/agent-selector/agent-selector';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
@@ -36,9 +36,11 @@ function getConversationsPaneSize() {
 export const CreateConversationModal = observer(function CreateConversationModal({
   connectionId,
   onSuccess,
+  projectId,
   taskId,
 }: BaseModalProps<{ conversationId: string }> & {
   connectionId?: string;
+  projectId: string;
   taskId: string;
 }) {
   const [providerOverride, setProviderOverride] = useState<AgentProviderId | null>(null);
@@ -60,7 +62,9 @@ export const CreateConversationModal = observer(function CreateConversationModal
     installedProviderIds,
     availabilityKnown,
   });
-  const conversationMgr = asProvisioned(findTaskStoreByTaskId(taskId))?.conversations;
+  const taskStore = getTaskStore(projectId, taskId);
+  const provisioned = taskStore ? asProvisioned(taskStore) : undefined;
+  const conversationMgr = provisioned?.conversations;
   const autoApproveDefaults = useAgentAutoApproveDefaults();
   const skipPermissions = providerId ? autoApproveDefaults.getDefault(providerId) : false;
   const titleProviderId = providerId ?? defaultProviderId;

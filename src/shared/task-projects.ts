@@ -4,6 +4,7 @@ export type TaskProjectContext = {
   projectId: string;
   projectName: string;
   worktreePath: string | null;
+  sourceBranch: string | null;
 };
 
 export type TaskProjectWithContexts = {

@@ -39,6 +39,7 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
   const handleCreate = () =>
     showCreateConversationModal({
       connectionId: remoteConnectionId,
+      projectId,
       taskId,
       onSuccess: (result) => {
         const { conversationId } = result as { conversationId: string };

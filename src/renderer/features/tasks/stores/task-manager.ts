@@ -1,7 +1,7 @@
 import { makeObservable, observable, reaction, runInAction, toJS } from 'mobx';
 import { toast } from 'sonner';
 import { prSyncProgressChannel, prUpdatedChannel } from '@shared/events/prEvents';
-import { taskStatusUpdatedChannel } from '@shared/events/taskEvents';
+import { taskDeletedChannel, taskStatusUpdatedChannel } from '@shared/events/taskEvents';
 import type {
   CreateTaskError,
   CreateTaskParams,
@@ -77,6 +77,7 @@ export class TaskManagerStore {
 
   private _unsubPrUpdated: (() => void) | null = null;
   private _unsubPrSyncProgress: (() => void) | null = null;
+  private _unsubTaskDeleted: (() => void) | null = null;
   private _disposeRepositoryReaction: (() => void) | null = null;
 
   tasks = observable.map<string, TaskStore>();
@@ -127,6 +128,31 @@ export class TaskManagerStore {
         }
       }
     });
+
+    this._unsubTaskDeleted = events.on(
+      taskDeletedChannel,
+      ({ taskId, projectId: evtProjectId, workspaceId }) => {
+        const store = this.tasks.get(taskId);
+        if (!store) return;
+
+        // For multi-project tasks (workspace tasks), delete from all projects' stores
+        // For single-project tasks, only delete from the matching project's store
+        const taskWorkspaceId = (store.data as Task).workspaceId ?? null;
+        if (workspaceId && taskWorkspaceId === workspaceId) {
+          // Multi-project task - delete regardless of projectId
+          store.dispose();
+          runInAction(() => {
+            this.tasks.delete(taskId);
+          });
+        } else if (evtProjectId === this.projectId) {
+          // Single-project task - only delete from matching project
+          store.dispose();
+          runInAction(() => {
+            this.tasks.delete(taskId);
+          });
+        }
+      }
+    );
 
     this._disposeRepositoryReaction = reaction(
       () => this._repository.repositoryUrl,
@@ -259,13 +285,30 @@ export class TaskManagerStore {
         runInAction(() => {
           const current = this.tasks.get(taskId);
           if (current && isUnprovisioned(current)) {
+            const updatedData = {
+              ...current.data,
+              lastInteractedAt: new Date().toISOString(),
+            } as Task;
             current.transitionToProvisioned(
-              { ...current.data, lastInteractedAt: new Date().toISOString() },
+              updatedData,
               result.path,
               this._repository,
               savedSnapshot as TaskViewSnapshot | undefined
             );
             current.activate();
+
+            // Sync provisioning to other projects for multi-project tasks
+            const pt = current.provisionedTask;
+            if (pt && (current.data as Task).workspaceId) {
+              const projectManager = getProjectManagerStore();
+              for (const [pid, project] of projectManager.projects) {
+                if (pid === this.projectId) continue;
+                const otherStore = project.mountedProject?.taskManager.tasks.get(taskId);
+                if (otherStore && isUnprovisioned(otherStore)) {
+                  otherStore.transitionToSharedProvisioned(updatedData, pt);
+                }
+              }
+            }
           }
         });
       })
@@ -410,6 +453,8 @@ export class TaskManagerStore {
     this._unsubPrUpdated = null;
     this._unsubPrSyncProgress?.();
     this._unsubPrSyncProgress = null;
+    this._unsubTaskDeleted?.();
+    this._unsubTaskDeleted = null;
     this._disposeRepositoryReaction?.();
     this._disposeRepositoryReaction = null;
   }

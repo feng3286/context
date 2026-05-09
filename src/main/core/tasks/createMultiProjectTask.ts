@@ -5,6 +5,7 @@ import type {
   CreateMultiProjectTaskParams,
   CreateTaskError,
   CreateTaskSuccess,
+  CreateTaskWarning,
   TaskLifecycleStatus,
 } from '@shared/tasks';
 import { workspaceKey } from '@shared/workspace-key';
@@ -25,8 +26,9 @@ function mapProvisionError(message: string): CreateTaskError {
 export async function createMultiProjectTask(
   params: CreateMultiProjectTaskParams
 ): Promise<Result<CreateTaskSuccess, CreateTaskError>> {
-  const { projectBranchSources, taskBranch } = params;
+  const { projectBranchSources, taskBranch, pushBranch } = params;
   const initialStatus: TaskLifecycleStatus = 'in_progress';
+  let warning: CreateTaskWarning | undefined;
 
   // Validate all projects exist
   for (const source of projectBranchSources) {
@@ -93,22 +95,40 @@ export async function createMultiProjectTask(
       return err({ type: 'branch-create-failed', branch: taskBranch, error: createResult.error });
     }
 
+    // Push branch to remote if requested
+    if (pushBranch && !warning) {
+      const [, configuredRemote] = await Promise.all([
+        project.repository.getRemotes(),
+        project.repository.getConfiguredRemote(),
+      ]);
+      const publishResult = await project.repository.publishBranch(taskBranch, configuredRemote);
+      if (!publishResult.success) {
+        warning = {
+          type: 'branch-publish-failed',
+          branch: taskBranch,
+          remote: configuredRemote,
+          error: publishResult.error,
+        };
+      }
+    }
+
     // Create worktree directly at: {defaultWorktreeDir}/{workspaceName}/{taskName}/{projectName}/
     // No taskBranch subdirectory - all projects' worktrees are at the same level for easy context sharing
     const projectWorkDir = path.join(taskBaseDir, projectName);
 
     // Provision worktree for this project
-    const provisionResult = await project.provisionTask(task, [], [], projectWorkDir);
+    const provisionResult = await project.provisionTask(task, [], [], projectWorkDir, taskBaseDir);
     if (!provisionResult.success) {
       return err(mapProvisionError(provisionResult.error.type));
     }
   }
 
-  // Create task-project associations
+  // Create task-project associations with per-project source branch
   await db.insert(taskProjects).values(
     projectBranchSources.map((source) => ({
       taskId: params.id,
       projectId: source.projectId,
+      sourceBranch: source.sourceBranch,
     }))
   );
 
@@ -123,5 +143,5 @@ export async function createMultiProjectTask(
     project_count: projectBranchSources.length,
   });
 
-  return ok({ task });
+  return ok({ task, warning });
 }

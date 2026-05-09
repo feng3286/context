@@ -38,6 +38,15 @@ export function registerActiveCodeEditor(editor: monaco.editor.ICodeEditor | nul
   };
 }
 
+export function getActiveEditorPosition(): { lineNumber: number; column: number } | null {
+  if (!activeEditor) return null;
+  try {
+    const position = activeEditor.getPosition();
+    if (position) return { lineNumber: position.lineNumber, column: position.column };
+  } catch {}
+  return null;
+}
+
 export function performActiveEditorUndo(): boolean {
   const editor = activeEditor;
   if (!editor || !isEditorFocused(editor)) return false;

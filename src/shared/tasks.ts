@@ -37,6 +37,8 @@ export type Task = {
   isPinned: boolean;
   prs: PullRequest[];
   conversations: Record<string, number>;
+  /** Per-project source branch (from task_projects.source_branch). Only populated when queried by projectId. */
+  projectSourceBranch?: string | null;
 };
 
 export type TaskBootstrapStatus =
@@ -100,6 +102,7 @@ export type CreateMultiProjectTaskParams = {
   workspaceId: string;
   name: string;
   taskBranch: string;
+  pushBranch?: boolean;
   projectBranchSources: Array<{
     projectId: string;
     sourceBranch: string;

@@ -19,9 +19,33 @@ export async function provisionTask(taskId: string) {
   if (!project) throw new Error(`Project not found: ${task.projectId}`);
 
   const existingTask = project.getTask(taskId);
+  const wsId = workspaceKey(task.taskBranch);
+
+  // For workspace (multi-project) tasks, ensure workspaces are registered
+  // in ALL associated projects' providers. This must happen even when the
+  // task already exists, because providers are restarted on app launch.
+  if (task.workspaceId) {
+    const taskProjectRows = await db
+      .select()
+      .from(taskProjects)
+      .where(eq(taskProjects.taskId, taskId));
+
+    for (const row of taskProjectRows) {
+      const rowProject = projectManager.getProject(row.projectId);
+      if (rowProject && task.workDir) {
+        // Compute worktree path: {task.workDir}/{project.name}
+        const [projectRow] = await db
+          .select({ name: projects.name })
+          .from(projects)
+          .where(eq(projects.id, row.projectId))
+          .limit(1);
+        const worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
+        await rowProject.ensureWorkspace(wsId, worktreePath);
+      }
+    }
+  }
 
   if (existingTask) {
-    const wsId = workspaceKey(existingTask.taskBranch);
     return { path: project.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
   }
 
@@ -42,35 +66,10 @@ export async function provisionTask(taskId: string) {
   let workDir: string | undefined;
   let taskBaseDir: string | undefined;
 
-  // Get all task-project associations for multi-project tasks
-  const taskProjectRows = await db
-    .select()
-    .from(taskProjects)
-    .where(eq(taskProjects.taskId, taskId));
-
   if (task.workspaceId) {
-    // Multi-project task: worktree paths are computed as {task.workDir}/{project.name}
     workDir = task.workDir;
-    // For conversations, use the task base directory (parent of all worktrees)
     taskBaseDir = task.workDir;
-
-    // Ensure workspaces are provisioned in ALL associated projects' providers
-    const workspaceId = workspaceKey(task.taskBranch);
-    for (const row of taskProjectRows) {
-      const rowProject = projectManager.getProject(row.projectId);
-      if (rowProject && task.workDir) {
-        // Compute worktree path: {task.workDir}/{project.name}
-        const [projectRow] = await db
-          .select({ name: projects.name })
-          .from(projects)
-          .where(eq(projects.id, row.projectId))
-          .limit(1);
-        const worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
-        await rowProject.ensureWorkspace(workspaceId, worktreePath);
-      }
-    }
   } else {
-    // Single-project task: workDir will be resolved by the project provider
     workDir = undefined;
     taskBaseDir = undefined;
   }
@@ -96,6 +95,5 @@ export async function provisionTask(taskId: string) {
     workspace_id: task.workspaceId,
   });
 
-  const wsId = workspaceKey(task.taskBranch);
   return { path: project.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
 }

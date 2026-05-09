@@ -37,7 +37,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
         <SidebarContent className="flex flex-col">
           <SidebarPinnedTaskList />
           <SidebarGroup className="mb-0 min-h-0 flex-1 flex flex-col">
-            <div className="px-3 py-1 text-xs font-medium text-foreground-tertiary-muted uppercase tracking-wider">
+            <div className="flex items-center px-3 py-1.5 text-[11px] font-semibold text-foreground-tertiary-muted uppercase tracking-widest">
               Workspaces
             </div>
             <SidebarGroupContent className="min-h-0 flex-1 flex flex-col">
@@ -47,8 +47,8 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
+        <SidebarFooter className="gap-0.5">
+          <div className="flex flex-col gap-0.5 pb-2 border-b border-border/50 mb-1.5">
             <SidebarMenuButton
               isActive={false}
               onClick={() => showCreateWorkspaceModal({})}
@@ -72,46 +72,46 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
               </span>
               <ShortcutHint settingsKey="newProject" />
             </SidebarMenuButton>
-            <SidebarMenuButton
-              isActive={isCurrentView(currentView, 'skills')}
-              onClick={() => navigate('skills')}
-              aria-label="Skills"
-              className="w-full justify-start"
-            >
-              <Puzzle className="h-5 w-5 sm:h-4 sm:w-4" />
-              Skills
-            </SidebarMenuButton>
-            <SidebarMenuButton
-              isActive={isCurrentView(currentView, 'mcp')}
-              onClick={() => navigate('mcp')}
-              aria-label="MCP"
-              className="w-full justify-start"
-            >
-              <Plug className="h-5 w-5 sm:h-4 sm:w-4" />
-              MCP
-            </SidebarMenuButton>
-            <SidebarMenuButton
-              isActive={isCurrentView(currentView, 'settings')}
-              onClick={() => navigate('settings')}
-              aria-label="Settings"
-              className="w-full justify-between"
-            >
-              <span className="flex items-center gap-2">
-                <Settings className="h-5 w-5 sm:h-4 sm:w-4" />
-                Settings
-              </span>
-              <ShortcutHint settingsKey="settings" />
-            </SidebarMenuButton>
-          </SidebarMenu>
+          </div>
+          <SidebarMenuButton
+            isActive={isCurrentView(currentView, 'skills')}
+            onClick={() => navigate('skills')}
+            aria-label="Skills"
+            className="w-full justify-start"
+          >
+            <Puzzle className="h-5 w-5 sm:h-4 sm:w-4" />
+            Skills
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            isActive={isCurrentView(currentView, 'mcp')}
+            onClick={() => navigate('mcp')}
+            aria-label="MCP"
+            className="w-full justify-start"
+          >
+            <Plug className="h-5 w-5 sm:h-4 sm:w-4" />
+            MCP
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            isActive={isCurrentView(currentView, 'settings')}
+            onClick={() => navigate('settings')}
+            aria-label="Settings"
+            className="w-full justify-between"
+          >
+            <span className="flex items-center gap-2">
+              <Settings className="h-5 w-5 sm:h-4 sm:w-4" />
+              Settings
+            </span>
+            <ShortcutHint settingsKey="settings" />
+          </SidebarMenuButton>
         </SidebarFooter>
-        <div className="flex items-center gap-2 justify-between px-3 py-2 border-t border-border">
+        <div className="flex items-center gap-2 justify-between px-3 py-2 border-t border-border/50">
           <button
             type="button"
-            className="flex h-6 items-center min-w-0 w-full cursor-pointer gap-2 rounded-lg px-3 text-sm text-foreground-muted focus:outline-none focus-visible:outline-none"
+            className="flex h-6 items-center min-w-0 w-full cursor-pointer gap-2 rounded-lg px-2 text-sm text-foreground-muted hover:text-foreground-tertiary transition-colors focus:outline-none focus-visible:outline-none"
             onClick={() => showFeedbackModal({})}
           >
-            <MessageSquareShare className="size-4 shrink-0" />
-            <span className="truncate">Give feedback</span>
+            <MessageSquareShare className="size-3.5 shrink-0" />
+            <span className="truncate text-xs">Give feedback</span>
           </button>
           <UpdateSection />
         </div>

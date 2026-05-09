@@ -32,11 +32,15 @@ export function getTaskStore(projectId: string, taskId: string): TaskStore | und
  */
 export function findTaskStoreByTaskId(taskId: string): TaskStore | undefined {
   const projectManager = getProjectManagerStore();
+  let fallback: TaskStore | undefined;
   for (const project of projectManager.projects.values()) {
     const taskStore = project.mountedProject?.taskManager.tasks.get(taskId);
-    if (taskStore) return taskStore;
+    if (taskStore) {
+      if (taskStore.state === 'provisioned') return taskStore;
+      fallback ??= taskStore;
+    }
   }
-  return undefined;
+  return fallback;
 }
 
 /** Registered task payload (`Task`) when the row exists and is not unregistered; otherwise undefined. */
@@ -124,7 +128,8 @@ export function taskViewKind(store: TaskStore | undefined, projectId: string): T
 
 /** Returns the provisioned task payload if ready, otherwise undefined. */
 export function asProvisioned(store: TaskStore | undefined): ProvisionedTask | undefined {
-  return store?.provisionedTask ?? undefined;
+  if (!store) return undefined;
+  return store.provisionedTask ?? store.sharedProvisionedTask ?? undefined;
 }
 
 /** Returns the display name from any task store variant. */

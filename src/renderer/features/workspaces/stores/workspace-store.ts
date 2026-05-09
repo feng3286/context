@@ -1,9 +1,10 @@
 import { makeObservable, observable, runInAction } from 'mobx';
 import type { Conversation } from '@shared/conversations';
+import { taskDeletedChannel } from '@shared/events/taskEvents';
 import type { Project } from '@shared/projects';
 import type { Task } from '@shared/tasks';
 import type { Workspace } from '@shared/workspaces';
-import { rpc } from '@renderer/lib/ipc';
+import { events, rpc } from '@renderer/lib/ipc';
 
 export type WorkspaceLifecycleStatus = 'unloaded' | 'loading' | 'ready' | 'error';
 
@@ -47,6 +48,7 @@ export class WorkspaceStoreClass {
   tasks: Task[] = [];
   error: string | undefined = undefined;
   private _loadPromise: Promise<void> | null = null;
+  private _unsubTaskDeleted: (() => void) | null = null;
 
   constructor(data: Workspace) {
     this.data = data;
@@ -57,6 +59,18 @@ export class WorkspaceStoreClass {
       tasks: observable,
       error: observable,
     });
+
+    this._unsubTaskDeleted = events.on(taskDeletedChannel, ({ taskId, workspaceId }) => {
+      if (workspaceId !== this.data.id) return;
+      runInAction(() => {
+        this.tasks = this.tasks.filter((t) => t.id !== taskId);
+      });
+    });
+  }
+
+  dispose(): void {
+    this._unsubTaskDeleted?.();
+    this._unsubTaskDeleted = null;
   }
 
   load(): Promise<void> {

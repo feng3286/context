@@ -1,5 +1,11 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { rpc } from '@renderer/lib/ipc';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@renderer/lib/ui/context-menu';
 import { log } from '@renderer/utils/logger';
 import type { FrontendPty, SessionTheme } from './pty';
 import { usePty } from './use-pty';
@@ -46,7 +52,7 @@ const PtyPaneComponent = forwardRef<{ focus: () => void }, Props>(
 
     const theme: SessionTheme = { override: themeOverride };
 
-    const { focus, sendInput } = usePty(
+    const { focus, sendInput, pasteFromClipboard, copySelectionToClipboard, hasSelection } = usePty(
       {
         sessionId,
         pty,
@@ -115,23 +121,30 @@ const PtyPaneComponent = forwardRef<{ focus: () => void }, Props>(
           boxSizing: 'border-box',
         }}
       >
-        <div
-          ref={containerRef}
-          data-terminal-container
-          className="p-2 bg-background-secondary-1"
-          style={{
-            width: '100%',
-            height: '100%',
-
-            minHeight: 0,
-            overflow: 'hidden',
-            filter: contentFilter || undefined,
-          }}
-          onClick={handleFocus}
-          onMouseDown={handleFocus}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={handleDrop}
-        />
+        <ContextMenu>
+          <ContextMenuTrigger
+            ref={containerRef}
+            data-terminal-container
+            className="p-2 bg-background-secondary-1"
+            style={{
+              width: '100%',
+              height: '100%',
+              minHeight: 0,
+              overflow: 'hidden',
+              filter: contentFilter || undefined,
+            }}
+            onClick={handleFocus}
+            onMouseDown={handleFocus}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={handleDrop}
+          />
+          <ContextMenuContent>
+            <ContextMenuItem disabled={!hasSelection()} onClick={copySelectionToClipboard}>
+              Copy
+            </ContextMenuItem>
+            <ContextMenuItem onClick={pasteFromClipboard}>Paste</ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       </div>
     );
   }

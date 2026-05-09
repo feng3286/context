@@ -27,6 +27,7 @@ import {
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import { RightPanelView } from '@renderer/features/tasks/types';
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
+import { getActiveEditorPosition } from '@renderer/lib/editor/activeCodeEditor';
 import { OpenInMenu } from '@renderer/lib/components/titlebar/open-in-menu';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { useDelayedBoolean } from '@renderer/lib/hooks/use-delay-boolean';
@@ -146,6 +147,19 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
   const projectName = getTaskProjectDisplayName(projectId, provisionedTask);
 
   const isRemoteProject = projectStore?.data.type === 'ssh';
+
+  // Compute active file path and line number based on current view
+  const activeFilePath =
+    view === 'editor'
+      ? taskView.editorView.activeFilePath ?? undefined
+      : view === 'diff'
+        ? taskView.diffView.activeFile?.path ?? undefined
+        : undefined;
+
+  // Get line number from Monaco editor when in editor view
+  const editorPosition = view === 'editor' ? getActiveEditorPosition() : null;
+  const activeLineNumber = editorPosition?.lineNumber ?? (activeFilePath ? 1 : undefined);
+
   return (
     <Titlebar
       leftSlot={
@@ -164,7 +178,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 <MicroLabel className="text-foreground-passive items-center flex">Task</MicroLabel>
                 <span className="text-sm tracking-tight">{taskDisplayName(taskStore)}</span>
               </div>
-              <OpenInMenu path={provisionedTask.path} />
+              <OpenInMenu path={provisionedTask.path} filePath={activeFilePath} lineNumber={activeLineNumber} />
               {provisionedTask.isMultiProject && provisionedTask.projectContexts ? (
                 // Multi-project: show each project's git section
                 Array.from(provisionedTask.projectContexts.projects.values()).map(
@@ -183,11 +197,11 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                           <span>{projectContext.git.branchName}</span>
                         </span>
                       )}
-                      {taskPayload.sourceBranch && (
+                      {projectContext.sourceBranch && (
                         <span className="flex items-center gap-2 text-foreground-passive">
                           Created from
                           <span className="flex items-center gap-1 text-foreground-muted">
-                            <GitBranch className="size-3.5" /> {taskPayload.sourceBranch.branch}
+                            <GitBranch className="size-3.5" /> {projectContext.sourceBranch}
                           </span>
                         </span>
                       )}
@@ -425,7 +439,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
         <div className="flex items-center gap-2 mr-2">
           <DevServerPills projectId={projectId} taskId={taskId} />
           {!isRemoteProject && (
-            <OpenInMenu path={provisionedTask.path} className="h-7  bg-background" />
+            <OpenInMenu path={provisionedTask.path} filePath={activeFilePath} lineNumber={activeLineNumber} className="h-7  bg-background" />
           )}
           <ToggleGroup
             disabled={delayedIsPending}

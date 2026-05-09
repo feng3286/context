@@ -167,6 +167,8 @@ export const CreateTaskModal = observer(function CreateTaskModal({
   // Task name and branch
   const [taskName, setTaskName] = useState('');
   const [taskBranch, setTaskBranch] = useState('');
+  const [branchManuallyEdited, setBranchManuallyEdited] = useState(false);
+  const [pushBranch, setPushBranch] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const { navigate } = useNavigate();
@@ -221,7 +223,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
 
   const handleTaskNameChange = (name: string) => {
     setTaskName(name);
-    if (!taskBranch) {
+    if (!branchManuallyEdited) {
       setTaskBranch(generateTaskBranch(name));
     }
   };
@@ -253,6 +255,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
           workspaceId,
           name: taskName.trim(),
           taskBranch: taskBranch.trim() || generateTaskBranch(taskName),
+          pushBranch: pushBranch || undefined,
           projectBranchSources,
         });
 
@@ -289,6 +292,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
           strategy: {
             kind: 'new-branch',
             taskBranch: taskBranch.trim() || generateTaskBranch(taskName),
+            pushBranch: pushBranch || undefined,
           },
         });
 
@@ -308,6 +312,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
     selectedProjectId,
     taskName,
     taskBranch,
+    pushBranch,
     branchConfigs,
     navigate,
     onClose,
@@ -367,7 +372,10 @@ export const CreateTaskModal = observer(function CreateTaskModal({
           <input
             type="text"
             value={taskBranch}
-            onChange={(e) => setTaskBranch(e.target.value)}
+            onChange={(e) => {
+              setTaskBranch(e.target.value);
+              setBranchManuallyEdited(true);
+            }}
             className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Auto-generated from name"
           />
@@ -375,6 +383,16 @@ export const CreateTaskModal = observer(function CreateTaskModal({
             All projects will use this branch name.
           </p>
         </Field>
+
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={pushBranch}
+            onChange={(e) => setPushBranch(e.target.checked)}
+            className="h-4 w-4 rounded border-border"
+          />
+          <span className="text-sm">Push branch to remote</span>
+        </label>
       </DialogContentArea>
       <DialogFooter>
         <ConfirmButton

@@ -1,7 +1,7 @@
 import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { Task } from '@shared/tasks';
 import { db } from '@main/db/client';
-import { conversations, tasks } from '@main/db/schema';
+import { conversations, taskProjects, tasks } from '@main/db/schema';
 import { mapTaskRowToTask } from './core';
 
 export async function getTasks(projectId?: string): Promise<Task[]> {
@@ -24,6 +24,21 @@ export async function getTasks(projectId?: string): Promise<Task[]> {
 
   const taskIds = rows.map((r) => r.id);
 
+  // Get per-project source branches from task_projects
+  const sourceBranchMap = new Map<string, string | null>();
+  if (projectId) {
+    const tpRows = await db
+      .select({
+        taskId: taskProjects.taskId,
+        sourceBranch: taskProjects.sourceBranch,
+      })
+      .from(taskProjects)
+      .where(eq(taskProjects.projectId, projectId));
+    for (const { taskId, sourceBranch } of tpRows) {
+      sourceBranchMap.set(taskId, sourceBranch ?? null);
+    }
+  }
+
   const convRows = await db
     .select({
       taskId: conversations.taskId,
@@ -45,6 +60,7 @@ export async function getTasks(projectId?: string): Promise<Task[]> {
     ...mapTaskRowToTask(row),
     prs: [],
     conversations: convByTask.get(row.id) ?? {},
+    projectSourceBranch: sourceBranchMap.has(row.id) ? sourceBranchMap.get(row.id)! : undefined,
   }));
 }
 

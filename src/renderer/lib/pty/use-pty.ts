@@ -74,6 +74,9 @@ export interface UseTerminalReturn {
   focus: () => void;
   setTheme: (theme: SessionTheme) => void;
   sendInput: (data: string, options?: { track?: boolean }) => void;
+  pasteFromClipboard: () => void;
+  copySelectionToClipboard: () => void;
+  hasSelection: () => boolean;
 }
 
 /**
@@ -598,5 +601,9 @@ export function usePty(
     }
   }, [isPanelDragging, measureAndResize]);
 
-  return { focus, setTheme, sendInput };
+  const hasSelection = useCallback(() => {
+    return termRef.current?.hasSelection() ?? false;
+  }, []);
+
+  return { focus, setTheme, sendInput, pasteFromClipboard, copySelectionToClipboard, hasSelection };
 }

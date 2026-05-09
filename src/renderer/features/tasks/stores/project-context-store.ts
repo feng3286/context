@@ -13,6 +13,7 @@ export class ProjectContext {
   readonly projectId: string;
   readonly projectName: string;
   readonly worktreePath: string | null;
+  readonly sourceBranch: string | null;
   readonly git: GitStore;
   readonly files: FilesStore;
 
@@ -20,6 +21,7 @@ export class ProjectContext {
     this.projectId = context.projectId;
     this.projectName = context.projectName;
     this.worktreePath = context.worktreePath;
+    this.sourceBranch = context.sourceBranch;
     // Use the task's workspaceId for git/files stores
     // The workspaceId is derived from taskBranch which is shared across all projects
     this.git = new GitStore(context.projectId, workspaceId, repositoryStore);
@@ -49,6 +51,7 @@ export class ProjectContext {
 export class ProjectContextStore {
   readonly projects = observable.map<string, ProjectContext>();
   readonly expandedSections = observable.set<string>();
+  readonly expandedProjects = observable.set<string>();
   activeProjectId: string | null = null;
 
   constructor() {
@@ -84,6 +87,30 @@ export class ProjectContextStore {
 
   isExpanded(projectId: string): boolean {
     return this.expandedSections.has(projectId);
+  }
+
+  toggleProjectExpand(projectKey: string): void {
+    if (this.expandedProjects.has(projectKey)) {
+      this.expandedProjects.delete(projectKey);
+    } else {
+      this.expandedProjects.add(projectKey);
+      // Extract projectId from "project:<id>" format
+      const projectId = projectKey.replace('project:', '');
+      const context = this.projects.get(projectId);
+      if (context && !context.files.loadedPaths.has('')) {
+        void context.files.loadDir('');
+      }
+    }
+  }
+
+  findProjectIdForPath(path: string): string | undefined {
+    // Find which project contains this path
+    for (const context of this.projects.values()) {
+      if (context.files.nodes.has(path) || path.startsWith(context.worktreePath ?? '')) {
+        return context.projectId;
+      }
+    }
+    return undefined;
   }
 
   activate(): void {

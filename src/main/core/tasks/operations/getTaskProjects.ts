@@ -40,6 +40,7 @@ export async function getTaskProjectContexts(taskId: string): Promise<TaskProjec
     .select({
       projectId: projects.id,
       projectName: projects.name,
+      sourceBranch: taskProjects.sourceBranch,
     })
     .from(taskProjects)
     .innerJoin(projects, eq(taskProjects.projectId, projects.id))
@@ -49,5 +50,6 @@ export async function getTaskProjectContexts(taskId: string): Promise<TaskProjec
     projectId: row.projectId,
     projectName: row.projectName,
     worktreePath: null,
+    sourceBranch: row.sourceBranch,
   }));
 }

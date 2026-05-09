@@ -220,6 +220,7 @@ export async function createTask(
     allProjectIds.map((pid) => ({
       taskId: params.id,
       projectId: pid,
+      sourceBranch: dbSourceBranch.branch,
     }))
   );
 

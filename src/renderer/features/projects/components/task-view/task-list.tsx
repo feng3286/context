@@ -1,12 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Archive, RotateCcw, Trash2, X } from 'lucide-react';
+import { Archive, RotateCcw, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useRef } from 'react';
 import { asMounted, getProjectStore } from '@renderer/features/projects/stores/project-selectors';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
 import { ListPopoverCard } from '@renderer/lib/components/list-popover-card';
 import { useParams } from '@renderer/lib/layout/navigation-provider';
-import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Button } from '@renderer/lib/ui/button';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { SearchInput } from '@renderer/lib/ui/search-input';
@@ -16,10 +15,12 @@ import { ReadyTask, TaskRow } from './task-row';
 
 function TaskVirtualList({
   tasks,
+  projectId,
   selectedIds,
   onToggleSelect,
 }: {
   tasks: ReadyTask[];
+  projectId: string;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
 }) {
@@ -65,6 +66,7 @@ function TaskVirtualList({
             >
               <TaskRow
                 task={task}
+                projectId={projectId}
                 isSelected={selectedIds.has(task.data.id)}
                 onToggleSelect={() => onToggleSelect(task.data.id)}
               />
@@ -82,14 +84,12 @@ function SelectionBar({
   onClear,
   onArchive,
   onRestore,
-  onDelete,
 }: {
   count: number;
   tab: 'active' | 'archived';
   onClear: () => void;
   onArchive: () => void;
   onRestore: () => void;
-  onDelete: () => void;
 }) {
   if (count === 0) return null;
 
@@ -109,10 +109,6 @@ function SelectionBar({
             Restore
           </Button>
         )}
-        <Button variant="destructive" size="sm" onClick={onDelete}>
-          <Trash2 className="size-3.5" />
-          Delete
-        </Button>
         <Button variant="ghost" size="icon-sm" onClick={onClear} aria-label="Clear selection">
           <X className="size-3.5" />
         </Button>
@@ -127,7 +123,6 @@ export const TaskList = observer(function TaskList() {
   } = useParams('project');
   const store = asMounted(getProjectStore(projectId));
   const taskManager = getTaskManagerStore(projectId);
-  const showConfirm = useShowModal('confirmActionModal');
 
   const taskView = store?.view.taskView ?? null;
 
@@ -161,20 +156,6 @@ export const TaskList = observer(function TaskList() {
     clearSelection();
   };
 
-  const bulkDelete = () => {
-    const count = taskView.selectedIds.size;
-    showConfirm({
-      title: `Delete ${count} task${count === 1 ? '' : 's'}`,
-      description: 'The selected tasks will be permanently deleted. This action cannot be undone.',
-      confirmLabel: `Delete ${count} task${count === 1 ? '' : 's'}`,
-      onSuccess: () => {
-        const ids = [...taskView.selectedIds];
-        ids.forEach((id) => void taskManager?.deleteTask(id));
-        clearSelection();
-      },
-    });
-  };
-
   return (
     <div className="relative flex flex-col max-w-3xl mx-auto w-full h-full pt-6 px-6 min-h-0">
       <div className="flex flex-col gap-4 border-b border-border pb-3 shrink-0">
@@ -200,6 +181,7 @@ export const TaskList = observer(function TaskList() {
 
       <TaskVirtualList
         tasks={filteredTasks}
+        projectId={projectId}
         selectedIds={taskView.selectedIds}
         onToggleSelect={(id) => taskView.toggleSelect(id)}
       />
@@ -210,7 +192,6 @@ export const TaskList = observer(function TaskList() {
         onClear={clearSelection}
         onArchive={bulkArchive}
         onRestore={bulkRestore}
-        onDelete={bulkDelete}
       />
     </div>
   );

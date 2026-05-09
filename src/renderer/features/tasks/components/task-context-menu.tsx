@@ -18,7 +18,7 @@ interface TaskContextMenuProps {
   onRename: () => void;
   onArchive: () => void;
   onRestore?: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
 }
 
 export function TaskContextMenu({
@@ -66,10 +66,12 @@ export function TaskContextMenu({
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onClick={onDelete}>
-          <Trash2 className="size-4" />
-          Delete
-        </ContextMenuItem>
+        {onDelete && (
+          <ContextMenuItem variant="destructive" onClick={onDelete}>
+            <Trash2 className="size-4" />
+            Delete
+          </ContextMenuItem>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );

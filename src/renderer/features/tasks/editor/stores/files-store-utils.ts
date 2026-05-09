@@ -46,7 +46,7 @@ const EXCLUDED_NAMES = new Set([
 ]);
 
 export function isExcluded(path: string): boolean {
-  return path.split('/').some((seg) => EXCLUDED_NAMES.has(seg));
+  return path.replace(/\\/g, '/').split('/').some((seg) => EXCLUDED_NAMES.has(seg));
 }
 
 // ---------------------------------------------------------------------------
@@ -54,14 +54,15 @@ export function isExcluded(path: string): boolean {
 // ---------------------------------------------------------------------------
 
 export function makeNode(relPath: string, type: 'file' | 'directory', mtime?: Date): FileNode {
-  const parts = relPath.split('/').filter(Boolean);
-  const name = parts[parts.length - 1] ?? relPath;
+  const normalized = relPath.replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+  const name = parts[parts.length - 1] ?? normalized;
   const parentPath = parts.length > 1 ? parts.slice(0, -1).join('/') : null;
   const depth = parts.length - 1;
   const extension = type === 'file' && name.includes('.') ? name.split('.').pop() : undefined;
 
   return {
-    path: relPath,
+    path: normalized,
     name,
     parentPath,
     depth,

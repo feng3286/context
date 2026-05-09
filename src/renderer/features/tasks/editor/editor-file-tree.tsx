@@ -7,7 +7,7 @@ import { buildVisibleRows } from '@renderer/features/tasks/editor/stores/files-s
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
 import { cn } from '@renderer/utils/utils';
-import { MultiProjectFileTree } from './multi-project-file-tree';
+import { UnifiedMultiProjectFileTree } from './unified-multi-project-file-tree';
 
 const FileTreeRow = observer(function FileTreeRow({
   node,
@@ -126,13 +126,9 @@ const FileTreeRow = observer(function FileTreeRow({
 export const EditorFileTree = observer(function EditorFileTree() {
   const taskState = useProvisionedTask();
 
-  // 多项目任务使用 MultiProjectFileTree
-  if (taskState.isMultiProject && taskState.projectContexts) {
-    return <MultiProjectFileTree />;
-  }
+  const parentRef = useRef<HTMLDivElement>(null);
 
-  // 单项目任务使用原有逻辑
-  const files = taskState.workspace.files;
+  const files = taskState.isMultiProject ? null : taskState.workspace.files;
   const editorView = taskState.taskView.editorView;
   const projectId = taskState._taskData.projectId;
 
@@ -140,14 +136,17 @@ export const EditorFileTree = observer(function EditorFileTree() {
     ? buildVisibleRows(files.nodes, files.childIndex, editorView.expandedPaths)
     : [];
 
-  const parentRef = useRef<HTMLDivElement>(null);
-
   const virtualizer = useVirtualizer({
     count: visibleRows.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 28,
     overscan: 10,
   });
+
+  // 多项目任务使用统一的文件树
+  if (taskState.isMultiProject && taskState.projectContexts) {
+    return <UnifiedMultiProjectFileTree />;
+  }
 
   if (files?.isLoading) {
     return (

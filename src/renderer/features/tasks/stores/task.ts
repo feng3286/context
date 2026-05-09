@@ -151,6 +151,7 @@ export class TaskStore {
   phase: UnregisteredTaskPhase | UnprovisionedTaskPhase | null;
   errorMessage: string | undefined = undefined;
   provisionedTask: ProvisionedTask | null = null;
+  sharedProvisionedTask: ProvisionedTask | null = null;
 
   get displayName(): string {
     return this.data.name;
@@ -174,6 +175,7 @@ export class TaskStore {
     this.phase = phase;
     makeAutoObservable(this, {
       provisionedTask: observable.ref,
+      sharedProvisionedTask: observable.ref,
       /** Deep observable so nested fields (e.g. `status`) notify observers (e.g. sidebar). */
       data: observable,
     });
@@ -192,9 +194,18 @@ export class TaskStore {
     this.errorMessage = undefined;
   }
 
+  transitionToSharedProvisioned(data: Task, provisionedTask: ProvisionedTask): void {
+    this.data = data;
+    this.sharedProvisionedTask = provisionedTask;
+    this.state = 'provisioned';
+    this.phase = null;
+    this.errorMessage = undefined;
+  }
+
   transitionToUnprovisioned(data: Task, phase: UnprovisionedTaskPhase = 'idle'): void {
     this.provisionedTask?.dispose();
     this.provisionedTask = null;
+    this.sharedProvisionedTask = null;
     this.data = data;
     this.state = 'unprovisioned';
     this.phase = phase;
@@ -204,6 +215,7 @@ export class TaskStore {
   transitionToUnregistered(data: UnregisteredTaskData): void {
     this.provisionedTask?.dispose();
     this.provisionedTask = null;
+    this.sharedProvisionedTask = null;
     this.data = data;
     this.state = 'unregistered';
     this.phase = 'creating';
@@ -217,19 +229,23 @@ export class TaskStore {
   dispose(): void {
     this.provisionedTask?.dispose();
     this.provisionedTask = null;
+    this.sharedProvisionedTask = null;
   }
 
   get conversationStats(): Record<string, number> {
     if (this.state === 'unregistered') {
       return {};
     }
-    if (this.state === 'provisioned' && this.provisionedTask) {
-      const counts: Record<string, number> = {};
-      for (const conv of this.provisionedTask.conversations.conversations.values()) {
-        const id = conv.data.providerId;
-        counts[id] = (counts[id] ?? 0) + 1;
+    if (this.state === 'provisioned') {
+      const pt = this.provisionedTask ?? this.sharedProvisionedTask;
+      if (pt) {
+        const counts: Record<string, number> = {};
+        for (const conv of pt.conversations.conversations.values()) {
+          const id = conv.data.providerId;
+          counts[id] = (counts[id] ?? 0) + 1;
+        }
+        return counts;
       }
-      return counts;
     }
     return (this.data as Task).conversations;
   }

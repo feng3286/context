@@ -38,6 +38,8 @@ export class WorkspaceManagerStore {
   async deleteWorkspace(id: string): Promise<void> {
     await rpc.workspace.deleteWorkspace(id);
     runInAction(() => {
+      const store = this.workspaces.get(id);
+      store?.dispose();
       this.workspaces.delete(id);
     });
   }

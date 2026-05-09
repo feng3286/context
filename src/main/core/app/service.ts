@@ -1,4 +1,5 @@
 import { exec } from 'node:child_process';
+import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { clipboard, dialog, shell } from 'electron';
 import { appPasteChannel, appRedoChannel, appUndoChannel } from '@shared/events/appEvents';
@@ -161,10 +162,12 @@ class AppService {
   async openIn(args: {
     app: OpenInAppId;
     path: string;
+    filePath?: string;
+    lineNumber?: number;
     isRemote?: boolean;
     sshConnectionId?: string | null;
   }): Promise<void> {
-    const { path: target, app: appId, isRemote = false, sshConnectionId } = args;
+    const { path: target, app: appId, filePath, lineNumber, isRemote = false, sshConnectionId } = args;
 
     if (!target || typeof target !== 'string' || !appId) {
       throw new Error('Invalid arguments');
@@ -182,11 +185,11 @@ class AppService {
     }
 
     if (isRemote && sshConnectionId) {
-      await this.openInRemote({ appId, appConfig, label, target, platform, sshConnectionId });
+      await this.openInRemote({ appId, appConfig, label, target, platform, sshConnectionId, filePath, lineNumber });
       return;
     }
 
-    await this.openInLocal({ label, target, platformConfig });
+    await this.openInLocal({ label, target, platformConfig, filePath, lineNumber });
   }
 
   private async openInRemote(args: {
@@ -196,6 +199,8 @@ class AppService {
     target: string;
     platform: PlatformKey;
     sshConnectionId: string;
+    filePath?: string;
+    lineNumber?: number;
   }): Promise<void> {
     const { appId, appConfig, label, target, platform, sshConnectionId } = args;
 
@@ -278,8 +283,41 @@ class AppService {
     label: string;
     target: string;
     platformConfig: PlatformConfig | undefined;
+    filePath?: string;
+    lineNumber?: number;
   }): Promise<void> {
-    const { label, target, platformConfig } = args;
+    const { label, target, platformConfig, filePath, lineNumber } = args;
+
+    // If filePath is provided and openFileCommands exist, use file-specific opening
+    if (filePath && platformConfig?.openFileCommands?.length) {
+      const line = lineNumber ?? 1;
+      const absoluteFilePath = filePath.startsWith(target) ? filePath : join(target, filePath);
+      // Windows uses double quotes; Unix uses single quotes
+      const quoted =
+        process.platform === 'win32'
+          ? (p: string) => `"${p.replace(/"/g, '\\"')}"`
+          : (p: string) => `'${p.replace(/'/g, "'\\''")}'`;
+      const commands = platformConfig.openFileCommands
+        .map((cmd) =>
+          cmd
+            .replace('{{file}}', quoted(absoluteFilePath))
+            .replace('{{line}}', String(line))
+            .replace('{{col}}', '1')
+            .replace('{{path}}', quoted(target))
+            .replace('{{path_raw}}', target)
+        )
+        .join(' || ');
+
+      if (!commands) throw new Error('Unsupported platform or app');
+
+      await new Promise<void>((resolve, reject) => {
+        exec(commands, { cwd: target, env: buildExternalToolEnv() }, (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+      return;
+    }
 
     if (platformConfig?.openUrls) {
       for (const urlTemplate of platformConfig.openUrls) {
@@ -298,7 +336,10 @@ class AppService {
       );
     }
 
-    const quoted = (p: string) => `'${p.replace(/'/g, "'\\''")}'`;
+    const quoted =
+      process.platform === 'win32'
+        ? (p: string) => `"${p.replace(/"/g, '\\"')}"`
+        : (p: string) => `'${p.replace(/'/g, "'\\''")}'`;
     const commands: string[] = platformConfig?.openCommands ?? [];
     const command = commands
       .map((cmd) => cmd.replace('{{path}}', quoted(target)).replace('{{path_raw}}', target))

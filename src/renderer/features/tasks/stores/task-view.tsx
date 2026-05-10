@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, observable } from 'mobx';
 import type { TaskViewSnapshot } from '@shared/view-state';
 import type { ConversationManagerStore } from '@renderer/features/tasks/conversations/conversation-manager';
 import { ConversationTabViewStore } from '@renderer/features/tasks/conversations/conversation-tab-view-store';
@@ -56,7 +56,7 @@ export class TaskViewStore {
       conversationTabs: false,
       terminalTabs: false,
       editorView: false,
-      diffView: false,
+      diffView: observable,
     });
   }
 

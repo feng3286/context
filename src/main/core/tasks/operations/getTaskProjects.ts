@@ -1,8 +1,9 @@
+import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { LocalProject, Project, SshProject } from '@shared/projects';
 import type { TaskProjectContext } from '@shared/task-projects';
 import { db } from '@main/db/client';
-import { projects, taskProjects } from '@main/db/schema';
+import { projects, taskProjects, tasks } from '@main/db/schema';
 
 export async function getTaskProjects(taskId: string): Promise<Project[]> {
   const rows = await db
@@ -36,6 +37,15 @@ export async function getTaskProjects(taskId: string): Promise<Project[]> {
 }
 
 export async function getTaskProjectContexts(taskId: string): Promise<TaskProjectContext[]> {
+  // First get the task to retrieve workDir
+  const [taskRow] = await db
+    .select({ workDir: tasks.workDir })
+    .from(tasks)
+    .where(eq(tasks.id, taskId))
+    .limit(1);
+
+  const workDir = taskRow?.workDir;
+
   const rows = await db
     .select({
       projectId: projects.id,
@@ -49,7 +59,8 @@ export async function getTaskProjectContexts(taskId: string): Promise<TaskProjec
   return rows.map((row) => ({
     projectId: row.projectId,
     projectName: row.projectName,
-    worktreePath: null,
+    // Compute worktreePath: {task.workDir}/{projectName}
+    worktreePath: workDir ? path.join(workDir, row.projectName) : null,
     sourceBranch: row.sourceBranch,
   }));
 }

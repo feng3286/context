@@ -31,7 +31,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
   const showCreateWorkspaceModal = useShowModal('createWorkspaceModal');
 
   return (
-    <div className="flex flex-col h-full bg-background-tertiary text-foreground-tertiary-muted">
+    <div className="flex flex-col h-full bg-background-tertiary text-foreground-tertiary-muted overflow-x-hidden">
       <SidebarSpace />
       <SidebarContainer className="w-full border-r-0 flex-1 min-h-0">
         <SidebarContent className="flex flex-col">

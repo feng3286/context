@@ -22,6 +22,8 @@ interface OpenInMenuProps {
   isRemote?: boolean;
   sshConnectionId?: string | null;
   className?: string;
+  /** For multi-project tasks, optional projectId to determine the correct worktree path */
+  projectId?: string;
 }
 
 export const OpenInMenu: React.FC<OpenInMenuProps> = ({
@@ -31,6 +33,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
   className,
   isRemote = false,
   sshConnectionId = null,
+  projectId,
 }) => {
   const { toast } = useToast();
   const { icons, labels, installedApps, availability, loading } = useOpenInApps();
@@ -59,6 +62,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
           lineNumber,
           isRemote,
           sshConnectionId: sshConnectionId ?? undefined,
+          projectId,
         });
         if (!res?.success) {
           toast({
@@ -75,7 +79,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         });
       }
     },
-    [labels, path, filePath, lineNumber, isRemote, sshConnectionId, toast]
+    [labels, path, filePath, lineNumber, isRemote, sshConnectionId, projectId, toast]
   );
 
   const sortedApps = useMemo(() => {

@@ -1,31 +1,44 @@
-import { computed, makeObservable, observable, reaction, runInAction, when } from 'mobx';
+import { action, computed, makeObservable, observable, reaction, runInAction, when } from 'mobx';
 import { PrStore } from '@renderer/features/tasks/stores/pr-store';
 import { GitStore } from './git-store';
 
 export type SelectionState = 'all' | 'none' | 'partial';
 
-export interface ExpandedSections {
-  unstaged: boolean;
-  staged: boolean;
-  pullRequests: boolean;
-}
+export type ExpandedSectionKey = 'unstaged' | 'staged' | 'pullRequests';
 
 export class ChangesViewStore {
   unstagedSelection = observable.set<string>();
   stagedSelection = observable.set<string>();
-  expandedSections: ExpandedSections = { unstaged: true, staged: true, pullRequests: true };
+  expandedUnstaged: boolean = true;
+  expandedStaged: boolean = true;
+  expandedPullRequests: boolean = true;
 
   private _disposeReactions: Array<() => void> = [];
-  private _suppressAutoExpand = new Set<keyof ExpandedSections>();
+  private _suppressAutoExpand = new Set<ExpandedSectionKey>();
 
   constructor(
     private readonly git: GitStore,
     private readonly pr: PrStore
   ) {
     makeObservable(this, {
-      expandedSections: observable,
+      unstagedSelection: observable,
+      stagedSelection: observable,
+      expandedUnstaged: observable,
+      expandedStaged: observable,
+      expandedPullRequests: observable,
       unstagedSelectionState: computed,
       stagedSelectionState: computed,
+      toggleUnstagedItem: action,
+      toggleAllUnstaged: action,
+      clearUnstagedSelection: action,
+      toggleStagedItem: action,
+      toggleAllStaged: action,
+      clearStagedSelection: action,
+      setExpanded: action,
+      toggleExpanded: action,
+      expandForActiveFileType: action,
+      suppressNextAutoExpand: action,
+      dispose: action,
     });
 
     // Prune stale paths from selections whenever the file lists change.
@@ -60,11 +73,9 @@ export class ChangesViewStore {
           const hasPullRequests = this.pr.pullRequests.length > 0;
 
           runInAction(() => {
-            this.expandedSections = {
-              unstaged: hasUnstaged || (!hasStaged && !hasUnstaged && !hasPullRequests),
-              staged: hasStaged,
-              pullRequests: hasPullRequests,
-            };
+            this.expandedUnstaged = hasUnstaged || (!hasStaged && !hasUnstaged && !hasPullRequests);
+            this.expandedStaged = hasStaged;
+            this.expandedPullRequests = hasPullRequests;
           });
         }
       )
@@ -80,46 +91,35 @@ export class ChangesViewStore {
         }),
         (curr, prev) => {
           runInAction(() => {
-            const next = { ...this.expandedSections };
-            let changed = false;
-
             if (curr.unstaged === 0 && prev.unstaged > 0) {
-              next.unstaged = false;
-              changed = true;
+              this.expandedUnstaged = false;
             } else if (curr.unstaged > 0 && prev.unstaged === 0) {
               if (this._suppressAutoExpand.has('unstaged')) {
                 this._suppressAutoExpand.delete('unstaged');
               } else {
-                next.unstaged = true;
-                changed = true;
+                this.expandedUnstaged = true;
               }
             }
 
             if (curr.staged === 0 && prev.staged > 0) {
-              next.staged = false;
-              changed = true;
+              this.expandedStaged = false;
             } else if (curr.staged > 0 && prev.staged === 0) {
               if (this._suppressAutoExpand.has('staged')) {
                 this._suppressAutoExpand.delete('staged');
               } else {
-                next.staged = true;
-                changed = true;
+                this.expandedStaged = true;
               }
             }
 
             if (curr.pullRequests === 0 && prev.pullRequests > 0) {
-              next.pullRequests = false;
-              changed = true;
+              this.expandedPullRequests = false;
             } else if (curr.pullRequests > 0 && prev.pullRequests === 0) {
               if (this._suppressAutoExpand.has('pullRequests')) {
                 this._suppressAutoExpand.delete('pullRequests');
               } else {
-                next.pullRequests = true;
-                changed = true;
+                this.expandedPullRequests = true;
               }
             }
-
-            if (changed) this.expandedSections = next;
           });
         }
       )
@@ -186,31 +186,34 @@ export class ChangesViewStore {
     this.stagedSelection.clear();
   }
 
-  toggleExpanded(section: keyof ExpandedSections): void {
-    runInAction(() => {
-      this.expandedSections = {
-        ...this.expandedSections,
-        [section]: !this.expandedSections[section],
-      };
-    });
+  setExpanded(next: { unstaged?: boolean; staged?: boolean; pullRequests?: boolean }): void {
+    if (next.unstaged !== undefined) this.expandedUnstaged = next.unstaged;
+    if (next.staged !== undefined) this.expandedStaged = next.staged;
+    if (next.pullRequests !== undefined) this.expandedPullRequests = next.pullRequests;
   }
 
-  setExpanded(next: ExpandedSections | ((prev: ExpandedSections) => ExpandedSections)): void {
-    runInAction(() => {
-      this.expandedSections = typeof next === 'function' ? next(this.expandedSections) : next;
-    });
+  toggleExpanded(section: ExpandedSectionKey): void {
+    if (section === 'unstaged') {
+      this.expandedUnstaged = !this.expandedUnstaged;
+    } else if (section === 'staged') {
+      this.expandedStaged = !this.expandedStaged;
+    } else if (section === 'pullRequests') {
+      this.expandedPullRequests = !this.expandedPullRequests;
+    }
   }
 
   expandForActiveFileType(group: 'disk' | 'staged' | 'git' | 'pr'): void {
     const section = group === 'disk' ? 'unstaged' : group === 'staged' ? 'staged' : 'pullRequests';
-    if (!this.expandedSections[section]) {
-      runInAction(() => {
-        this.expandedSections = { ...this.expandedSections, [section]: true };
-      });
+    if (section === 'unstaged' && !this.expandedUnstaged) {
+      this.expandedUnstaged = true;
+    } else if (section === 'staged' && !this.expandedStaged) {
+      this.expandedStaged = true;
+    } else if (section === 'pullRequests' && !this.expandedPullRequests) {
+      this.expandedPullRequests = true;
     }
   }
 
-  suppressNextAutoExpand(section: keyof ExpandedSections): void {
+  suppressNextAutoExpand(section: ExpandedSectionKey): void {
     this._suppressAutoExpand.add(section);
   }
 

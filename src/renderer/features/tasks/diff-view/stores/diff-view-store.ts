@@ -1,4 +1,4 @@
-import { action, computed, makeObservable, observable, reaction } from 'mobx';
+import { action, computed, makeObservable, observable, reaction, runInAction, when } from 'mobx';
 import { commitRef, type GitObjectRef } from '@shared/git';
 import type { ActiveFile, DiffViewSnapshot } from '@shared/view-state';
 import { ChangesViewStore } from '@renderer/features/tasks/diff-view/stores/changes-view-store';
@@ -50,6 +50,7 @@ export class DiffViewStore implements Snapshottable<DiffViewSnapshot> {
       diffStyle: observable,
       commitAction: observable,
       prTab: observable,
+      changesView: observable,
       setActiveFile: action,
       setDiffStyle: action,
       setPrTab: action,
@@ -66,11 +67,14 @@ export class DiffViewStore implements Snapshottable<DiffViewSnapshot> {
     );
 
     // Auto-expand the changes panel section that contains the newly selected file.
+    // Only applies to single-project mode (when projectId is not specified).
     this._disposeReactions.push(
       reaction(
         () => this.activeFile,
         (file) => {
           if (!file || file.group === 'git' || file.group === 'pr') return;
+          // In multi-project mode, projectId is set - don't auto-expand global changesView
+          if (file.projectId) return;
           this.changesView.expandForActiveFileType(file.group);
         }
       )
@@ -89,6 +93,10 @@ export class DiffViewStore implements Snapshottable<DiffViewSnapshot> {
 
     // git/pr groups cannot be validated against working-tree lists — trust the override
     if (override.group === 'git' || override.group === 'pr') return override;
+
+    // For multi-project tasks, files with projectId cannot be validated against this.git
+    // (which is the workspace git store, not project-specific). Trust the override.
+    if (override.projectId) return override;
 
     const isStaged = override.group === 'staged';
     const ownList = isStaged ? this.git.stagedFileChanges : this.git.unstagedFileChanges;
@@ -169,6 +177,12 @@ export class DiffViewStore implements Snapshottable<DiffViewSnapshot> {
 
   setActiveFile(file: ActiveFile | null): void {
     this.activeFileOverride = file;
+    // Skip index tracking for multi-project files or git/pr groups —
+    // this.git is not the correct store for validation.
+    if (file?.projectId || file?.group === 'git' || file?.group === 'pr') {
+      this._activeFileOverrideIndex = -1;
+      return;
+    }
     if (file?.group === 'disk' || file?.group === 'staged') {
       const list =
         file.group === 'staged' ? this.git.stagedFileChanges : this.git.unstagedFileChanges;

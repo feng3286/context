@@ -212,6 +212,9 @@ export class MonacoModelRegistry {
    *
    * Idempotent: if the model already exists, just increments ref count and returns the URI.
    *
+   * For multi-project tasks, pass projectId to ensure unique model URIs for files
+   * from different projects that may have the same relative path.
+   *
    * @returns the buffer URI string (same for all three types of the same file)
    */
   async registerModel(
@@ -223,7 +226,12 @@ export class MonacoModelRegistry {
     type: ModelType,
     ref: GitRef = HEAD_REF
   ): Promise<string> {
-    const uri = buildMonacoModelPath(modelRootPath, filePath);
+    // Use projectId to build unique URIs for multi-project tasks
+    // If modelRootPath is already project-specific (starts with 'project:'), use it directly
+    const effectiveRoot = modelRootPath.startsWith('project:')
+      ? modelRootPath
+      : `project:${projectId}`;
+    const uri = buildMonacoModelPath(effectiveRoot, filePath);
 
     switch (type) {
       case 'disk':

@@ -12,13 +12,16 @@ import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { getLanguageFromPath } from '@renderer/utils/languageUtils';
 
 export const FileDiffView = observer(function FileDiffView() {
-  const { projectId } = useTaskViewContext();
+  const { projectId: contextProjectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
   const { workspaceId } = provisioned;
   const diffView = provisioned.taskView.diffView;
   const draftComments = provisioned.draftComments;
   const activeFile = diffView.activeFile;
   const [editor, setEditor] = useState<monaco.editor.IStandaloneDiffEditor | null>(null);
+
+  // Use activeFile's projectId for multi-project tasks, fallback to context projectId
+  const projectId = activeFile?.projectId ?? contextProjectId;
 
   const isBinary = activeFile ? isBinaryForDiff(activeFile.path) : false;
   const showEditor = activeFile !== null && !isBinary;
@@ -63,7 +66,8 @@ export const FileDiffView = observer(function FileDiffView() {
 
   // Compute URIs from activeFile (same rules as DiffSlotStore).
   const root = `workspace:${workspaceId}`;
-  const uri = activeFile ? buildMonacoModelPath(root, activeFile.path) : '';
+  // Use projectId to build unique URIs for multi-project tasks
+  const uri = activeFile ? buildMonacoModelPath(root, activeFile.path, projectId) : '';
   const language = activeFile ? getLanguageFromPath(activeFile.path) : '';
 
   const originalUri = (() => {

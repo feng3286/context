@@ -76,18 +76,18 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: ['command -v cursor >/dev/null 2>&1 && cursor .', 'open -a "Cursor" .'],
-        openFileCommands: ['cursor --reuse-window --goto {{file}}:{{line}} {{path}}'],
+        openFileCommands: ['cursor --goto {{file}}:{{line}} {{path}}'],
         checkCommands: ['cursor'],
         appNames: ['Cursor'],
       },
       win32: {
         openCommands: ['start "" cursor {{path}}'],
-        openFileCommands: ['cursor --reuse-window --goto {{file}}:{{line}} {{path}}'],
+        openFileCommands: ['cursor --goto {{file}}:{{line}} {{path}}'],
         checkCommands: ['cursor'],
       },
       linux: {
         openCommands: ['cursor {{path}}'],
-        openFileCommands: ['cursor --reuse-window --goto {{file}}:{{line}} {{path}}'],
+        openFileCommands: ['cursor --goto {{file}}:{{line}} {{path}}'],
         checkCommands: ['cursor'],
       },
     },
@@ -106,7 +106,7 @@ const _OPEN_IN_APPS = {
           'open -n -a "Visual Studio Code" {{path}}',
         ],
         openFileCommands: [
-          'code --reuse-window --goto {{file}}:{{line}} {{path}}',
+          'code --goto {{file}}:{{line}} {{path}}',
           'open -a "Visual Studio Code" --args --goto {{file}}:{{line}} {{path}}',
         ],
         checkCommands: ['code'],
@@ -115,12 +115,12 @@ const _OPEN_IN_APPS = {
       },
       win32: {
         openCommands: ['start "" code {{path}}', 'start "" code-insiders {{path}}'],
-        openFileCommands: ['code --reuse-window --goto {{file}}:{{line}} {{path}}'],
+        openFileCommands: ['code --goto {{file}}:{{line}} {{path}}'],
         checkCommands: ['code', 'code-insiders'],
       },
       linux: {
         openCommands: ['code {{path}}', 'code-insiders {{path}}'],
-        openFileCommands: ['code --reuse-window --goto {{file}}:{{line}} {{path}}'],
+        openFileCommands: ['code --goto {{file}}:{{line}} {{path}}'],
         checkCommands: ['code', 'code-insiders'],
       },
     },
@@ -137,19 +137,19 @@ const _OPEN_IN_APPS = {
           'open -n -b com.exafunction.windsurf --args {{path}}',
           'open -n -a "Windsurf" {{path}}',
         ],
-        openFileCommands: ['windsurf --reuse-window --goto "{{file}}:{{line}}" {{path}}'],
+        openFileCommands: ['windsurf --goto "{{file}}:{{line}}" {{path}}'],
         checkCommands: ['windsurf'],
         bundleIds: ['com.exafunction.windsurf'],
         appNames: ['Windsurf'],
       },
       win32: {
         openCommands: ['start "" windsurf {{path}}'],
-        openFileCommands: ['windsurf --reuse-window --goto "{{file}}:{{line}}" {{path}}'],
+        openFileCommands: ['windsurf --goto "{{file}}:{{line}}" {{path}}'],
         checkCommands: ['windsurf'],
       },
       linux: {
         openCommands: ['windsurf {{path}}'],
-        openFileCommands: ['windsurf --reuse-window --goto "{{file}}:{{line}}" {{path}}'],
+        openFileCommands: ['windsurf --goto "{{file}}:{{line}}" {{path}}'],
         checkCommands: ['windsurf'],
       },
     },
@@ -270,19 +270,19 @@ const _OPEN_IN_APPS = {
           'command -v kiro >/dev/null 2>&1 && kiro {{path}}',
           'open -a "Kiro" {{path}}',
         ],
-        openFileCommands: ['kiro --reuse-window --goto "{{file}}:{{line}}" {{path}}'],
+        openFileCommands: ['kiro --goto "{{file}}:{{line}}" {{path}}'],
         checkCommands: ['kiro'],
         bundleIds: ['dev.kiro.desktop'],
         appNames: ['Kiro'],
       },
       win32: {
         openCommands: ['start "" kiro {{path}}'],
-        openFileCommands: ['kiro --reuse-window --goto "{{file}}:{{line}}" {{path}}'],
+        openFileCommands: ['kiro --goto "{{file}}:{{line}}" {{path}}'],
         checkCommands: ['kiro'],
       },
       linux: {
         openCommands: ['kiro {{path}}'],
-        openFileCommands: ['kiro --reuse-window --goto "{{file}}:{{line}}" {{path}}'],
+        openFileCommands: ['kiro --goto "{{file}}:{{line}}" {{path}}'],
         checkCommands: ['kiro'],
       },
     },
@@ -319,18 +319,24 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: ['open -a "IntelliJ IDEA" {{path}}'],
-        openFileCommands: ['idea --line {{line}} {{file}}'],
+        // Include project path so IDEA loads the whole project when opening a file
+        openFileCommands: ['idea {{path}} --line {{line}} {{file}}'],
         bundleIds: ['com.jetbrains.intellij'],
         appNames: ['IntelliJ IDEA'],
       },
       win32: {
         openCommands: ['idea64 {{path}}', 'idea {{path}}'],
-        openFileCommands: ['idea64 --line {{line}} {{file}}', 'idea --line {{line}} {{file}}'],
+        // Include project path so IDEA loads the whole project when opening a file
+        openFileCommands: [
+          'idea64 {{path}} --line {{line}} {{file}}',
+          'idea {{path}} --line {{line}} {{file}}',
+        ],
         checkCommands: ['idea64', 'idea'],
       },
       linux: {
         openCommands: ['idea {{path}}'],
-        openFileCommands: ['idea --line {{line}} {{file}}'],
+        // Include project path so IDEA loads the whole project when opening a file
+        openFileCommands: ['idea {{path}} --line {{line}} {{file}}'],
         checkCommands: ['idea'],
       },
     },
@@ -343,21 +349,23 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: ['open -a "WebStorm" {{path}}'],
-        openFileCommands: ['webstorm --line {{line}} {{file}}'],
+        // Include project path so WebStorm loads the whole project when opening a file
+        openFileCommands: ['webstorm {{path}} --line {{line}} {{file}}'],
         bundleIds: ['com.jetbrains.WebStorm'],
         appNames: ['WebStorm'],
       },
       win32: {
         openCommands: ['webstorm64 {{path}}', 'webstorm {{path}}'],
         openFileCommands: [
-          'webstorm64 --line {{line}} {{file}}',
-          'webstorm --line {{line}} {{file}}',
+          'webstorm64 {{path}} --line {{line}} {{file}}',
+          'webstorm {{path}} --line {{line}} {{file}}',
         ],
         checkCommands: ['webstorm64', 'webstorm'],
       },
       linux: {
         openCommands: ['webstorm {{path}}'],
-        openFileCommands: ['webstorm --line {{line}} {{file}}'],
+        // Include project path so WebStorm loads the whole project when opening a file
+        openFileCommands: ['webstorm {{path}} --line {{line}} {{file}}'],
         checkCommands: ['webstorm'],
       },
     },
@@ -370,21 +378,23 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: ['open -a "PyCharm" {{path}}'],
-        openFileCommands: ['pycharm --line {{line}} {{file}}'],
+        // Include project path so PyCharm loads the whole project when opening a file
+        openFileCommands: ['pycharm {{path}} --line {{line}} {{file}}'],
         bundleIds: ['com.jetbrains.pycharm'],
         appNames: ['PyCharm'],
       },
       win32: {
         openCommands: ['pycharm64 {{path}}', 'pycharm {{path}}'],
         openFileCommands: [
-          'pycharm64 --line {{line}} {{file}}',
-          'pycharm --line {{line}} {{file}}',
+          'pycharm64 {{path}} --line {{line}} {{file}}',
+          'pycharm {{path}} --line {{line}} {{file}}',
         ],
         checkCommands: ['pycharm64', 'pycharm'],
       },
       linux: {
         openCommands: ['pycharm {{path}}'],
-        openFileCommands: ['pycharm --line {{line}} {{file}}'],
+        // Include project path so PyCharm loads the whole project when opening a file
+        openFileCommands: ['pycharm {{path}} --line {{line}} {{file}}'],
         checkCommands: ['pycharm'],
       },
     },
@@ -397,21 +407,22 @@ const _OPEN_IN_APPS = {
     platforms: {
       darwin: {
         openCommands: ['open -a "RustRover" {{path}}'],
-        openFileCommands: ['rustrover --line {{line}} {{file}}'],
+        // Include project path so RustRover loads the whole project when opening a file
+        openFileCommands: ['rustrover {{path}} --line {{line}} {{file}}'],
         bundleIds: ['com.jetbrains.rustrover'],
         appNames: ['RustRover'],
       },
       win32: {
         openCommands: ['rustrover64 {{path}}', 'rustrover {{path}}'],
         openFileCommands: [
-          'rustrover64 --line {{line}} {{file}}',
-          'rustrover --line {{line}} {{file}}',
+          'rustrover64 {{path}} --line {{line}} {{file}}',
+          'rustrover {{path}} --line {{line}} {{file}}',
         ],
         checkCommands: ['rustrover64', 'rustrover'],
       },
       linux: {
         openCommands: ['rustrover {{path}}'],
-        openFileCommands: ['rustrover --line {{line}} {{file}}'],
+        openFileCommands: ['rustrover {{path}} --line {{line}} {{file}}'],
         checkCommands: ['rustrover'],
       },
     },

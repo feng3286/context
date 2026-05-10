@@ -1,4 +1,5 @@
 import { Pencil } from 'lucide-react';
+import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { modelRegistry } from '@renderer/lib/monaco/monaco-model-registry';
@@ -12,11 +13,17 @@ interface SvgRendererProps {
  * Renders an SVG file as an image.
  * A floating "Edit source" button in the top-right corner toggles to Monaco source view.
  */
-export function SvgRenderer({ filePath }: SvgRendererProps) {
-  const editorView = useProvisionedTask().taskView.editorView;
+export const SvgRenderer = observer(function SvgRenderer({ filePath }: SvgRendererProps) {
+  const provisioned = useProvisionedTask();
+  const editorView = provisioned.taskView.editorView;
+
+  // Use the tab's projectId for multi-project tasks
+  const tab = editorView.tabs.find((t) => t.path === filePath);
+  const projectId = tab?.projectId ?? provisioned._taskData.projectId;
 
   const content =
-    modelRegistry.getValue(buildMonacoModelPath(editorView.modelRootPath, filePath)) ?? '';
+    modelRegistry.getValue(buildMonacoModelPath(editorView.modelRootPath, filePath, projectId)) ??
+    '';
 
   const svgUrl = useMemo(
     () => (content ? URL.createObjectURL(new Blob([content], { type: 'image/svg+xml' })) : ''),
@@ -44,4 +51,4 @@ export function SvgRenderer({ filePath }: SvgRendererProps) {
       </button>
     </div>
   );
-}
+});

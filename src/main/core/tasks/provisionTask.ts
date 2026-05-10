@@ -32,20 +32,35 @@ export async function provisionTask(taskId: string) {
 
     for (const row of taskProjectRows) {
       const rowProject = projectManager.getProject(row.projectId);
-      if (rowProject && task.workDir) {
-        // Compute worktree path: {task.workDir}/{project.name}
-        const [projectRow] = await db
-          .select({ name: projects.name })
-          .from(projects)
-          .where(eq(projects.id, row.projectId))
-          .limit(1);
-        const worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
-        await rowProject.ensureWorkspace(wsId, worktreePath);
+      if (rowProject) {
+        let worktreePath: string | undefined;
+
+        if (task.workDir) {
+          // Compute worktree path: {task.workDir}/{project.name}
+          const [projectRow] = await db
+            .select({ name: projects.name })
+            .from(projects)
+            .where(eq(projects.id, row.projectId))
+            .limit(1);
+          worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
+        } else if (task.taskBranch) {
+          // Fallback: find existing worktree by branch name
+          worktreePath = await rowProject.getWorktreeForBranch(task.taskBranch);
+        }
+
+        if (worktreePath) {
+          await rowProject.ensureWorkspace(wsId, worktreePath);
+        }
       }
     }
   }
 
   if (existingTask) {
+    // For multi-project tasks, return workDir as the base path containing all project worktrees
+    // For single-project tasks, return the workspace path
+    if (task.workspaceId && task.workDir) {
+      return { path: task.workDir, workspaceId: wsId };
+    }
     return { path: project.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
   }
 
@@ -95,5 +110,10 @@ export async function provisionTask(taskId: string) {
     workspace_id: task.workspaceId,
   });
 
+  // For multi-project tasks, return workDir as the base path containing all project worktrees
+  // For single-project tasks, return the workspace path
+  if (task.workspaceId && task.workDir) {
+    return { path: task.workDir, workspaceId: wsId };
+  }
   return { path: project.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
 }

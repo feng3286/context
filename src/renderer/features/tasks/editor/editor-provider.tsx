@@ -141,11 +141,12 @@ export const EditorProvider = observer(function EditorProvider({
       autorun(() => {
         const lease = leaseBox.get(); // reactive
         const activePath = editorView.activeFilePath; // reactive
+        const activeTab = editorView.activeTab; // reactive
 
         if (!lease) return;
 
         const newBufUri = activePath
-          ? buildMonacoModelPath(editorView.modelRootPath, activePath)
+          ? buildMonacoModelPath(editorView.modelRootPath, activePath, activeTab?.projectId)
           : null;
 
         if (!newBufUri) {
@@ -187,8 +188,8 @@ export const EditorProvider = observer(function EditorProvider({
           if (!tab) return;
           showConflictModal({
             filePath: tab.path,
-            onSuccess: async (accept) => {
-              await editorView.resolveConflict(accept);
+            onSuccess: async (result) => {
+              await editorView.resolveConflict(result as boolean);
             },
           });
         }

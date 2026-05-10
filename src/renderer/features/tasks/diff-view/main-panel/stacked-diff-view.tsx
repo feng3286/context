@@ -3,10 +3,12 @@ import { reaction } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { Activity, useEffect, useMemo, useRef, useState } from 'react';
 import { HEAD_REF, STAGED_REF } from '@shared/git';
+import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
 import {
   DiffSlotStore,
   StackedDiffPanelStore,
 } from '@renderer/features/tasks/diff-view/stores/stacked-diff-panel-store';
+import type { PrStore } from '@renderer/features/tasks/stores/pr-store';
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
 import { modelRegistry } from '@renderer/lib/monaco/monaco-model-registry';
@@ -17,15 +19,28 @@ import { cn } from '@renderer/utils/utils';
 const LARGE_DIFF_LINE_THRESHOLD = 1500;
 
 export const StackedDiffView = observer(function StackedDiffView() {
-  const { projectId } = useTaskViewContext();
+  const { projectId: contextProjectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
   const { workspaceId } = provisioned;
   const diffView = provisioned.taskView.diffView;
-  const git = provisioned.workspace.git;
-  const pr = provisioned.workspace.pr;
+
+  // Get GitStore and PrStore for a specific project (multi-project support)
+  const getGit = (projectId?: string): GitStore => {
+    if (!projectId) return provisioned.workspace.git;
+    if (provisioned.isMultiProject && provisioned.projectContexts) {
+      const projectContext = provisioned.projectContexts.projects.get(projectId);
+      if (projectContext) return projectContext.git;
+    }
+    return provisioned.workspace.git;
+  };
+
+  const getPr = (projectId?: string): PrStore => {
+    // PR store is shared across projects for multi-project tasks
+    return provisioned.workspace.pr;
+  };
 
   const panelStore = useMemo(
-    () => new StackedDiffPanelStore(projectId, workspaceId, diffView, git, pr),
+    () => new StackedDiffPanelStore(contextProjectId, workspaceId, diffView, getGit, getPr),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );

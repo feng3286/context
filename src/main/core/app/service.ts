@@ -166,6 +166,7 @@ class AppService {
     lineNumber?: number;
     isRemote?: boolean;
     sshConnectionId?: string | null;
+    projectId?: string;
   }): Promise<void> {
     const {
       path: target,
@@ -174,11 +175,15 @@ class AppService {
       lineNumber,
       isRemote = false,
       sshConnectionId,
+      projectId,
     } = args;
 
     if (!target || typeof target !== 'string' || !appId) {
       throw new Error('Invalid arguments');
     }
+
+    // The frontend resolves the correct worktree path for multi-project tasks
+    // and passes it as `path`. We just use the provided path directly.
 
     const platform = process.platform as PlatformKey;
     const appConfig = getAppById(appId);

@@ -83,11 +83,13 @@ function WorkspaceHeaderRow({
 
 function ProjectSidebarRow({
   project,
+  workspaceId,
   isActive,
   onNavigate,
   onRemove,
 }: {
   project: Project;
+  workspaceId: string;
   isActive: boolean;
   onNavigate: () => void;
   onRemove: () => void;
@@ -172,6 +174,10 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
   const workspaces = Array.from(workspaceManagerStore.workspaces.values());
   const activeWorkspaceId = currentView === 'workspace' ? params.workspaceId : null;
 
+  // Get current workspace context from project view (if navigating from workspace)
+  const currentProjectWorkspaceId =
+    currentView === 'project' ? projectParams.params.workspaceId : null;
+
   const toggleExpand = (workspaceId: string) => {
     const newSet = new Set(expandedWorkspaces);
     if (newSet.has(workspaceId)) {
@@ -240,7 +246,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
   };
 
   return (
-    <div className="flex flex-col min-h-0 flex-1 overflow-y-auto pb-2">
+    <div className="flex flex-col min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-2">
       {workspaces.map((store) => {
         const isExpanded = expandedWorkspaces.has(store.data.id);
         const isActive = store.data.id === activeWorkspaceId;
@@ -299,12 +305,17 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                   ) : (
                     projects.map((project) => (
                       <ProjectSidebarRow
-                        key={project.id}
+                        key={`${store.data.id}:${project.id}`}
                         project={project}
+                        workspaceId={store.data.id}
                         isActive={
-                          currentView === 'project' && projectParams.params.projectId === project.id
+                          currentView === 'project' &&
+                          projectParams.params.projectId === project.id &&
+                          projectParams.params.workspaceId === store.data.id
                         }
-                        onNavigate={() => navigate('project', { projectId: project.id })}
+                        onNavigate={() =>
+                          navigate('project', { projectId: project.id, workspaceId: store.data.id })
+                        }
                         onRemove={() => void handleRemoveProject(store.data.id, project.id)}
                       />
                     ))

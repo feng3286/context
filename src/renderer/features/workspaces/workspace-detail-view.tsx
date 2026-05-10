@@ -1,12 +1,4 @@
-import {
-  FolderPlus,
-  Layers,
-  MessageSquare,
-  MoreVertical,
-  Plus,
-  Settings,
-  Trash2,
-} from 'lucide-react';
+import { FolderPlus, Layers, MessageSquare, MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, type ReactNode } from 'react';
 import type { Project } from '@shared/projects';
@@ -21,11 +13,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@renderer/lib/ui/dropdown-menu';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
-import { Separator } from '@renderer/lib/ui/separator';
 import { workspaceManagerStore } from './stores/workspace-manager';
 import { getWorkspaceStore } from './stores/workspace-selectors';
 import { WorkspaceStoreClass } from './stores/workspace-store';
@@ -109,7 +99,7 @@ function TaskRowCompact({ task, onClick }: { task: Task; onClick: () => void }) 
 
 export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPanel() {
   const { navigate } = useNavigate();
-  const showAddProjectModal = useShowModal('addProjectModal');
+  const showSelectProjectModal = useShowModal('selectProjectModal');
   const showCreateTaskModal = useShowModal('taskModal');
   const {
     params: { workspaceId },
@@ -174,7 +164,7 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
             <Button
               variant="outline"
               size="sm"
-              onClick={() => showAddProjectModal({ workspaceId })}
+              onClick={() => showSelectProjectModal({ workspaceId })}
             >
               <FolderPlus className="size-3.5" />
               Add Project

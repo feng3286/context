@@ -7,7 +7,9 @@ export type RichEditorTab = EditorTab & { isDirty: boolean; bufferUri: string };
 
 /** Returns true when the buffer for `filePath` has unsaved changes. */
 export function selectTabIsDirty(store: EditorViewStore, filePath: string): boolean {
-  return modelRegistry.dirtyUris.has(buildMonacoModelPath(store.modelRootPath, filePath));
+  const tab = store.tabs.find((t) => t.path === filePath);
+  const uri = buildMonacoModelPath(store.modelRootPath, filePath, tab?.projectId);
+  return modelRegistry.dirtyUris.has(uri);
 }
 
 /** Returns the currently active tab, or undefined if no tab is active. */

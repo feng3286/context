@@ -21,7 +21,14 @@ interface ProjectHeaderNode {
   projectId: string;
 }
 
-type UnifiedNode = FileNode | ProjectHeaderNode;
+/**
+ * File node with attached projectId for the unified tree
+ */
+interface ProjectFileNode extends FileNode {
+  projectId: string;
+}
+
+type UnifiedNode = ProjectHeaderNode | ProjectFileNode;
 
 /**
  * Build a unified tree structure from multiple projects
@@ -50,16 +57,16 @@ function buildUnifiedTree(
     };
     rows.push(headerNode);
 
-    // If project is expanded, add its file tree
+    // If project is expanded, add its file tree with projectId attached
     if (expandedProjects.has(projectKey)) {
       const fileRows = buildVisibleRows(
         projectContext.files.nodes,
         projectContext.files.childIndex,
         expandedPaths
       );
-      // Increase depth for all file nodes to show them nested under project
+      // Increase depth for all file nodes and attach projectId
       for (const node of fileRows) {
-        rows.push({ ...node, depth: node.depth + 1 });
+        rows.push({ ...node, depth: node.depth + 1, projectId });
       }
     }
   }
@@ -81,9 +88,8 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
   const editorView = taskState.taskView.editorView;
 
   const isProjectHeader = node.type === 'project-header';
-  const projectId = isProjectHeader
-    ? node.projectId
-    : taskState.projectContexts?.findProjectIdForPath?.(node.path);
+  // projectId is now directly attached to all unified nodes
+  const projectId = node.projectId;
   const projectContext = projectId ? taskState.projectContexts?.projects.get(projectId) : null;
 
   if (!projectContext && !isProjectHeader) return null;
@@ -116,14 +122,14 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
     } else if (node.type === 'directory') {
       toggleExpand();
     } else {
-      editorView.openFilePreview(node.path, projectId!);
+      editorView.openFilePreview(node.path, projectId);
     }
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isProjectHeader && node.type === 'file') {
-      editorView.openFile(node.path, projectId!);
+      editorView.openFile(node.path, projectId);
     }
   };
 
@@ -135,7 +141,7 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
       } else if (node.type === 'directory') {
         toggleExpand();
       } else {
-        editorView.openFilePreview(node.path, projectId!);
+        editorView.openFilePreview(node.path, projectId);
       }
     }
   };
@@ -264,9 +270,11 @@ export const UnifiedMultiProjectFileTree = observer(function UnifiedMultiProject
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
         {virtualizer.getVirtualItems().map((vItem) => {
           const node = visibleRows[vItem.index]!;
+          // Use projectId + path as key to avoid conflicts between projects with same file paths
+          const key = `${node.projectId}:${node.path}`;
           return (
             <UnifiedFileTreeRow
-              key={node.path}
+              key={key}
               node={node}
               style={{
                 position: 'absolute',

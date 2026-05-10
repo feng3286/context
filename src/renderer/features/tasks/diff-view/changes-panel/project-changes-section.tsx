@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEffect } from 'react';
 import type { ProjectContext } from '@renderer/features/tasks/stores/project-context-store';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { cn } from '@renderer/utils/utils';
@@ -24,10 +25,19 @@ export const ProjectChangesSection = observer(function ProjectChangesSection({
 
   const expanded = projectContexts.isExpanded(projectContext.projectId);
   const git = projectContext.git;
+  const changesView = projectContext.changesView;
 
   const stagedCount = git.stagedFileChanges.length;
   const unstagedCount = git.unstagedFileChanges.length;
   const totalChanges = stagedCount + unstagedCount;
+
+  // Auto-expand this project when a file in it is selected
+  useEffect(() => {
+    const activeFile = provisioned.taskView.diffView.activeFile;
+    if (activeFile?.projectId === projectContext.projectId && !expanded) {
+      projectContexts.toggleSection(projectContext.projectId);
+    }
+  }, [provisioned.taskView.diffView.activeFile?.projectId, projectContext.projectId, expanded, projectContexts]);
 
   // Don't render empty project sections
   if (!git.hasData || totalChanges === 0) return null;
@@ -69,20 +79,22 @@ export const ProjectChangesSection = observer(function ProjectChangesSection({
       {/* Project changes content */}
       {expanded && (
         <div className="flex min-h-0 flex-col overflow-hidden">
-          {/* Unstaged section for this project */}
+          {/* Unstaged section for this project - uses project-specific changesView */}
           <div className="flex min-h-0 flex-col border-b border-border/50">
             <UnstagedSection
               gitOverride={git}
               projectIdOverride={projectContext.projectId}
+              changesViewOverride={changesView}
               hideCommitCard
             />
           </div>
 
-          {/* Staged section for this project */}
+          {/* Staged section for this project - uses project-specific changesView */}
           <div className="flex min-h-0 flex-col">
             <StagedSection
               gitOverride={git}
               projectIdOverride={projectContext.projectId}
+              changesViewOverride={changesView}
               hideCommitCard
             />
           </div>

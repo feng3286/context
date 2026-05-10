@@ -4,6 +4,7 @@ import type { RepositoryStore } from '@renderer/features/projects/stores/reposit
 import { rpc } from '@renderer/lib/ipc';
 import { GitStore } from '../diff-view/stores/git-store';
 import { FilesStore } from '../editor/stores/files-store';
+import { ProjectChangesViewStore } from './project-changes-view-store';
 
 /**
  * Per-project context for multi-project tasks.
@@ -16,6 +17,7 @@ export class ProjectContext {
   readonly sourceBranch: string | null;
   readonly git: GitStore;
   readonly files: FilesStore;
+  readonly changesView: ProjectChangesViewStore;
 
   constructor(context: TaskProjectContext, workspaceId: string, repositoryStore: RepositoryStore) {
     this.projectId = context.projectId;
@@ -26,10 +28,12 @@ export class ProjectContext {
     // The workspaceId is derived from taskBranch which is shared across all projects
     this.git = new GitStore(context.projectId, workspaceId, repositoryStore);
     this.files = new FilesStore(context.projectId, workspaceId);
+    this.changesView = new ProjectChangesViewStore();
 
     makeAutoObservable(this, {
       git: false,
       files: false,
+      changesView: false,
     });
   }
 
@@ -41,6 +45,7 @@ export class ProjectContext {
   dispose(): void {
     this.git.dispose();
     this.files.dispose();
+    this.changesView.dispose();
   }
 }
 

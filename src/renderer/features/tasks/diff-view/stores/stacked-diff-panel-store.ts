@@ -16,6 +16,7 @@ interface SlotContext {
   diffType: DiffType;
   originalRef: GitObjectRef;
   modifiedRef?: GitObjectRef;
+  projectId?: string;
 }
 
 export class DiffSlotStore {
@@ -23,16 +24,18 @@ export class DiffSlotStore {
   diffType: DiffType = 'disk';
   originalRef: GitObjectRef = commitRef('HEAD');
   modifiedRef: GitObjectRef | undefined = undefined;
+  projectId: string;
+  readonly workspaceId: string;
 
-  constructor(
-    readonly projectId: string,
-    readonly workspaceId: string
-  ) {
+  constructor(projectId: string, workspaceId: string) {
+    this.projectId = projectId;
+    this.workspaceId = workspaceId;
     makeObservable(this, {
       file: observable.ref,
       diffType: observable,
       originalRef: observable.ref,
       modifiedRef: observable.ref,
+      projectId: observable,
       uri: computed,
       originalUri: computed,
       modifiedUri: computed,
@@ -41,9 +44,13 @@ export class DiffSlotStore {
     });
   }
 
+  setProjectId(projectId: string): void {
+    this.projectId = projectId;
+  }
+
   get uri(): string {
     if (!this.file) return '';
-    return buildMonacoModelPath(`workspace:${this.workspaceId}`, this.file.path);
+    return buildMonacoModelPath(`workspace:${this.workspaceId}`, this.file.path, this.projectId);
   }
 
   get originalUri(): string {
@@ -74,6 +81,7 @@ export class DiffSlotStore {
 
 export class StackedDiffPanelStore {
   private readonly _slots: DiffSlotStore[];
+  private readonly _initialProjectId: string;
 
   // _count is private so we include it via the AdditionalKeys type parameter.
   private _count = 0;
@@ -89,9 +97,10 @@ export class StackedDiffPanelStore {
     projectId: string,
     workspaceId: string,
     private readonly diffView: DiffViewStore,
-    private readonly git: GitStore,
-    private readonly pr: PrStore
+    private readonly getGit: (projectId?: string) => GitStore,
+    private readonly getPr: (projectId?: string) => PrStore
   ) {
+    this._initialProjectId = projectId;
     this._slots = Array.from(
       { length: MAX_STACKED_FILES },
       () => new DiffSlotStore(projectId, workspaceId)
@@ -140,36 +149,47 @@ export class StackedDiffPanelStore {
 
   private _currentContext(): SlotContext {
     const activeFile = this.diffView.activeFile;
+    const projectId = activeFile?.projectId ?? this._initialProjectId;
+    const git = this.getGit(projectId);
+    const pr = this.getPr(projectId);
 
     if (!activeFile) {
-      return { files: [], diffType: 'disk', originalRef: commitRef('HEAD') };
+      return { files: [], diffType: 'disk', originalRef: commitRef('HEAD'), projectId };
     }
 
     if (activeFile.group === 'pr') {
-      const activePr = this.pr.pullRequests.find(
+      const activePr = pr.pullRequests.find(
         (p) => activeFile.prNumber != null && getPrNumber(p) === activeFile.prNumber
       );
       return {
-        files: activePr ? (this.pr.getFiles(activePr).data ?? []) : [],
+        files: activePr ? (pr.getFiles(activePr).data ?? []) : [],
         diffType: 'pr',
         originalRef: activeFile.originalRef,
         modifiedRef: activeFile.modifiedRef,
+        projectId,
       };
     }
 
     if (activeFile.group === 'git') {
-      return { files: [], diffType: 'git', originalRef: activeFile.originalRef };
+      return { files: [], diffType: 'git', originalRef: activeFile.originalRef, projectId };
     }
 
     const isStaged = activeFile.group === 'staged';
     return {
-      files: isStaged ? this.git.stagedFileChanges : this.git.unstagedFileChanges,
+      files: isStaged ? git.stagedFileChanges : git.unstagedFileChanges,
       diffType: isStaged ? 'staged' : 'disk',
       originalRef: commitRef('HEAD'),
+      projectId,
     };
   }
 
-  private _applyContext({ files, diffType, originalRef, modifiedRef }: SlotContext): void {
+  private _applyContext({
+    files,
+    diffType,
+    originalRef,
+    modifiedRef,
+    projectId,
+  }: SlotContext): void {
     const count = Math.min(files.length, MAX_STACKED_FILES);
     this._count = count;
 
@@ -179,6 +199,9 @@ export class StackedDiffPanelStore {
       slot.diffType = diffType;
       slot.originalRef = originalRef;
       slot.modifiedRef = modifiedRef;
+      if (projectId) {
+        slot.setProjectId(projectId);
+      }
     }
 
     const currentPaths = new Set(files.map((f) => f.path));

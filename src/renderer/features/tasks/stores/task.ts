@@ -116,7 +116,7 @@ export class ProvisionedTask {
       conversations: false,
       terminals: false,
       draftComments: false,
-      taskView: false,
+      taskView: observable,
       projectContexts: false,
       /** Owned by TaskStore.data — do not attach a second observable tree here */
       _taskData: false,

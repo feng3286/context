@@ -40,7 +40,7 @@ export function createMainWindow(): BrowserWindow {
     mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
   }
 
-  // Route external links to the user’s default browser
+  // Route external links to the user's default browser
   registerExternalLinkHandlers(mainWindow, import.meta.env.DEV);
 
   // Show when ready

@@ -1,7 +1,7 @@
 import { Eye, Pencil } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback } from 'react';
-import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
+import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { rpc } from '@renderer/lib/ipc';
 import { modelRegistry } from '@renderer/lib/monaco/monaco-model-registry';
 import { buildMonacoModelPath } from '@renderer/lib/monaco/monacoModelPath';
@@ -19,11 +19,16 @@ interface MarkdownEditorRendererProps {
 export const MarkdownEditorRenderer = observer(function MarkdownEditorRenderer({
   filePath,
 }: MarkdownEditorRendererProps) {
-  const { projectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
   const { workspaceId } = provisioned;
   const editorView = provisioned.taskView.editorView;
-  const bufferUri = buildMonacoModelPath(editorView.modelRootPath, filePath);
+
+  // Use the tab's projectId for multi-project tasks
+  const tab = editorView.tabs.find((t) => t.path === filePath);
+  const projectId =
+    tab?.projectId ?? editorView.activeTab?.projectId ?? provisioned._taskData.projectId;
+
+  const bufferUri = buildMonacoModelPath(editorView.modelRootPath, filePath, projectId);
   // Reading bufferVersions creates a MobX tracking dependency so this observer()
   // component re-renders whenever the buffer content changes or is first populated.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

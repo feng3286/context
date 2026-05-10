@@ -42,7 +42,8 @@ export function usePrefetchDiffModels(
       if (isBinaryForDiff(filePath)) return;
       const language = getLanguageFromPath(filePath);
       const root = `workspace:${workspaceId}`;
-      const uri = buildMonacoModelPath(root, filePath);
+      // Use projectId to build unique URIs for multi-project tasks
+      const uri = buildMonacoModelPath(root, filePath, projectId);
       const entry: PrefetchEntry = { gitUris: [] };
 
       if (group === 'disk') {

@@ -1,9 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@renderer/lib/ui/resizable';
-import { cn } from '@renderer/utils/utils';
 import { GitStatusSection } from './git-status-section';
-import { SECTION_HEADER_HEIGHT, usePanelLayout } from './hooks/use-panel-layout';
 import { PullRequestsSection } from './pr-section';
 import { ProjectChangesSection } from './project-changes-section';
 import { StagedSection } from './staged-section';
@@ -11,86 +8,31 @@ import { UnstagedSection } from './unstaged-section';
 
 /**
  * Changes panel for single-project tasks.
- * Uses resizable panels for staged/unstaged/PR sections.
+ * Simple collapsible sections with conditional rendering.
  */
 const SingleProjectChangesPanel = observer(function SingleProjectChangesPanel() {
   const provisioned = useProvisionedTask();
   const changesView = provisioned.taskView.diffView.changesView;
 
-  const {
-    expanded,
-    toggleExpanded,
-    panelTransitionClass,
-    pointerHandlers,
-    unstagedRef,
-    stagedRef,
-    prRef,
-    spacerRef,
-  } = usePanelLayout(changesView);
-
   if (!provisioned.workspace.git.hasData) return null;
 
   return (
-    <div className="flex h-full flex-col">
-      <ResizablePanelGroup
-        orientation="vertical"
-        className="min-h-0 flex-1"
-        id="changes-panel-group"
-        disableCursor
-      >
-        <ResizablePanel
-          id="changes-unstaged"
-          panelRef={unstagedRef}
-          collapsible
-          collapsedSize={SECTION_HEADER_HEIGHT}
-          minSize="150px"
-          maxSize="100%"
-          defaultSize="33%"
-          className={cn('flex flex-col overflow-hidden', panelTransitionClass)}
-        >
-          <UnstagedSection />
-        </ResizablePanel>
-        <ResizableHandle disabled={!expanded.unstaged || !expanded.staged} {...pointerHandlers} />
-        <ResizablePanel
-          id="changes-staged"
-          panelRef={stagedRef}
-          collapsible
-          collapsedSize={SECTION_HEADER_HEIGHT}
-          minSize="150px"
-          maxSize="100%"
-          defaultSize="33%"
-          className={cn('flex flex-col overflow-hidden', panelTransitionClass)}
-        >
-          <StagedSection />
-        </ResizablePanel>
-        <ResizableHandle
-          disabled={!expanded.staged || !expanded.pullRequests}
-          {...pointerHandlers}
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Unstaged changes section */}
+      <UnstagedSection />
+
+      {/* Staged changes section */}
+      <StagedSection />
+
+      {/* Pull Requests section */}
+      {provisioned.workspace.pr.pullRequests.length > 0 && (
+        <PullRequestsSection
+          collapsed={!changesView.expandedPullRequests}
+          onToggleCollapsed={() => changesView.toggleExpanded('pullRequests')}
         />
-        <ResizablePanel
-          id="changes-pr"
-          panelRef={prRef}
-          collapsible
-          collapsedSize={SECTION_HEADER_HEIGHT}
-          minSize="150px"
-          maxSize="100%"
-          defaultSize="33%"
-          className={cn('flex flex-col overflow-hidden', panelTransitionClass)}
-        >
-          <PullRequestsSection
-            onToggleCollapsed={() => toggleExpanded('pullRequests')}
-            collapsed={!expanded.pullRequests}
-          />
-        </ResizablePanel>
-        <ResizablePanel
-          id="changes-spacer"
-          panelRef={spacerRef}
-          minSize="0%"
-          maxSize="100%"
-          defaultSize="0%"
-          className="border-t border-border"
-        />
-      </ResizablePanelGroup>
+      )}
+
+      {/* Git status */}
       <GitStatusSection />
     </div>
   );
@@ -145,7 +87,7 @@ const MultiProjectChangesPanel = observer(function MultiProjectChangesPanel() {
       {provisioned.workspace.pr.pullRequests.length > 0 && (
         <div className="shrink-0 border-t border-border">
           <PullRequestsSection
-            collapsed={!provisioned.taskView.diffView.changesView.expandedSections.pullRequests}
+            collapsed={!provisioned.taskView.diffView.changesView.expandedPullRequests}
             onToggleCollapsed={() =>
               provisioned.taskView.diffView.changesView.toggleExpanded('pullRequests')
             }

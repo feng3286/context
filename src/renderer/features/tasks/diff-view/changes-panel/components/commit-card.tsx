@@ -16,7 +16,7 @@ export const CommitCard = observer(function CommitCard({ autoStage = false }: Co
   const provisioned = useProvisionedTask();
   const git = provisioned.workspace.git;
   const changesView = provisioned.taskView.diffView.changesView;
-  const hasPRs = changesView.expandedSections.pullRequests;
+  const hasPRs = changesView.expandedPullRequests;
   const [commitMessage, setCommitMessage] = useState('');
   const [description, setDescription] = useState('');
   const [phase, setPhase] = useState<CommitPhase>('idle');

@@ -38,7 +38,7 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
 
   get tabs(): Array<EditorTab & { isDirty: boolean; bufferUri: string }> {
     return this._tabs.map((tab) => {
-      const bufferUri = buildMonacoModelPath(this.modelRootPath, tab.path);
+      const bufferUri = buildMonacoModelPath(this.modelRootPath, tab.path, tab.projectId);
       return { ...tab, bufferUri, isDirty: modelRegistry.dirtyUris.has(bufferUri) };
     });
   }
@@ -149,7 +149,9 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
     }
 
     const prevPreview = this._tabs.find((t) => t.isPreview);
-    const prevUri = prevPreview ? buildMonacoModelPath(this.modelRootPath, prevPreview.path) : null;
+    const prevUri = prevPreview
+      ? buildMonacoModelPath(this.modelRootPath, prevPreview.path, prevPreview.projectId)
+      : null;
     const canReplace = prevPreview && prevUri && !modelRegistry.isDirty(prevUri);
 
     if (canReplace && prevPreview && prevUri) {
@@ -185,7 +187,7 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
     const idx = this._tabs.findIndex((t) => t.tabId === tabId);
     if (idx === -1) return;
     const tab = this._tabs[idx];
-    const uri = buildMonacoModelPath(this.modelRootPath, tab.path);
+    const uri = buildMonacoModelPath(this.modelRootPath, tab.path, tab.projectId);
     this._unregisterModels(uri);
     void rpc.editorBuffer.clearBuffer(this.projectId, this.workspaceId, tab.path);
     this._tabs.splice(idx, 1);
@@ -215,7 +217,8 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
   async saveFile(filePath?: string): Promise<void> {
     const targetPath = filePath ?? this.activeFilePath;
     if (!targetPath) return;
-    const uri = buildMonacoModelPath(this.modelRootPath, targetPath);
+    const tab = this._tabs.find((t) => t.path === targetPath);
+    const uri = buildMonacoModelPath(this.modelRootPath, targetPath, tab?.projectId);
     if (!modelRegistry.isDirty(uri)) return;
 
     if (modelRegistry.hasPendingConflict(uri)) {
@@ -243,11 +246,11 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
   }
 
   async saveAllFiles(): Promise<void> {
-    const dirtyPaths = this._tabs
-      .filter((t) => modelRegistry.isDirty(buildMonacoModelPath(this.modelRootPath, t.path)))
-      .map((t) => t.path);
-    for (const path of dirtyPaths) {
-      await this.saveFile(path);
+    const dirtyTabs = this._tabs.filter((t) =>
+      modelRegistry.isDirty(buildMonacoModelPath(this.modelRootPath, t.path, t.projectId))
+    );
+    for (const tab of dirtyTabs) {
+      await this.saveFile(tab.path);
     }
   }
 
@@ -259,7 +262,9 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
   async resolveConflict(accept: boolean): Promise<void> {
     const uri = this.pendingConflictUri;
     if (!uri) return;
-    const tab = this._tabs.find((t) => buildMonacoModelPath(this.modelRootPath, t.path) === uri);
+    const tab = this._tabs.find(
+      (t) => buildMonacoModelPath(this.modelRootPath, t.path, t.projectId) === uri
+    );
     runInAction(() => {
       this.pendingConflictUri = null;
     });
@@ -298,7 +303,8 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
     try {
       const buffers = await rpc.editorBuffer.listBuffers(this.projectId, this.workspaceId);
       for (const { filePath, content } of buffers) {
-        const uri = buildMonacoModelPath(this.modelRootPath, filePath);
+        const tab = this._tabs.find((t) => t.path === filePath);
+        const uri = buildMonacoModelPath(this.modelRootPath, filePath, tab?.projectId);
         const model = modelRegistry.getModelByUri(uri);
         if (model) model.setValue(content);
       }
@@ -309,7 +315,7 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
 
   dispose(): void {
     for (const tab of this._tabs) {
-      const uri = buildMonacoModelPath(this.modelRootPath, tab.path);
+      const uri = buildMonacoModelPath(this.modelRootPath, tab.path, tab.projectId);
       this._unregisterModels(uri);
     }
   }

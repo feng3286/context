@@ -156,9 +156,24 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
         ? (taskView.diffView.activeFile?.path ?? undefined)
         : undefined;
 
+  // Determine the project ID for the active file
+  const activeFileProjectId =
+    view === 'editor'
+      ? (taskView.editorView.activeTab?.projectId ?? projectId)
+      : view === 'diff'
+        ? (taskView.diffView.activeFile?.projectId ?? projectId)
+        : projectId;
+
   // Get line number from Monaco editor when in editor view
   const editorPosition = view === 'editor' ? getActiveEditorPosition() : null;
   const activeLineNumber = editorPosition?.lineNumber ?? (activeFilePath ? 1 : undefined);
+
+  // For multi-project tasks, resolve the correct worktree path
+  const activeProjectWorktreePath =
+    provisionedTask.isMultiProject && activeFileProjectId
+      ? (provisionedTask.projectContexts?.projects.get(activeFileProjectId)?.worktreePath ??
+        provisionedTask.path)
+      : provisionedTask.path;
 
   return (
     <Titlebar
@@ -179,9 +194,10 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 <span className="text-sm tracking-tight">{taskDisplayName(taskStore)}</span>
               </div>
               <OpenInMenu
-                path={provisionedTask.path}
+                path={activeProjectWorktreePath}
                 filePath={activeFilePath}
                 lineNumber={activeLineNumber}
+                projectId={activeFileProjectId}
               />
               {provisionedTask.isMultiProject && provisionedTask.projectContexts ? (
                 // Multi-project: show each project's git section
@@ -444,9 +460,10 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
           <DevServerPills projectId={projectId} taskId={taskId} />
           {!isRemoteProject && (
             <OpenInMenu
-              path={provisionedTask.path}
+              path={activeProjectWorktreePath}
               filePath={activeFilePath}
               lineNumber={activeLineNumber}
+              projectId={activeFileProjectId}
               className="h-7  bg-background"
             />
           )}

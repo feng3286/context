@@ -7,7 +7,7 @@ import { useParams } from '@renderer/lib/layout/navigation-provider';
 
 export const ActiveProject = observer(function ActiveProject() {
   const {
-    params: { projectId },
+    params: { projectId, workspaceId },
   } = useParams('project');
   const store = asMounted(getProjectStore(projectId));
 
@@ -17,7 +17,7 @@ export const ActiveProject = observer(function ActiveProject() {
 
   return (
     <>
-      {activeView === 'tasks' && <TaskList />}
+      {activeView === 'tasks' && <TaskList workspaceId={workspaceId} />}
       {activeView === 'pull-request' && <PullRequestView />}
       {activeView === 'settings' && <SettingsPanel />}
     </>

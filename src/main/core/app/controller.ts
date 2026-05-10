@@ -28,6 +28,7 @@ export const appController = createRPCController({
     lineNumber?: number;
     isRemote?: boolean;
     sshConnectionId?: string | null;
+    projectId?: string;
   }) => {
     try {
       await appService.openIn(args);

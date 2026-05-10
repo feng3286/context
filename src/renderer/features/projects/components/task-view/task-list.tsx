@@ -117,7 +117,7 @@ function SelectionBar({
   );
 }
 
-export const TaskList = observer(function TaskList() {
+export const TaskList = observer(function TaskList({ workspaceId }: { workspaceId?: string }) {
   const {
     params: { projectId },
   } = useParams('project');
@@ -131,8 +131,14 @@ export const TaskList = observer(function TaskList() {
         (t): t is ReadyTask => t.state !== 'unregistered'
       )
     : [];
-  const activeTasks = allTasks.filter((t) => !t.data.archivedAt);
-  const archivedTasks = allTasks.filter((t) => Boolean(t.data.archivedAt));
+
+  // Filter by workspaceId if provided
+  const workspaceFilteredTasks = workspaceId
+    ? allTasks.filter((t) => t.data.workspaceId === workspaceId)
+    : allTasks;
+
+  const activeTasks = workspaceFilteredTasks.filter((t) => !t.data.archivedAt);
+  const archivedTasks = workspaceFilteredTasks.filter((t) => Boolean(t.data.archivedAt));
 
   if (!taskView) return null;
 

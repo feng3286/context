@@ -1,11 +1,15 @@
+import { ChevronDown, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { getPrSyncStore } from '@renderer/features/projects/stores/project-selectors';
 import { rpc } from '@renderer/lib/ipc';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
+import { Badge } from '@renderer/lib/ui/badge';
+import { Button } from '@renderer/lib/ui/button';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/lib/ui/tooltip';
+import { cn } from '@renderer/utils/utils';
 import { useProvisionedTask, useTaskViewContext } from '../../task-view-context';
 import { PullRequestEntry } from './components/pr-entry/pr-entry';
-import { PullRequestSectionHeader } from './components/section-header';
 
 export const PullRequestsSection = observer(function PullRequestsSection({
   collapsed,
@@ -28,43 +32,88 @@ export const PullRequestsSection = observer(function PullRequestsSection({
     : false;
 
   return (
-    <>
-      <PullRequestSectionHeader
-        count={pullRequests.length}
-        collapsed={collapsed}
-        onToggleCollapsed={onToggleCollapsed}
-        hasOpenPr={hasOpenPr}
-        onCreatePr={
-          taskBranch
-            ? () =>
-                showCreatePrModal({
-                  nameWithOwner: repositoryUrl ?? '',
-                  branchName: taskBranch,
-                  draft: false,
-                  workspaceId: provisioned.workspaceId,
-                  onSuccess: () => {},
-                })
-            : undefined
-        }
-        onRefresh={() => {
-          void rpc.pullRequests.syncPullRequests(projectId);
-        }}
-        isRefreshing={isRefreshing}
-      />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {!repositoryUrl ? (
-          <EmptyState
-            label="Pull requests unavailable"
-            description="Pull requests are currently available only for configured GitHub remotes."
-          />
-        ) : pullRequests.length === 0 ? (
-          <EmptyState
-            label="No pull requests"
-            description="Push your branch and create a PR to start a review."
-          />
-        ) : null}
-        {repositoryUrl && currentPr && <PullRequestEntry key={currentPr.url} pr={currentPr} />}
+    <div className={cn('flex flex-col border-b border-border', !collapsed && 'flex-1 min-h-0')}>
+      {/* Section header - always visible */}
+      <div
+        className="shrink-0 flex items-center justify-between px-2.5 h-9 cursor-pointer hover:bg-background-1"
+        onClick={onToggleCollapsed}
+        role="button"
+        aria-expanded={!collapsed}
+      >
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-muted-foreground">
+            {!collapsed ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </span>
+          <span className="text-sm text-foreground-muted">Pull Requests</span>
+          <Badge variant="secondary">{pullRequests.length}</Badge>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  taskBranch &&
+                    showCreatePrModal({
+                      nameWithOwner: repositoryUrl ?? '',
+                      branchName: taskBranch,
+                      draft: false,
+                      workspaceId: provisioned.workspaceId,
+                      onSuccess: () => {},
+                    });
+                }}
+                disabled={hasOpenPr}
+              >
+                <Plus className="size-3" />
+                Create PR
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {hasOpenPr ? 'A pull request is already open' : 'Create a pull request'}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                variant="outline"
+                size="icon-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void rpc.pullRequests.syncPullRequests(projectId);
+                }}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={cn('size-3', isRefreshing && 'animate-spin')} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Refresh pull requests</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-    </>
+
+      {/* Content - only visible when expanded */}
+      {!collapsed && (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {!repositoryUrl ? (
+            <EmptyState
+              label="Pull requests unavailable"
+              description="Pull requests are currently available only for configured GitHub remotes."
+            />
+          ) : pullRequests.length === 0 ? (
+            <EmptyState
+              label="No pull requests"
+              description="Push your branch and create a PR to start a review."
+            />
+          ) : null}
+          {repositoryUrl && currentPr && <PullRequestEntry key={currentPr.url} pr={currentPr} />}
+        </div>
+      )}
+    </div>
   );
 });

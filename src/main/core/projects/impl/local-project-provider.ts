@@ -133,14 +133,15 @@ export class LocalProjectProvider implements ProjectProvider {
     conversations: Conversation[],
     terminals: Terminal[],
     workDir?: string,
-    taskBaseDir?: string
+    taskBaseDir?: string,
+    projectCount?: number
   ): Promise<Result<TaskProvider, ProvisionTaskError>> {
     const existing = this.tasks.get(task.id);
     if (existing) return ok(existing);
     if (this.provisioningTasks.has(task.id)) return this.provisioningTasks.get(task.id)!;
 
     const promise = withTimeout(
-      this.doProvisionTask(task, conversations, terminals, workDir, taskBaseDir),
+      this.doProvisionTask(task, conversations, terminals, workDir, taskBaseDir, projectCount),
       TASK_TIMEOUT_MS
     )
       .then((taskEnv) => {
@@ -168,7 +169,8 @@ export class LocalProjectProvider implements ProjectProvider {
     conversations: Conversation[],
     terminals: Terminal[],
     customWorkDir?: string,
-    taskBaseDir?: string
+    taskBaseDir?: string,
+    projectCount?: number
   ): Promise<TaskProvider> {
     log.debug('LocalProjectProvider: doProvisionTask START', {
       taskId: task.id,
@@ -264,8 +266,10 @@ export class LocalProjectProvider implements ProjectProvider {
       const exec = getGitLocalExec(() => githubConnectionService.getToken());
       const projectSettings = await this.settings.get();
       const defaultBranch = await this.settings.getDefaultBranch();
-      // For multi-project tasks, use taskBaseDir (task base directory) instead of workspace.path (project worktree)
-      const effectiveTaskPath = taskBaseDir ?? workspace.path;
+      const effectiveTaskPath =
+        projectCount === 1 && taskBaseDir
+          ? path.join(taskBaseDir, this.project.name)
+          : (taskBaseDir ?? workspace.path);
       const taskEnvVars = getTaskEnvVars({
         taskId: task.id,
         taskName: task.name,

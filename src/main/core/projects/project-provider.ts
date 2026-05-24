@@ -54,7 +54,8 @@ export interface ProjectProvider {
     conversations: Conversation[],
     terminals: Terminal[],
     workDir?: string,
-    taskBaseDir?: string
+    taskBaseDir?: string,
+    projectCount?: number
   ): Promise<Result<TaskProvider, ProvisionTaskError>>;
   getTask(taskId: string): TaskProvider | undefined;
   getTaskBootstrapStatus(taskId: string): TaskBootstrapStatus;

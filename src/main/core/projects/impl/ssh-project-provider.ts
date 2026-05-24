@@ -171,7 +171,8 @@ export class SshProjectProvider implements ProjectProvider {
     conversations: Conversation[],
     terminals: Terminal[],
     _workDir?: string,
-    _taskBaseDir?: string
+    _taskBaseDir?: string,
+    _projectCount?: number
   ): Promise<Result<TaskProvider, ProvisionTaskError>> {
     const existing = this.tasks.get(task.id);
     if (existing) return ok(existing);

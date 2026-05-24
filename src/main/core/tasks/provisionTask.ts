@@ -74,13 +74,15 @@ export async function provisionTask(taskId: string) {
 
   const workDir = task.workDir;
   const taskBaseDir = task.workDir;
+  const projectCount = taskProjectRows.length;
 
   const result = await primaryProject.provisionTask(
     task,
     existingConversations,
     existingTerminals,
     workDir,
-    taskBaseDir
+    taskBaseDir,
+    projectCount
   );
   if (!result.success) {
     throw new Error(`Failed to provision task: ${formatProvisionTaskError(result.error)}`);

@@ -140,7 +140,14 @@ export async function createMultiProjectTask(
     const projectWorkDir = path.join(taskBaseDir, projectName);
 
     // Provision worktree for this project
-    const provisionResult = await project.provisionTask(task, [], [], projectWorkDir, taskBaseDir);
+    const provisionResult = await project.provisionTask(
+      task,
+      [],
+      [],
+      projectWorkDir,
+      taskBaseDir,
+      projectBranchSources.length
+    );
     if (!provisionResult.success) {
       return err(mapProvisionError(provisionResult.error.type));
     }

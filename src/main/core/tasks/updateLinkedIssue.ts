@@ -1,15 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { Issue } from '@shared/tasks';
 import { db } from '@main/db/client';
-import { tasks } from '@main/db/schema';
+import { taskProjects, tasks } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 
 export async function updateLinkedIssue(taskId: string, issue?: Issue) {
-  const [task] = await db
-    .select({ id: tasks.id, projectId: tasks.projectId })
-    .from(tasks)
-    .where(eq(tasks.id, taskId))
-    .limit(1);
+  const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!task) return;
 
   await db
@@ -20,9 +16,16 @@ export async function updateLinkedIssue(taskId: string, issue?: Issue) {
     .where(eq(tasks.id, taskId));
 
   if (issue) {
+    // Get primary project for telemetry
+    const [tpRow] = await db
+      .select({ projectId: taskProjects.projectId })
+      .from(taskProjects)
+      .where(eq(taskProjects.taskId, taskId))
+      .limit(1);
+
     capture('issue_linked_to_task', {
       provider: issue.provider,
-      project_id: task.projectId,
+      project_id: tpRow?.projectId ?? '',
       task_id: task.id,
     });
   }

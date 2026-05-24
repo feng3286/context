@@ -19,7 +19,7 @@ export const SvgRenderer = observer(function SvgRenderer({ filePath }: SvgRender
 
   // Use the tab's projectId for multi-project tasks
   const tab = editorView.tabs.find((t) => t.path === filePath);
-  const projectId = tab?.projectId ?? provisioned._taskData.projectId;
+  const projectId = tab?.projectId ?? provisioned._projectId;
 
   const content =
     modelRegistry.getValue(buildMonacoModelPath(editorView.modelRootPath, filePath, projectId)) ??

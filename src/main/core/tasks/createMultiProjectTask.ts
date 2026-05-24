@@ -66,14 +66,12 @@ export async function createMultiProjectTask(
   const defaultWorktreeDir = localProjectSettings.defaultWorktreeDirectory ?? '';
   const taskBaseDir = path.join(defaultWorktreeDir, workspaceName, params.name);
 
-  // Create task record
   const [taskRow] = await db
     .insert(tasks)
     .values({
       id: params.id,
-      projectId: projectBranchSources[0].projectId, // Keep for backward compatibility
       workspaceId: params.workspaceId,
-      workDir: taskBaseDir, // Store task base directory for multi-project tasks
+      workDir: taskBaseDir,
       name: params.name,
       taskBranch: resolvedTaskBranch,
       status: initialStatus,

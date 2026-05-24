@@ -1,19 +1,24 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { projectManager } from '@main/core/projects/project-manager';
 import { db } from '@main/db/client';
-import { tasks } from '@main/db/schema';
+import { taskProjects, tasks } from '@main/db/schema';
 import { appSettingsService } from '../settings/settings-service';
 
-export async function renameTask(
-  projectId: string,
-  taskId: string,
-  newName: string
-): Promise<void> {
+export async function renameTask(taskId: string, newName: string): Promise<void> {
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!row) throw new Error(`Task not found: ${taskId}`);
 
-  const project = projectManager.getProject(projectId);
-  if (!project) throw new Error(`Project not found: ${projectId}`);
+  // Get primary project from task_projects
+  const [tpRow] = await db
+    .select({ projectId: taskProjects.projectId })
+    .from(taskProjects)
+    .where(eq(taskProjects.taskId, taskId))
+    .limit(1);
+
+  if (!tpRow) throw new Error(`Task has no associated projects: ${taskId}`);
+
+  const project = projectManager.getProject(tpRow.projectId);
+  if (!project) throw new Error(`Project not found: ${tpRow.projectId}`);
 
   const oldBranch = row.taskBranch;
   const sourceBranch = row.sourceBranch ?? undefined;
@@ -24,7 +29,7 @@ export async function renameTask(
       const siblings = await db
         .select({ id: tasks.id })
         .from(tasks)
-        .where(and(eq(tasks.projectId, row.projectId), eq(tasks.taskBranch, oldBranch)))
+        .where(and(eq(tasks.workspaceId, row.workspaceId), eq(tasks.taskBranch, oldBranch)))
         .limit(2);
 
       if (siblings.length === 1) {

@@ -11,8 +11,7 @@ export function mapTaskRowToTask(
   const sourceBranch = row.sourceBranch ? fromStoredBranch(row.sourceBranch) : undefined;
   return {
     id: row.id,
-    projectId: row.projectId,
-    workspaceId: row.workspaceId ?? undefined,
+    workspaceId: row.workspaceId,
     workDir: row.workDir ?? undefined,
     name: row.name,
     status: row.status as TaskLifecycleStatus,

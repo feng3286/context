@@ -1,15 +1,24 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { projectManager } from '@main/core/projects/project-manager';
 import { db } from '@main/db/client';
-import { tasks } from '@main/db/schema';
+import { taskProjects, tasks } from '@main/db/schema';
 import { log } from '@main/lib/logger';
 import { capture } from '@main/lib/telemetry';
 
-export async function archiveTask(projectId: string, taskId: string): Promise<void> {
+export async function archiveTask(taskId: string): Promise<void> {
   const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!task) return;
 
-  const project = projectManager.getProject(projectId);
+  // Get primary project from task_projects
+  const [tpRow] = await db
+    .select({ projectId: taskProjects.projectId })
+    .from(taskProjects)
+    .where(eq(taskProjects.taskId, taskId))
+    .limit(1);
+
+  if (!tpRow) return;
+
+  const project = projectManager.getProject(tpRow.projectId);
 
   await db
     .update(tasks)
@@ -20,7 +29,7 @@ export async function archiveTask(projectId: string, taskId: string): Promise<vo
       statusChangedAt: sql`CURRENT_TIMESTAMP`,
     })
     .where(eq(tasks.id, taskId));
-  capture('task_archived', { project_id: projectId, task_id: taskId });
+  capture('task_archived', { project_id: tpRow.projectId, task_id: taskId });
 
   if (!project) return;
 
@@ -41,7 +50,7 @@ export async function archiveTask(projectId: string, taskId: string): Promise<vo
       .from(tasks)
       .where(
         and(
-          eq(tasks.projectId, task.projectId),
+          eq(tasks.workspaceId, task.workspaceId),
           eq(tasks.taskBranch, task.taskBranch),
           isNull(tasks.archivedAt)
         )

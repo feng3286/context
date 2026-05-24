@@ -20,9 +20,8 @@ export type Issue = {
 
 export type Task = {
   id: string;
-  projectId: string; // Keep for backward compatibility
-  workspaceId?: string; // NEW: link to workspace
-  workDir?: string; // NEW: task-specific work directory
+  workspaceId: string;
+  workDir?: string;
   name: string;
   status: TaskLifecycleStatus;
   sourceBranch: Branch | undefined;
@@ -37,8 +36,6 @@ export type Task = {
   isPinned: boolean;
   prs: PullRequest[];
   conversations: Record<string, number>;
-  /** Per-project source branch (from task_projects.source_branch). Only populated when queried by projectId. */
-  projectSourceBranch?: string | null;
 };
 
 export type TaskBootstrapStatus =
@@ -64,11 +61,9 @@ export type CreateTaskStrategy =
 
 export type CreateTaskParams = {
   id: string;
-  projectId: string; // Keep for backward compatibility (single-project tasks)
-  workspaceId?: string; // NEW: for multi-project tasks
-  projectIds?: string[]; // NEW: multi-project task projects
-  primaryProjectId?: string; // NEW: the project that determines sourceBranch
-  workDir?: string; // NEW: task-specific work directory
+  workspaceId: string;
+  projectIds: string[];
+  workDir?: string;
   name: string;
   /** The branch to fork the new worktree from (not used for `from-pull-request` strategy) */
   sourceBranch: Branch;

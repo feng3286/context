@@ -215,10 +215,14 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
     }
   };
 
-  const handleTaskClick = async (task: Task) => {
+  const handleTaskClick = async (task: Task, workspaceProjects: string[]) => {
     // Ensure project is loaded and mounted before navigating
     const projectManager = getProjectManagerStore();
-    const projectStore = projectManager.projects.get(task.projectId);
+    // Use the first project from the workspace's projects
+    const firstProjectId = workspaceProjects[0];
+    if (!firstProjectId) return;
+
+    const projectStore = projectManager.projects.get(firstProjectId);
 
     if (!projectStore) {
       // Project not in store, need to load first
@@ -226,21 +230,21 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
     }
 
     // Check again after load
-    const projectStoreAfterLoad = projectManager.projects.get(task.projectId);
+    const projectStoreAfterLoad = projectManager.projects.get(firstProjectId);
     if (projectStoreAfterLoad) {
       // Mount the project if not already mounted
-      await projectManager.mountProject(task.projectId);
+      await projectManager.mountProject(firstProjectId);
     }
 
     // Navigate to task view
-    navigate('task', { projectId: task.projectId, taskId: task.id });
+    navigate('task', { projectId: firstProjectId, taskId: task.id });
   };
 
   const handleDeleteTask = async (workspaceId: string, task: Task) => {
     if (confirm(`Delete task "${task.name}"?`)) {
       const store = workspaceManagerStore.getWorkspace(workspaceId);
       if (store) {
-        await (store as WorkspaceStoreClass).deleteTask(task.projectId, task.id);
+        await (store as WorkspaceStoreClass).deleteTask(task.id);
       }
     }
   };
@@ -350,7 +354,12 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                         key={task.id}
                         task={task}
                         isActive={currentView === 'task' && taskParams.params.taskId === task.id}
-                        onClick={() => void handleTaskClick(task)}
+                        onClick={() =>
+                          void handleTaskClick(
+                            task,
+                            projects.map((p) => p.id)
+                          )
+                        }
                         onDelete={() => void handleDeleteTask(store.data.id, task)}
                       />
                     ))

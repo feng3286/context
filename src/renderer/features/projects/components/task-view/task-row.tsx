@@ -35,12 +35,12 @@ export const TaskRow = observer(function TaskRow({
 }) {
   const { navigate } = useNavigate();
   const showRename = useShowModal('renameTaskModal');
-  const taskManager = getTaskManagerStore(task.data.projectId);
+  const taskManager = getTaskManagerStore(projectId);
   const projectStore = getProjectStore(projectId);
 
-  // Get project name, per-project source branch, and current branch
+  // Get project name and current branch
   const projectName = projectStore?.data?.name ?? '';
-  const sourceBranchName = task.data.projectSourceBranch ?? task.data.sourceBranch?.branch ?? null;
+  const sourceBranchName = task.data.sourceBranch?.branch ?? null;
   const currentBranch = task.data.taskBranch;
 
   const handleArchive = () => void taskManager?.archiveTask(task.data.id);
@@ -48,7 +48,7 @@ export const TaskRow = observer(function TaskRow({
   const handleProvision = () => void taskManager?.provisionTask(task.data.id);
   const handleRename = () =>
     showRename({
-      projectId: task.data.projectId,
+      projectId,
       taskId: task.data.id,
       currentName: task.data.name,
     });
@@ -73,7 +73,7 @@ export const TaskRow = observer(function TaskRow({
         onClick={() => {
           if (isArchived) return;
           handleProvision();
-          navigate('task', { projectId: task.data.projectId, taskId: task.data.id });
+          navigate('task', { projectId, taskId: task.data.id });
         }}
         className="group flex items-center gap-2 rounded-lg p-3  hover:bg-background-1 transition-colors w-full"
       >

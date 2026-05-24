@@ -46,7 +46,8 @@ export async function createTask(
   const agentAutoApproveDefaults = await appSettingsService.get('agentAutoApproveDefaults');
   let warning: CreateTaskWarning | undefined;
 
-  const project = projectManager.getProject(params.projectId);
+  const primaryProjectId = params.projectIds[0];
+  const project = projectManager.getProject(primaryProjectId);
   if (!project) {
     return err({ type: 'project-not-found' });
   }
@@ -186,7 +187,7 @@ export async function createTask(
     .insert(tasks)
     .values({
       id: params.id,
-      projectId: params.projectId,
+      workspaceId: params.workspaceId,
       name: params.name,
       taskBranch,
       status: initialStatus,
@@ -200,10 +201,10 @@ export async function createTask(
 
   let prs: Awaited<ReturnType<typeof prQueryService.getTaskPullRequests>> = [];
   if (strategy.kind === 'from-pull-request') {
-    const capability = await prQueryService.getProjectRemoteInfo(params.projectId);
+    const capability = await prQueryService.getProjectRemoteInfo(primaryProjectId);
     if (capability.status === 'ready') {
       prs = await prQueryService.getTaskPullRequests(
-        params.projectId,
+        primaryProjectId,
         strategy.headBranch,
         capability.repositoryUrl
       );
@@ -213,10 +214,8 @@ export async function createTask(
   const task = mapTaskRowToTask(taskRow, prs);
 
   // Set task-project associations
-  const allProjectIds =
-    params.projectIds && params.projectIds.length > 0 ? params.projectIds : [params.projectId];
   await db.insert(taskProjects).values(
-    allProjectIds.map((pid) => ({
+    params.projectIds.map((pid) => ({
       taskId: params.id,
       projectId: pid,
       sourceBranch: dbSourceBranch.branch,
@@ -239,7 +238,7 @@ export async function createTask(
   }
 
   capture('task_provisioned', {
-    project_id: params.projectId,
+    project_id: primaryProjectId,
     task_id: params.id,
   });
 
@@ -266,13 +265,13 @@ export async function createTask(
     has_initial_prompt: Boolean(params.initialConversation?.initialPrompt?.trim()),
     has_issue: params.linkedIssue?.provider ?? 'none',
     provider: params.initialConversation?.provider ?? null,
-    project_id: params.projectId,
+    project_id: primaryProjectId,
     task_id: params.id,
   });
   if (params.linkedIssue) {
     capture('issue_linked_to_task', {
       provider: params.linkedIssue.provider,
-      project_id: params.projectId,
+      project_id: primaryProjectId,
       task_id: params.id,
     });
   }

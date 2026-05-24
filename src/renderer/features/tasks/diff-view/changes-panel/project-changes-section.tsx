@@ -37,7 +37,12 @@ export const ProjectChangesSection = observer(function ProjectChangesSection({
     if (activeFile?.projectId === projectContext.projectId && !expanded) {
       projectContexts.toggleSection(projectContext.projectId);
     }
-  }, [provisioned.taskView.diffView.activeFile?.projectId, projectContext.projectId, expanded, projectContexts]);
+  }, [
+    provisioned.taskView.diffView.activeFile?.projectId,
+    projectContext.projectId,
+    expanded,
+    projectContexts,
+  ]);
 
   // Don't render empty project sections
   if (!git.hasData || totalChanges === 0) return null;

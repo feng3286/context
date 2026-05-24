@@ -1,8 +1,8 @@
 import { ChevronDown, ChevronRight, Plus, Undo2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { commitRef, HEAD_REF } from '@shared/git';
-import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
 import type { ChangesViewStore } from '@renderer/features/tasks/diff-view/stores/changes-view-store';
+import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
 import type { ProjectChangesViewStore } from '@renderer/features/tasks/stores/project-changes-view-store';
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
@@ -48,11 +48,7 @@ export const UnstagedSection = observer(function UnstagedSection({
   const hasStagedChanges = git.stagedFileChanges.length > 0;
   const selectedPaths = effectiveChangesView.unstagedSelection;
   const selectionState =
-    selectedPaths.size === 0
-      ? 'none'
-      : selectedPaths.size === changes.length
-        ? 'all'
-        : 'partial';
+    selectedPaths.size === 0 ? 'none' : selectedPaths.size === changes.length ? 'all' : 'partial';
 
   const activePath =
     provisioned.taskView.view === 'diff' && diffView.activeFile?.group === 'disk'

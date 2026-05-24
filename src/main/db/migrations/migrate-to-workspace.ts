@@ -10,8 +10,10 @@ import { projects, taskProjects, tasks, workspaceProjects, workspaces } from '..
  * Migration strategy:
  * - Create a Workspace for each existing Project (1:1 mapping)
  * - Link each Project to its corresponding Workspace via workspace_projects
- * - Set workspaceId on existing Tasks (based on their projectId)
+ * - Set workspaceId on existing Tasks (based on their project-task_projects relationship)
  * - Create task_projects entries linking Tasks to Projects
+ *
+ * NOTE: This migration is a no-op if projectId column has been removed (post-0014).
  */
 export async function migrateToWorkspace(): Promise<void> {
   // Check if migration already done by checking for existing workspaces
@@ -31,8 +33,15 @@ export async function migrateToWorkspace(): Promise<void> {
     return;
   }
 
-  // Get all existing tasks
+  // Get all existing tasks with their project associations via task_projects
   const allTasks = await db.select().from(tasks);
+  const taskProjectRows = await db.select().from(taskProjects).execute();
+  const taskToProjects = new Map<string, string[]>();
+  for (const tp of taskProjectRows) {
+    const projects = taskToProjects.get(tp.taskId) ?? [];
+    projects.push(tp.projectId);
+    taskToProjects.set(tp.taskId, projects);
+  }
 
   for (const project of allProjects) {
     // Create a workspace for each existing project
@@ -52,21 +61,17 @@ export async function migrateToWorkspace(): Promise<void> {
       addedAt: project.createdAt,
     });
 
-    // Update tasks for this project - set workspaceId and create task_projects entries
-    const projectTasks = allTasks.filter((task) => task.projectId === project.id);
+    // Find tasks associated with this project via task_projects
+    const projectTaskIds = allTasks
+      .filter((task) => taskToProjects.get(task.id)?.includes(project.id))
+      .map((t) => t.id);
 
-    for (const task of projectTasks) {
+    for (const taskId of projectTaskIds) {
       // Set workspaceId on task
-      await db.update(tasks).set({ workspaceId }).where(eq(tasks.id, task.id));
-
-      // Link task to project via task_projects
-      await db.insert(taskProjects).values({
-        taskId: task.id,
-        projectId: project.id,
-      });
+      await db.update(tasks).set({ workspaceId }).where(eq(tasks.id, taskId));
     }
   }
 
   console.log(`Migrated ${allProjects.length} projects to workspaces`);
-  console.log(`Updated ${allTasks.length} tasks with workspace associations`);
+  console.log(`Updated tasks with workspace associations`);
 }

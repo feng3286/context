@@ -87,10 +87,12 @@ export class TaskManagerStore {
     this._repository = repository;
     makeObservable(this, { tasks: observable });
 
-    events.on(taskStatusUpdatedChannel, ({ taskId, projectId: evtProjectId, status }) => {
-      if (evtProjectId !== this.projectId) return;
+    events.on(taskStatusUpdatedChannel, ({ taskId, workspaceId, status }) => {
       const store = this.tasks.get(taskId);
-      if (store && isProvisioned(store)) {
+      if (!store) return;
+      const taskWorkspaceId = (store.data as Task).workspaceId;
+      if (taskWorkspaceId && taskWorkspaceId !== workspaceId) return;
+      if (isProvisioned(store)) {
         runInAction(() => {
           store.data.status = status as TaskLifecycleStatus;
         });
@@ -129,30 +131,19 @@ export class TaskManagerStore {
       }
     });
 
-    this._unsubTaskDeleted = events.on(
-      taskDeletedChannel,
-      ({ taskId, projectId: evtProjectId, workspaceId }) => {
-        const store = this.tasks.get(taskId);
-        if (!store) return;
+    this._unsubTaskDeleted = events.on(taskDeletedChannel, ({ taskId, workspaceId }) => {
+      const store = this.tasks.get(taskId);
+      if (!store) return;
 
-        // For multi-project tasks (workspace tasks), delete from all projects' stores
-        // For single-project tasks, only delete from the matching project's store
-        const taskWorkspaceId = (store.data as Task).workspaceId ?? null;
-        if (workspaceId && taskWorkspaceId === workspaceId) {
-          // Multi-project task - delete regardless of projectId
-          store.dispose();
-          runInAction(() => {
-            this.tasks.delete(taskId);
-          });
-        } else if (evtProjectId === this.projectId) {
-          // Single-project task - only delete from matching project
-          store.dispose();
-          runInAction(() => {
-            this.tasks.delete(taskId);
-          });
-        }
-      }
-    );
+      // Only delete from this store if the task belongs to this workspace
+      const taskWorkspaceId = (store.data as Task).workspaceId;
+      if (taskWorkspaceId !== workspaceId) return;
+
+      store.dispose();
+      runInAction(() => {
+        this.tasks.delete(taskId);
+      });
+    });
 
     this._disposeRepositoryReaction = reaction(
       () => this._repository.repositoryUrl,
@@ -293,6 +284,7 @@ export class TaskManagerStore {
               updatedData,
               result.path,
               this._repository,
+              this.projectId,
               savedSnapshot as TaskViewSnapshot | undefined
             );
             current.activate();
@@ -348,7 +340,7 @@ export class TaskManagerStore {
     });
 
     const promise = rpc.tasks
-      .teardownTask(this.projectId, taskId)
+      .teardownTask(taskId)
       .then(() => {
         runInAction(() => {
           const current = this.tasks.get(taskId);
@@ -392,7 +384,7 @@ export class TaskManagerStore {
           task.data.archivedAt = new Date().toISOString();
         }
       });
-      await rpc.tasks.archiveTask(this.projectId, taskId);
+      await rpc.tasks.archiveTask(taskId);
       void this.teardownTask(taskId).catch(() => {});
     } catch (e) {
       runInAction(() => {
@@ -439,7 +431,7 @@ export class TaskManagerStore {
 
     try {
       task.dispose();
-      await rpc.tasks.deleteTask(this.projectId, taskId);
+      await rpc.tasks.deleteTask(taskId);
     } catch (e) {
       runInAction(() => {
         this.tasks.set(taskId, task);

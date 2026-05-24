@@ -121,8 +121,8 @@ export class WorkspaceStoreClass {
     return rpc.conversations.getConversationsForTask(taskId);
   }
 
-  async deleteTask(projectId: string, taskId: string): Promise<void> {
-    await rpc.tasks.deleteTask(projectId, taskId);
+  async deleteTask(taskId: string): Promise<void> {
+    await rpc.tasks.deleteTask(taskId);
     await this.load();
   }
 }

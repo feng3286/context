@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import type { CreateTerminalParams, Terminal } from '@shared/terminals';
 import { db } from '@main/db/client';
-import { tasks, terminals } from '@main/db/schema';
+import { taskProjects, terminals } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 import { resolveTaskByTaskId } from '../projects/utils';
 import { mapTerminalRowToTerminal } from './core';
@@ -9,18 +9,18 @@ import { mapTerminalRowToTerminal } from './core';
 export async function createTerminal(params: CreateTerminalParams): Promise<Terminal> {
   const { id: terminalId, initialSize = { cols: 80, rows: 24 } } = params;
 
-  // Get projectId from the task record for database insert
-  const taskRow = await db
-    .select({ projectId: tasks.projectId })
-    .from(tasks)
-    .where(eq(tasks.id, params.taskId))
+  // Get projectId from task_projects for database insert
+  const tpRow = await db
+    .select({ projectId: taskProjects.projectId })
+    .from(taskProjects)
+    .where(eq(taskProjects.taskId, params.taskId))
     .limit(1);
 
-  if (taskRow.length === 0) {
-    throw new Error('Task not found');
+  if (!tpRow || tpRow.length === 0) {
+    throw new Error('Task has no associated projects');
   }
 
-  const projectId = taskRow[0].projectId;
+  const projectId = tpRow[0].projectId;
 
   const [row] = await db
     .insert(terminals)

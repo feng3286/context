@@ -141,7 +141,10 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
   };
 
   const handleTaskClick = async (task: Task) => {
-    navigate('task', { projectId: task.projectId, taskId: task.id });
+    // Use the first project from the workspace's projects
+    const firstProjectId = projects[0]?.id;
+    if (!firstProjectId) return;
+    navigate('task', { projectId: firstProjectId, taskId: task.id });
   };
 
   return (

@@ -25,8 +25,7 @@ export const MarkdownEditorRenderer = observer(function MarkdownEditorRenderer({
 
   // Use the tab's projectId for multi-project tasks
   const tab = editorView.tabs.find((t) => t.path === filePath);
-  const projectId =
-    tab?.projectId ?? editorView.activeTab?.projectId ?? provisioned._taskData.projectId;
+  const projectId = tab?.projectId ?? editorView.activeTab?.projectId ?? provisioned._projectId;
 
   const bufferUri = buildMonacoModelPath(editorView.modelRootPath, filePath, projectId);
   // Reading bufferVersions creates a MobX tracking dependency so this observer()

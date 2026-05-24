@@ -145,10 +145,9 @@ export const tasks = sqliteTable(
   'tasks',
   {
     id: text('id').primaryKey(),
-    projectId: text('project_id')
+    workspaceId: text('workspace_id')
       .notNull()
-      .references(() => projects.id, { onDelete: 'cascade' }),
-    workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     workDir: text('work_dir'),
     name: text('name').notNull(),
     status: text('status').notNull(),
@@ -169,7 +168,6 @@ export const tasks = sqliteTable(
     isPinned: integer('is_pinned').notNull().default(0), // boolean, 0=false, 1=true
   },
   (table) => ({
-    projectIdIdx: index('idx_tasks_project_id').on(table.projectId),
     workspaceIdIdx: index('idx_tasks_workspace_id').on(table.workspaceId),
   })
 );
@@ -410,8 +408,7 @@ export const sshConnectionsRelations = relations(sshConnections, ({ many }) => (
   projects: many(projects),
 }));
 
-export const projectsRelations = relations(projects, ({ one, many }) => ({
-  tasks: many(tasks),
+export const projectsRelations = relations(projects, ({ one }) => ({
   sshConnection: one(sshConnections, {
     fields: [projects.sshConnectionId],
     references: [sshConnections.id],
@@ -446,10 +443,6 @@ export const taskProjectsRelations = relations(taskProjects, ({ one }) => ({
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  project: one(projects, {
-    fields: [tasks.projectId],
-    references: [projects.id],
-  }),
   workspace: one(workspaces, {
     fields: [tasks.workspaceId],
     references: [workspaces.id],

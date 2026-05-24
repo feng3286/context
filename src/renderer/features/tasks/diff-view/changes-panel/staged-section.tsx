@@ -45,11 +45,7 @@ export const StagedSection = observer(function StagedSection({
   const hasChanges = changes.length > 0;
   const selectedPaths = effectiveChangesView.stagedSelection;
   const selectionState =
-    selectedPaths.size === 0
-      ? 'none'
-      : selectedPaths.size === changes.length
-        ? 'all'
-        : 'partial';
+    selectedPaths.size === 0 ? 'none' : selectedPaths.size === changes.length ? 'all' : 'partial';
 
   const activePath =
     provisioned.taskView.view === 'diff' && diffView.activeFile?.group === 'staged'

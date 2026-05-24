@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { conversations, tasks } from '@main/db/schema';
+import { conversations, taskProjects, tasks } from '@main/db/schema';
 import { log } from '@main/lib/logger';
 import {
   isUniqueConstraintError,
@@ -223,17 +223,20 @@ export async function portConversations({
   const nowIso = new Date().toISOString();
   const claudeResumeTargets = readLegacyClaudeResumeTargets(userDataPath);
 
-  const taskRows = await appDb
+  const taskProjectRows = await appDb
     .select({
-      id: tasks.id,
-      projectId: tasks.projectId,
+      taskId: taskProjects.taskId,
+      projectId: taskProjects.projectId,
     })
-    .from(tasks)
+    .from(taskProjects)
     .execute();
 
+  // Map taskId to its first associated projectId
   const taskIdToProjectId = new Map<string, string>();
-  for (const row of taskRows) {
-    taskIdToProjectId.set(row.id, row.projectId);
+  for (const row of taskProjectRows) {
+    if (!taskIdToProjectId.has(row.taskId)) {
+      taskIdToProjectId.set(row.taskId, row.projectId);
+    }
   }
 
   const existingConversationRows = await appDb

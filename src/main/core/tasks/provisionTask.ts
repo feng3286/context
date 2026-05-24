@@ -15,53 +15,54 @@ export async function provisionTask(taskId: string) {
   if (!row) throw new Error(`Task not found: ${taskId}`);
 
   const task = mapTaskRowToTask(row);
-  const project = projectManager.getProject(task.projectId);
-  if (!project) throw new Error(`Project not found: ${task.projectId}`);
 
-  const existingTask = project.getTask(taskId);
+  // Get associated projects to find a primary project for provisioning
+  const taskProjectRows = await db
+    .select()
+    .from(taskProjects)
+    .where(eq(taskProjects.taskId, taskId));
+
+  if (taskProjectRows.length === 0) {
+    throw new Error(`Task has no associated projects: ${taskId}`);
+  }
+
+  const primaryProject = projectManager.getProject(taskProjectRows[0].projectId);
+  if (!primaryProject) {
+    throw new Error(`Project not found: ${taskProjectRows[0].projectId}`);
+  }
+
+  const existingTask = primaryProject.getTask(taskId);
   const wsId = workspaceKey(task.taskBranch);
 
-  // For workspace (multi-project) tasks, ensure workspaces are registered
-  // in ALL associated projects' providers. This must happen even when the
-  // task already exists, because providers are restarted on app launch.
-  if (task.workspaceId) {
-    const taskProjectRows = await db
-      .select()
-      .from(taskProjects)
-      .where(eq(taskProjects.taskId, taskId));
+  // Ensure workspaces are registered in ALL associated projects' providers
+  for (const tpRow of taskProjectRows) {
+    const rowProject = projectManager.getProject(tpRow.projectId);
+    if (rowProject) {
+      let worktreePath: string | undefined;
 
-    for (const row of taskProjectRows) {
-      const rowProject = projectManager.getProject(row.projectId);
-      if (rowProject) {
-        let worktreePath: string | undefined;
+      if (task.workDir) {
+        const [projectRow] = await db
+          .select({ name: projects.name })
+          .from(projects)
+          .where(eq(projects.id, tpRow.projectId))
+          .limit(1);
+        worktreePath = path.join(task.workDir, projectRow?.name ?? tpRow.projectId);
+      } else if (task.taskBranch) {
+        worktreePath = await rowProject.getWorktreeForBranch(task.taskBranch);
+      }
 
-        if (task.workDir) {
-          // Compute worktree path: {task.workDir}/{project.name}
-          const [projectRow] = await db
-            .select({ name: projects.name })
-            .from(projects)
-            .where(eq(projects.id, row.projectId))
-            .limit(1);
-          worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
-        } else if (task.taskBranch) {
-          // Fallback: find existing worktree by branch name
-          worktreePath = await rowProject.getWorktreeForBranch(task.taskBranch);
-        }
-
-        if (worktreePath) {
-          await rowProject.ensureWorkspace(wsId, worktreePath);
-        }
+      if (worktreePath) {
+        await rowProject.ensureWorkspace(wsId, worktreePath);
       }
     }
   }
 
   if (existingTask) {
-    // For multi-project tasks, return workDir as the base path containing all project worktrees
-    // For single-project tasks, return the workspace path
-    if (task.workspaceId && task.workDir) {
+    // For multi-project tasks, return workDir as the base path
+    if (task.workDir) {
       return { path: task.workDir, workspaceId: wsId };
     }
-    return { path: project.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
+    return { path: primaryProject.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
   }
 
   const [existingTerminals, existingConversations] = await Promise.all([
@@ -77,19 +78,10 @@ export async function provisionTask(taskId: string) {
       .then((rows) => rows.map((r) => mapConversationRowToConversation(r, true))),
   ]);
 
-  // For workspace tasks, look up the existing worktree path from task_projects table
-  let workDir: string | undefined;
-  let taskBaseDir: string | undefined;
+  const workDir = task.workDir;
+  const taskBaseDir = task.workDir;
 
-  if (task.workspaceId) {
-    workDir = task.workDir;
-    taskBaseDir = task.workDir;
-  } else {
-    workDir = undefined;
-    taskBaseDir = undefined;
-  }
-
-  const result = await project.provisionTask(
+  const result = await primaryProject.provisionTask(
     task,
     existingConversations,
     existingTerminals,
@@ -105,15 +97,14 @@ export async function provisionTask(taskId: string) {
     .set({ lastInteractedAt: sql`CURRENT_TIMESTAMP` })
     .where(eq(tasks.id, taskId));
   capture('task_provisioned', {
-    project_id: task.projectId,
+    project_id: taskProjectRows[0].projectId,
     task_id: task.id,
     workspace_id: task.workspaceId,
   });
 
-  // For multi-project tasks, return workDir as the base path containing all project worktrees
-  // For single-project tasks, return the workspace path
-  if (task.workspaceId && task.workDir) {
+  // For multi-project tasks, return workDir as the base path
+  if (task.workDir) {
     return { path: task.workDir, workspaceId: wsId };
   }
-  return { path: project.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
+  return { path: primaryProject.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
 }

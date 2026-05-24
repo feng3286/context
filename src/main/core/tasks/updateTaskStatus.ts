@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { TaskLifecycleStatus } from '@shared/tasks';
 import { db } from '@main/db/client';
-import { tasks } from '@main/db/schema';
+import { taskProjects, tasks } from '@main/db/schema';
 import { capture } from '@main/lib/telemetry';
 
 export async function updateTaskStatus(taskId: string, status: TaskLifecycleStatus): Promise<void> {
@@ -18,10 +18,17 @@ export async function updateTaskStatus(taskId: string, status: TaskLifecycleStat
     })
     .where(eq(tasks.id, taskId));
 
+  // Get primary project for telemetry
+  const [tpRow] = await db
+    .select({ projectId: taskProjects.projectId })
+    .from(taskProjects)
+    .where(eq(taskProjects.taskId, taskId))
+    .limit(1);
+
   capture('task_status_changed', {
     from_status: row.status as TaskLifecycleStatus,
     to_status: status,
-    project_id: row.projectId,
+    project_id: tpRow?.projectId ?? '',
     task_id: row.id,
   });
 }

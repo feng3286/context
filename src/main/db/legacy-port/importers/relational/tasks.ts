@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { tasks } from '@main/db/schema';
+import { workspaceKey } from '@shared/workspace-key';
+import { taskProjects, tasks, workspaceProjects } from '@main/db/schema';
 import { log } from '@main/lib/logger';
 import {
   isUniqueConstraintError,
@@ -67,19 +68,37 @@ export async function portTasks({ appDb, legacyDb, remap }: PortContext): Promis
   const existingTaskRows = await appDb
     .select({
       id: tasks.id,
-      projectId: tasks.projectId,
+      workspaceId: tasks.workspaceId,
       taskBranch: tasks.taskBranch,
     })
     .from(tasks)
     .execute();
 
+  // Get existing task-project associations
+  const existingTaskProjectRows = await appDb
+    .select({
+      taskId: taskProjects.taskId,
+      projectId: taskProjects.projectId,
+    })
+    .from(taskProjects)
+    .execute();
+
   const existingTaskIds = new Set<string>();
   const branchKeyToTaskId = new Map<string, string>();
+  const taskProjectMap = new Map<string, Set<string>>();
 
   for (const row of existingTaskRows) {
     existingTaskIds.add(row.id);
-    if (row.taskBranch) {
-      branchKeyToTaskId.set(`${row.projectId}::${row.taskBranch}`, row.id);
+    taskProjectMap.set(row.id, new Set());
+  }
+  for (const tp of existingTaskProjectRows) {
+    const projectIds = taskProjectMap.get(tp.taskId);
+    if (projectIds) projectIds.add(tp.projectId);
+    if (existingTaskRows.find((r) => r.id === tp.taskId)?.taskBranch) {
+      branchKeyToTaskId.set(
+        `${tp.projectId}::${existingTaskRows.find((r) => r.id === tp.taskId)!.taskBranch!}`,
+        tp.taskId
+      );
     }
   }
 
@@ -92,6 +111,20 @@ export async function portTasks({ appDb, legacyDb, remap }: PortContext): Promis
     if (legacyProjectId && legacyProjectPath) {
       legacyProjectPathById.set(legacyProjectId, legacyProjectPath);
     }
+  }
+
+  // Build legacy projectId -> workspaceId mapping from workspace_projects table
+  // (migrate-to-workspace creates 1:1 workspaces for each legacy project)
+  const workspaceProjectRows = await appDb
+    .select({
+      projectId: workspaceProjects.projectId,
+      workspaceId: workspaceProjects.workspaceId,
+    })
+    .from(workspaceProjects)
+    .execute();
+  const projectToWorkspace = new Map<string, string>();
+  for (const row of workspaceProjectRows) {
+    projectToWorkspace.set(row.projectId, row.workspaceId);
   }
 
   const legacyRows = readLegacyRows(legacyDb, 'tasks', [
@@ -150,9 +183,15 @@ export async function portTasks({ appDb, legacyDb, remap }: PortContext): Promis
     const updatedAt = toIsoTimestamp(row.updated_at, nowIso);
     const createdAt = toIsoTimestamp(row.created_at, updatedAt);
 
+    const workspaceId = projectToWorkspace.get(mappedProjectId);
+    if (!workspaceId) {
+      summary.skippedError += 1;
+      continue;
+    }
+
     const insertValues = {
       id: nextTaskId,
-      projectId: mappedProjectId,
+      workspaceId,
       name: toTrimmedString(row.name) ?? branch ?? `Legacy Task ${legacyTaskId.slice(0, 8)}`,
       status: coerceTaskStatus(toTrimmedString(row.status)),
       sourceBranch,

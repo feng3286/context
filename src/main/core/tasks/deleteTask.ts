@@ -30,64 +30,52 @@ async function removeWorktreeDirectly(worktreePath: string): Promise<boolean> {
   }
 }
 
-export async function deleteTask(projectId: string, taskId: string): Promise<void> {
+export async function deleteTask(taskId: string): Promise<void> {
   const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!task) return;
   const sourceBranch = task.sourceBranch ?? undefined;
   const workDir = task.workDir ?? undefined;
 
-  // Get all task-project associations (for multi-project tasks)
+  // Get all task-project associations
   const taskProjectRows = await db
     .select()
     .from(taskProjects)
     .where(eq(taskProjects.taskId, taskId));
 
-  const isMultiProject = taskProjectRows.length > 0;
+  if (taskProjectRows.length === 0) return;
+
+  const primaryProjectId = taskProjectRows[0].projectId;
 
   // Tear down task in ALL associated project providers
-  if (isMultiProject) {
-    for (const row of taskProjectRows) {
-      const rowProject = projectManager.getProject(row.projectId);
-      if (rowProject) {
-        const teardownResult = await rowProject.teardownTask(taskId).catch((e) => {
-          log.warn('deleteTask: teardown failed for project', {
-            taskId,
-            projectId: row.projectId,
-            error: String(e),
-          });
-          return null;
+  for (const row of taskProjectRows) {
+    const rowProject = projectManager.getProject(row.projectId);
+    if (rowProject) {
+      const teardownResult = await rowProject.teardownTask(taskId).catch((e) => {
+        log.warn('deleteTask: teardown failed for project', {
+          taskId,
+          projectId: row.projectId,
+          error: String(e),
         });
-        if (teardownResult && !teardownResult.success) {
-          log.warn('deleteTask: teardown failed for project', {
-            taskId,
-            projectId: row.projectId,
-            error: teardownResult.error.message,
-          });
-        }
-      }
-    }
-  } else {
-    const project = projectManager.getProject(projectId);
-    if (project) {
-      const teardownResult = await project.teardownTask(taskId).catch((e) => {
-        log.warn('deleteTask: teardown failed', { taskId, error: String(e) });
         return null;
       });
       if (teardownResult && !teardownResult.success) {
-        log.warn('deleteTask: teardown failed', { taskId, error: teardownResult.error.message });
+        log.warn('deleteTask: teardown failed for project', {
+          taskId,
+          projectId: row.projectId,
+          error: teardownResult.error.message,
+        });
       }
     }
   }
 
   await db.delete(tasks).where(eq(tasks.id, taskId));
   void viewStateService.del(`task:${taskId}`);
-  events.emit(taskDeletedChannel, { taskId, projectId, workspaceId: task.workspaceId });
-  capture('task_deleted', { project_id: projectId, task_id: taskId });
+  events.emit(taskDeletedChannel, { taskId, workspaceId: task.workspaceId });
+  capture('task_deleted', { project_id: primaryProjectId, task_id: taskId });
 
   // Remove worktrees using saved paths from database
-
-  // For multi-project tasks: remove worktrees under task.workDir/{project.name}
-  if (isMultiProject && task.workDir) {
+  if (task.workDir) {
+    // Remove worktrees under task.workDir/{project.name} for each associated project
     for (const row of taskProjectRows) {
       const rowProject = projectManager.getProject(row.projectId);
       const [projectRow] = await db
@@ -134,7 +122,7 @@ export async function deleteTask(projectId: string, taskId: string): Promise<voi
       });
     }
 
-    // Delete branches for multi-project tasks
+    // Delete branches for each associated project
     if (task.taskBranch) {
       for (const row of taskProjectRows) {
         const rowProject = projectManager.getProject(row.projectId);
@@ -159,9 +147,9 @@ export async function deleteTask(projectId: string, taskId: string): Promise<voi
       }
     }
   }
-  // For single-project tasks: use workDir from tasks table or fallback to branch-based lookup
+  // No workDir - use branch-based lookup with primary project
   else if (task.taskBranch) {
-    const project = projectManager.getProject(projectId);
+    const project = projectManager.getProject(primaryProjectId);
     if (project) {
       // Prefer saved workDir if available
       if (workDir) {
@@ -184,7 +172,9 @@ export async function deleteTask(projectId: string, taskId: string): Promise<voi
         const siblings = await db
           .select({ id: tasks.id })
           .from(tasks)
-          .where(and(eq(tasks.projectId, task.projectId), eq(tasks.taskBranch, task.taskBranch)))
+          .where(
+            and(eq(tasks.workspaceId, task.workspaceId), eq(tasks.taskBranch, task.taskBranch))
+          )
           .limit(1);
 
         if (siblings.length === 0) {
@@ -199,7 +189,9 @@ export async function deleteTask(projectId: string, taskId: string): Promise<voi
         const siblings = await db
           .select({ id: tasks.id })
           .from(tasks)
-          .where(and(eq(tasks.projectId, task.projectId), eq(tasks.taskBranch, task.taskBranch)))
+          .where(
+            and(eq(tasks.workspaceId, task.workspaceId), eq(tasks.taskBranch, task.taskBranch))
+          )
           .limit(1);
 
         if (siblings.length === 0) {

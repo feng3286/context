@@ -1,43 +1,38 @@
-import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import { Task } from '@shared/tasks';
 import { db } from '@main/db/client';
 import { conversations, taskProjects, tasks } from '@main/db/schema';
 import { mapTaskRowToTask } from './core';
 
 export async function getTasks(projectId?: string): Promise<Task[]> {
-  // When projectId is provided, include tasks associated via task_projects OR tasks.projectId
-  // This covers both multi-project tasks (task_projects) and legacy single-project tasks
+  // Query tasks associated with the project via task_projects junction table
   const rows = projectId
     ? await db
-        .select()
+        .select({
+          id: tasks.id,
+          workspaceId: tasks.workspaceId,
+          workDir: tasks.workDir,
+          name: tasks.name,
+          status: tasks.status,
+          sourceBranch: tasks.sourceBranch,
+          taskBranch: tasks.taskBranch,
+          linkedIssue: tasks.linkedIssue,
+          archivedAt: tasks.archivedAt,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          lastInteractedAt: tasks.lastInteractedAt,
+          statusChangedAt: tasks.statusChangedAt,
+          isPinned: tasks.isPinned,
+        })
         .from(tasks)
-        .where(
-          or(
-            eq(tasks.projectId, projectId),
-            sql`${tasks.id} IN (SELECT tp.task_id FROM task_projects tp WHERE tp.project_id = ${projectId})`
-          )
-        )
+        .innerJoin(taskProjects, eq(taskProjects.taskId, tasks.id))
+        .where(eq(taskProjects.projectId, projectId))
         .orderBy(desc(tasks.updatedAt))
     : await db.select().from(tasks).orderBy(desc(tasks.updatedAt));
 
   if (rows.length === 0) return [];
 
   const taskIds = rows.map((r) => r.id);
-
-  // Get per-project source branches from task_projects
-  const sourceBranchMap = new Map<string, string | null>();
-  if (projectId) {
-    const tpRows = await db
-      .select({
-        taskId: taskProjects.taskId,
-        sourceBranch: taskProjects.sourceBranch,
-      })
-      .from(taskProjects)
-      .where(eq(taskProjects.projectId, projectId));
-    for (const { taskId, sourceBranch } of tpRows) {
-      sourceBranchMap.set(taskId, sourceBranch ?? null);
-    }
-  }
 
   const convRows = await db
     .select({
@@ -60,7 +55,6 @@ export async function getTasks(projectId?: string): Promise<Task[]> {
     ...mapTaskRowToTask(row),
     prs: [],
     conversations: convByTask.get(row.id) ?? {},
-    projectSourceBranch: sourceBranchMap.has(row.id) ? sourceBranchMap.get(row.id)! : undefined,
   }));
 }
 
@@ -68,7 +62,7 @@ export async function getTasksByWorkspace(workspaceId: string): Promise<Task[]> 
   const rows = await db
     .select()
     .from(tasks)
-    .where(and(eq(tasks.workspaceId, workspaceId)))
+    .where(eq(tasks.workspaceId, workspaceId))
     .orderBy(desc(tasks.updatedAt));
 
   if (rows.length === 0) return [];

@@ -301,7 +301,29 @@ export const CreateTaskModal = observer(function CreateTaskModal({
         const firstProjectId = Array.from(selectedProjectIds)[0];
         navigate('task', { projectId: firstProjectId, taskId: id });
       } else if (selectedProjectId) {
-        // Single project task (existing behavior)
+        // Single project task - find a workspace that contains this project
+        await workspaceManagerStore.load();
+        let taskWorkspaceId: string | undefined;
+        for (const [, wsStore] of workspaceManagerStore.workspaces) {
+          if (wsStore.status === 'ready') {
+            const hasProject = wsStore.projects.some((p) => p.id === selectedProjectId);
+            if (hasProject) {
+              taskWorkspaceId = wsStore.data.id;
+              break;
+            }
+          }
+        }
+        // Fallback: use first available workspace
+        if (!taskWorkspaceId) {
+          for (const [, wsStore] of workspaceManagerStore.workspaces) {
+            if (wsStore.status === 'ready' && wsStore.projects.length > 0) {
+              taskWorkspaceId = wsStore.data.id;
+              break;
+            }
+          }
+        }
+        if (!taskWorkspaceId) return;
+
         const projectStore = getProjectManagerStore().projects.get(selectedProjectId);
         if (projectStore?.state !== 'mounted') return;
 
@@ -310,7 +332,8 @@ export const CreateTaskModal = observer(function CreateTaskModal({
 
         await projectStore.mountedProject!.taskManager.createTask({
           id,
-          projectId: selectedProjectId,
+          workspaceId: taskWorkspaceId,
+          projectIds: [selectedProjectId],
           name: taskName.trim(),
           sourceBranch: { type: 'local', branch: defaultBranchName },
           strategy: {

@@ -130,7 +130,7 @@ export const EditorFileTree = observer(function EditorFileTree() {
 
   const files = taskState.isMultiProject ? null : taskState.workspace.files;
   const editorView = taskState.taskView.editorView;
-  const projectId = taskState._taskData.projectId;
+  const projectId = taskState._projectId;
 
   const visibleRows = files
     ? buildVisibleRows(files.nodes, files.childIndex, editorView.expandedPaths)

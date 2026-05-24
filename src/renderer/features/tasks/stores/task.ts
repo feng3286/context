@@ -44,6 +44,7 @@ export class ProvisionedTask {
   readonly repositoryStore: RepositoryStore;
 
   readonly _taskData: Task;
+  readonly _projectId: string;
   readonly path: string;
   readonly workspaceId: string;
   readonly isMultiProject: boolean;
@@ -64,11 +65,13 @@ export class ProvisionedTask {
     taskStore: TaskStore,
     path: string,
     repositoryStore: RepositoryStore,
+    projectId: string,
     savedSnapshot?: TaskViewSnapshot
   ) {
     this._taskStore = taskStore;
     const taskData = taskStore.data as Task;
     this._taskData = taskData;
+    this._projectId = projectId;
     this.path = path;
     this.workspaceId = workspaceKey(taskData.taskBranch);
     this.repositoryStore = repositoryStore;
@@ -77,7 +80,7 @@ export class ProvisionedTask {
     this.isMultiProject = !!taskData.workspaceId;
 
     this.workspace = workspaceRegistry.acquire(
-      taskData.projectId,
+      projectId,
       this.workspaceId,
       taskStore,
       repositoryStore
@@ -104,7 +107,7 @@ export class ProvisionedTask {
         terminals: this.terminals,
         git: this.workspace.git,
         pr: this.workspace.pr,
-        projectId: taskData.projectId,
+        projectId,
         workspaceId: this.workspaceId,
       },
       savedSnapshot
@@ -126,14 +129,14 @@ export class ProvisionedTask {
   }
 
   activate(): void {
-    workspaceRegistry.activate(this._taskData.projectId, this.workspaceId);
+    workspaceRegistry.activate(this._projectId, this.workspaceId);
     // Note: projectContexts.activate() is now called by loadProjectContexts after loading
   }
 
   dispose(): void {
     this._snapshotDisposer?.();
     this._snapshotDisposer = null;
-    workspaceRegistry.release(this._taskData.projectId, this.workspaceId, this._taskStore);
+    workspaceRegistry.release(this._projectId, this.workspaceId, this._taskStore);
     this.devServers.dispose();
     this.draftComments.dispose();
     this.taskView.dispose();
@@ -185,10 +188,17 @@ export class TaskStore {
     data: Task,
     path: string,
     repositoryStore: RepositoryStore,
+    projectId: string,
     savedSnapshot?: TaskViewSnapshot
   ): void {
     this.data = data;
-    this.provisionedTask = new ProvisionedTask(this, path, repositoryStore, savedSnapshot);
+    this.provisionedTask = new ProvisionedTask(
+      this,
+      path,
+      repositoryStore,
+      projectId,
+      savedSnapshot
+    );
     this.state = 'provisioned';
     this.phase = null;
     this.errorMessage = undefined;
@@ -255,7 +265,7 @@ export class TaskStore {
     const task = registeredTaskData(this);
     if (!task) return;
     try {
-      await rpc.tasks.renameTask(task.projectId, task.id, name);
+      await rpc.tasks.renameTask(task.id, name);
       runInAction(() => {
         this.data.name = name;
       });

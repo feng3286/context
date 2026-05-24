@@ -1,72 +1,19 @@
-import { makeObservable, observable, reaction, runInAction, toJS } from 'mobx';
-import { toast } from 'sonner';
+import { makeObservable, observable, reaction, runInAction } from 'mobx';
 import { prSyncProgressChannel, prUpdatedChannel } from '@shared/events/prEvents';
 import { taskDeletedChannel, taskStatusUpdatedChannel } from '@shared/events/taskEvents';
-import type {
-  CreateTaskError,
-  CreateTaskParams,
-  CreateTaskWarning,
-  Task,
-  TaskLifecycleStatus,
-} from '@shared/tasks';
+import type { Task, TaskLifecycleStatus } from '@shared/tasks';
 import type { TaskViewSnapshot } from '@shared/view-state';
 import { getProjectManagerStore } from '@renderer/features/projects/stores/project-selectors';
 import type { RepositoryStore } from '@renderer/features/projects/stores/repository-store';
 import { events, rpc } from '@renderer/lib/ipc';
 import {
   createUnprovisionedTask,
-  createUnregisteredTask,
   isProvisioned,
   isRegistered,
   isUnprovisioned,
   isUnregistered,
   TaskStore,
 } from './task';
-
-function formatCreateTaskError(error: CreateTaskError): string {
-  switch (error.type) {
-    case 'project-not-found':
-      return 'Project not found.';
-    case 'initial-commit-required':
-      return 'Create an initial commit to enable branch-based tasks.';
-    case 'branch-create-failed': {
-      switch (error.error.type) {
-        case 'already_exists':
-          return `Branch "${error.error.name}" already exists. Try a different task name.`;
-        case 'invalid_base':
-          return `Source branch "${error.error.from}" is not a valid base. Check that it exists locally or on the selected remote.`;
-        case 'invalid_name':
-          return `Branch "${error.error.name}" is not a valid branch name.`;
-        case 'error':
-          return `Could not create branch "${error.branch}": ${error.error.message}`;
-      }
-    }
-    case 'pr-fetch-failed':
-      return error.error.type === 'not_found'
-        ? `PR #${error.error.prNumber} was not found on remote "${error.remote}".`
-        : `Could not fetch the pull request branch: ${error.error.message}`;
-    case 'branch-not-found':
-      return `Branch "${error.branch}" was not found locally or on the remote. Make sure the PR branch exists.`;
-    case 'worktree-setup-failed':
-      return error.message
-        ? `Could not set up the worktree for branch "${error.branch}": ${error.message}`
-        : `Could not set up the worktree for branch "${error.branch}".`;
-    case 'provision-failed':
-      return `Task could not be provisioned: ${error.message}`;
-  }
-}
-
-function formatCreateTaskWarning(warning: CreateTaskWarning): string {
-  switch (warning.type) {
-    case 'branch-publish-failed': {
-      const detail =
-        'message' in warning.error
-          ? (warning.error.message ?? warning.error.type)
-          : warning.error.type;
-      return `Failed to publish branch "${warning.branch}" to "${warning.remote}": ${detail}`;
-    }
-  }
-}
 
 export class TaskManagerStore {
   private readonly projectId: string;
@@ -195,63 +142,6 @@ export class TaskManagerStore {
   reloadTasks(): Promise<void> {
     this._loadPromise = null;
     return this.loadTasks();
-  }
-
-  async createTask(params: CreateTaskParams) {
-    runInAction(() => {
-      this.tasks.set(
-        params.id,
-        createUnregisteredTask({
-          id: params.id,
-          lastInteractedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          name: params.name,
-          status: params.initialStatus ?? 'in_progress',
-          statusChangedAt: new Date().toISOString(),
-          isPinned: false,
-        })
-      );
-    });
-
-    const sourceBranch = structuredClone(toJS(params.sourceBranch));
-
-    const result = await rpc.tasks.createTask({ ...params, sourceBranch }).catch((e: unknown) => {
-      // Network/IPC-level failure — surface as a generic error.
-      const message = e instanceof Error ? e.message : String(e);
-      runInAction(() => {
-        const current = this.tasks.get(params.id);
-        if (current && isUnregistered(current)) {
-          current.phase = 'create-error';
-          current.errorMessage = message;
-        }
-      });
-      throw e;
-    });
-
-    if (!result.success) {
-      const message = formatCreateTaskError(result.error);
-      runInAction(() => {
-        const current = this.tasks.get(params.id);
-        if (current && isUnregistered(current)) {
-          current.phase = 'create-error';
-          current.errorMessage = message;
-        }
-      });
-      throw new Error(message);
-    }
-
-    runInAction(() => {
-      const current = this.tasks.get(params.id);
-      if (current && isUnregistered(current)) {
-        current.transitionToUnprovisioned(result.data.task, 'provision');
-      }
-    });
-
-    if (result.data.warning) {
-      toast.error(formatCreateTaskWarning(result.data.warning));
-    }
-
-    await this.provisionTask(params.id);
   }
 
   async provisionTask(taskId: string): Promise<void> {

@@ -1,5 +1,4 @@
-import { CreateConversationParams } from '@shared/conversations';
-import type { Branch, CreateBranchError, FetchPrForReviewError, PushError } from '@shared/git';
+import type { Branch, CreateBranchError, PushError } from '@shared/git';
 import { PullRequest } from './pull-requests';
 
 export type TaskLifecycleStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled';
@@ -44,45 +43,10 @@ export type TaskBootstrapStatus =
   | { status: 'error'; message: string }
   | { status: 'not-started' };
 
-export type CreateTaskStrategy =
-  | { kind: 'new-branch'; taskBranch: string; pushBranch?: boolean }
-  | { kind: 'checkout-existing' }
-  | {
-      kind: 'from-pull-request';
-      prNumber: number;
-      /** The PR's headRefName, used as the local branch name (same as `gh pr checkout`). */
-      headBranch: string;
-      headRepositoryUrl: string;
-      isFork: boolean;
-      taskBranch?: string;
-      pushBranch?: boolean;
-    }
-  | { kind: 'no-worktree' };
-
-export type CreateTaskParams = {
-  id: string;
-  workspaceId: string;
-  projectIds: string[];
-  workDir?: string;
-  name: string;
-  /** The branch to fork the new worktree from (not used for `from-pull-request` strategy) */
-  sourceBranch: Branch;
-  /** Controls branch creation, worktree setup, and git fetch strategy */
-  strategy: CreateTaskStrategy;
-  /** The issue to link to the task */
-  linkedIssue?: Issue;
-  /**  */
-  initialConversation?: CreateConversationParams;
-  initialStatus?: TaskLifecycleStatus;
-};
-
 export type CreateTaskError =
   | { type: 'project-not-found' }
   | { type: 'initial-commit-required'; branch: string }
   | { type: 'branch-create-failed'; branch: string; error: CreateBranchError }
-  | { type: 'pr-fetch-failed'; error: FetchPrForReviewError; remote: string }
-  | { type: 'branch-not-found'; branch: string }
-  | { type: 'worktree-setup-failed'; branch: string; message?: string }
   | { type: 'provision-failed'; message: string };
 
 export type CreateTaskWarning = {

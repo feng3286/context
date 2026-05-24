@@ -1,6 +1,7 @@
 import { ExternalLink, ScanSearch } from 'lucide-react';
 import { memo } from 'react';
 import { getPrNumber, type PullRequest } from '@shared/pull-requests';
+import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { PrMergeLine } from '@renderer/lib/components/pr-merge-line';
 import { PrNumberBadge } from '@renderer/lib/components/pr-number-badge';
 import { StatusIcon } from '@renderer/lib/components/pr-status-icon';
@@ -18,6 +19,13 @@ export const PrRow = memo(function PrRow({
   projectId: string;
 }) {
   const showCreateTaskModal = useShowModal('taskModal');
+
+  const handleReviewInTask = () => {
+    const wsStore = workspaceManagerStore.getWorkspaceStoreForProject(projectId);
+    if (wsStore) {
+      showCreateTaskModal({ workspaceId: wsStore.data.id });
+    }
+  };
 
   return (
     <div className="flex relative items-start gap-3 rounded-lg p-3 py-4 hover:bg-background-1 transition-colors group">
@@ -50,13 +58,7 @@ export const PrRow = memo(function PrRow({
         <PrMergeLine pr={pr} />
       </div>
       <div className="shrink-0 absolute top-0 flex h-full items-center gap-1 right-3  opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            showCreateTaskModal({ projectId, strategy: 'from-pull-request', initialPR: pr })
-          }
-        >
+        <Button variant="outline" size="sm" onClick={handleReviewInTask}>
           <ScanSearch className="size-3.5" />
           Review in Task
         </Button>

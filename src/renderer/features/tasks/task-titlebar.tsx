@@ -82,7 +82,8 @@ const PendingTaskTitlebar = observer(function PendingTaskTitlebar({
   taskId: string;
   projectId: string;
 }) {
-  const taskStore = getTaskStore(projectId, taskId)!;
+  const taskStore = getTaskStore(projectId, taskId);
+  if (!taskStore) return null;
   const name = taskDisplayName(taskStore);
 
   // Check if this is a multi-project task directly from taskStore.data

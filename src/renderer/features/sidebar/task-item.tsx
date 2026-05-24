@@ -36,7 +36,8 @@ export const SidebarTaskItem = observer(function SidebarTaskItem({
   const isActive =
     currentView === 'task' && params.taskId === taskId && params.projectId === projectId;
 
-  const task = getTaskStore(projectId, taskId)!;
+  const task = getTaskStore(projectId, taskId);
+  if (!task) return null;
   const taskManager = getTaskManagerStore(projectId);
 
   const isBootstrapping =
@@ -64,8 +65,8 @@ export const SidebarTaskItem = observer(function SidebarTaskItem({
       description: `"${taskName}" will be permanently deleted. This action cannot be undone.`,
       confirmLabel: 'Delete',
       onSuccess: () => {
-        void taskManager?.deleteTask(taskId);
         if (isActive) navigate('project', { projectId });
+        void taskManager?.deleteTask(taskId);
       },
     });
 

@@ -1,14 +1,8 @@
 import { Check, ChevronRight, FolderOpen, GitBranch } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  asMounted,
-  getProjectManagerStore,
-  getRepositoryStore,
-  mountedProjectData,
-} from '@renderer/features/projects/stores/project-selectors';
+import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
-import { ProjectSelector } from '@renderer/features/tasks/create-task-modal/project-selector';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
@@ -16,8 +10,6 @@ import { WorkspaceStoreClass } from '@renderer/features/workspaces/stores/worksp
 import { rpc } from '@renderer/lib/ipc';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
-import { appState } from '@renderer/lib/stores/app-state';
-import { ComboboxTrigger, ComboboxValue } from '@renderer/lib/ui/combobox';
 import { ConfirmButton } from '@renderer/lib/ui/confirm-button';
 import {
   DialogContentArea,
@@ -33,7 +25,7 @@ interface ProjectBranchConfig {
   sourceBranch: string;
 }
 
-interface MultiProjectBranchSelectorProps {
+interface ProjectBranchSelectorProps {
   workspaceId: string;
   selectedProjectIds: Set<string>;
   onProjectToggle: (projectId: string) => void;
@@ -41,13 +33,13 @@ interface MultiProjectBranchSelectorProps {
   onBranchChange: (projectId: string, branch: string) => void;
 }
 
-const MultiProjectBranchSelector = observer(function MultiProjectBranchSelector({
+const ProjectBranchSelector = observer(function ProjectBranchSelector({
   workspaceId,
   selectedProjectIds,
   onProjectToggle,
   branchConfigs,
   onBranchChange,
-}: MultiProjectBranchSelectorProps) {
+}: ProjectBranchSelectorProps) {
   const store = workspaceManagerStore.getWorkspace(workspaceId);
   const projects = store && store.status === 'ready' ? store.projects : [];
 
@@ -110,57 +102,33 @@ const MultiProjectBranchSelector = observer(function MultiProjectBranchSelector(
 });
 
 export const CreateTaskModal = observer(function CreateTaskModal({
-  projectId,
   workspaceId,
   onClose,
 }: BaseModalProps & {
-  projectId?: string;
-  workspaceId?: string;
+  workspaceId: string;
 }) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(() => {
-    if (projectId) return projectId;
-    const nav = appState.navigation;
-    const navProjectId =
-      nav.currentViewId === 'task'
-        ? (nav.viewParamsStore['task'] as { projectId?: string } | undefined)?.projectId
-        : nav.currentViewId === 'project'
-          ? (nav.viewParamsStore['project'] as { projectId?: string } | undefined)?.projectId
-          : undefined;
-    return (
-      navProjectId ??
-      Array.from(getProjectManagerStore().projects.values())
-        .reverse()
-        .find((p) => p.state === 'mounted')?.data?.id
-    );
-  });
-
-  // For workspace mode: multi-project selection
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(() => {
-    if (workspaceId) {
-      const store = workspaceManagerStore.getWorkspace(workspaceId);
-      if (store && store.status === 'ready' && store.projects.length > 0) {
-        return new Set([store.projects[0].id]);
-      }
+    const store = workspaceManagerStore.getWorkspace(workspaceId);
+    if (store && store.status === 'ready' && store.projects.length > 0) {
+      return new Set([store.projects[0].id]);
     }
     return new Set();
   });
 
   // Branch config for each selected project
   const [branchConfigs, setBranchConfigs] = useState<Map<string, ProjectBranchConfig>>(() => {
-    if (workspaceId) {
-      const store = workspaceManagerStore.getWorkspace(workspaceId);
-      if (store && store.status === 'ready') {
-        const configs = new Map();
-        for (const project of store.projects) {
-          const repo = getRepositoryStore(project.id);
-          configs.set(project.id, {
-            projectId: project.id,
-            projectName: project.name,
-            sourceBranch: repo?.defaultBranch?.branch ?? 'main',
-          });
-        }
-        return configs;
+    const store = workspaceManagerStore.getWorkspace(workspaceId);
+    if (store && store.status === 'ready') {
+      const configs = new Map();
+      for (const project of store.projects) {
+        const repo = getRepositoryStore(project.id);
+        configs.set(project.id, {
+          projectId: project.id,
+          projectName: project.name,
+          sourceBranch: repo?.defaultBranch?.branch ?? 'main',
+        });
       }
+      return configs;
     }
     return new Map();
   });
@@ -190,22 +158,20 @@ export const CreateTaskModal = observer(function CreateTaskModal({
 
   // Initialize branch configs when projects change
   useEffect(() => {
-    if (workspaceId) {
-      const store = workspaceManagerStore.getWorkspace(workspaceId);
-      if (store && store.status === 'ready') {
-        const newConfigs = new Map(branchConfigs);
-        for (const project of store.projects) {
-          if (!newConfigs.has(project.id)) {
-            const repo = getRepositoryStore(project.id);
-            newConfigs.set(project.id, {
-              projectId: project.id,
-              projectName: project.name,
-              sourceBranch: repo?.defaultBranch?.branch ?? 'main',
-            });
-          }
+    const store = workspaceManagerStore.getWorkspace(workspaceId);
+    if (store && store.status === 'ready') {
+      const newConfigs = new Map(branchConfigs);
+      for (const project of store.projects) {
+        if (!newConfigs.has(project.id)) {
+          const repo = getRepositoryStore(project.id);
+          newConfigs.set(project.id, {
+            projectId: project.id,
+            projectName: project.name,
+            sourceBranch: repo?.defaultBranch?.branch ?? 'main',
+          });
         }
-        setBranchConfigs(newConfigs);
       }
+      setBranchConfigs(newConfigs);
     }
   }, [workspaceId]);
 
@@ -244,8 +210,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
   };
 
   // Validation
-  const hasProject = workspaceId ? selectedProjectIds.size > 0 : !!selectedProjectId;
-  const canCreate = hasProject && taskName.trim().length > 0;
+  const canCreate = selectedProjectIds.size > 0 && taskName.trim().length > 0;
 
   // Compute preview branch name
   const rawBranchPreview = taskBranch.trim() || generateTaskBranch(taskName);
@@ -258,93 +223,45 @@ export const CreateTaskModal = observer(function CreateTaskModal({
 
   const handleCreateTask = useCallback(async () => {
     if (!canCreate) return;
-    if (workspaceId && selectedProjectIds.size === 0) return;
 
     setLoading(true);
     try {
       const id = crypto.randomUUID();
 
-      if (workspaceId) {
-        // Multi-project task creation
-        const projectBranchSources = Array.from(selectedProjectIds).map((pid) => {
-          const config = branchConfigs.get(pid);
-          return {
-            projectId: pid,
-            sourceBranch: config?.sourceBranch ?? 'main',
-          };
-        });
+      const projectBranchSources = Array.from(selectedProjectIds).map((pid) => {
+        const config = branchConfigs.get(pid);
+        return {
+          projectId: pid,
+          sourceBranch: config?.sourceBranch ?? 'main',
+        };
+      });
 
-        await rpc.tasks.createMultiProjectTask({
-          id,
-          workspaceId,
-          name: taskName.trim(),
-          taskBranch: taskBranch.trim() || generateTaskBranch(taskName),
-          pushBranch: pushBranch || undefined,
-          projectBranchSources,
-        });
+      await rpc.tasks.createMultiProjectTask({
+        id,
+        workspaceId,
+        name: taskName.trim(),
+        taskBranch: taskBranch.trim() || generateTaskBranch(taskName),
+        pushBranch: pushBranch || undefined,
+        projectBranchSources,
+      });
 
-        // Refresh workspace store to show new task in sidebar
-        const wsStore = getWorkspaceStore(workspaceId);
-        if (wsStore) {
-          await (wsStore as WorkspaceStoreClass).load();
-        }
-
-        // Refresh TaskManagerStore for each project so navigation finds the new task
-        for (const pid of selectedProjectIds) {
-          const taskManager = getTaskManagerStore(pid);
-          if (taskManager) {
-            await taskManager.reloadTasks();
-          }
-        }
-
-        // Navigate to first project's task view
-        const firstProjectId = Array.from(selectedProjectIds)[0];
-        navigate('task', { projectId: firstProjectId, taskId: id });
-      } else if (selectedProjectId) {
-        // Single project task - find a workspace that contains this project
-        await workspaceManagerStore.load();
-        let taskWorkspaceId: string | undefined;
-        for (const [, wsStore] of workspaceManagerStore.workspaces) {
-          if (wsStore.status === 'ready') {
-            const hasProject = wsStore.projects.some((p) => p.id === selectedProjectId);
-            if (hasProject) {
-              taskWorkspaceId = wsStore.data.id;
-              break;
-            }
-          }
-        }
-        // Fallback: use first available workspace
-        if (!taskWorkspaceId) {
-          for (const [, wsStore] of workspaceManagerStore.workspaces) {
-            if (wsStore.status === 'ready' && wsStore.projects.length > 0) {
-              taskWorkspaceId = wsStore.data.id;
-              break;
-            }
-          }
-        }
-        if (!taskWorkspaceId) return;
-
-        const projectStore = getProjectManagerStore().projects.get(selectedProjectId);
-        if (projectStore?.state !== 'mounted') return;
-
-        const repo = getRepositoryStore(selectedProjectId);
-        const defaultBranchName = repo?.defaultBranch?.branch ?? 'main';
-
-        await projectStore.mountedProject!.taskManager.createTask({
-          id,
-          workspaceId: taskWorkspaceId,
-          projectIds: [selectedProjectId],
-          name: taskName.trim(),
-          sourceBranch: { type: 'local', branch: defaultBranchName },
-          strategy: {
-            kind: 'new-branch',
-            taskBranch: taskBranch.trim() || generateTaskBranch(taskName),
-            pushBranch: pushBranch || undefined,
-          },
-        });
-
-        navigate('task', { projectId: selectedProjectId, taskId: id });
+      // Refresh workspace store to show new task in sidebar
+      const wsStore = getWorkspaceStore(workspaceId);
+      if (wsStore) {
+        await (wsStore as WorkspaceStoreClass).load();
       }
+
+      // Refresh TaskManagerStore for each project so navigation finds the new task
+      for (const pid of selectedProjectIds) {
+        const taskManager = getTaskManagerStore(pid);
+        if (taskManager) {
+          await taskManager.reloadTasks();
+        }
+      }
+
+      // Navigate to first project's task view
+      const firstProjectId = Array.from(selectedProjectIds)[0];
+      navigate('task', { projectId: firstProjectId, taskId: id });
 
       onClose();
     } catch (err) {
@@ -356,7 +273,6 @@ export const CreateTaskModal = observer(function CreateTaskModal({
     canCreate,
     workspaceId,
     selectedProjectIds,
-    selectedProjectId,
     taskName,
     taskBranch,
     pushBranch,
@@ -368,39 +284,18 @@ export const CreateTaskModal = observer(function CreateTaskModal({
   return (
     <>
       <DialogHeader className="flex items-center gap-2">
-        {workspaceId ? (
-          <>
-            <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
-            <ChevronRight className="size-3.5 text-foreground-passive" />
-            <DialogTitle>Create Task in Workspace</DialogTitle>
-          </>
-        ) : (
-          <>
-            <ProjectSelector
-              value={selectedProjectId}
-              onChange={setSelectedProjectId}
-              trigger={
-                <ComboboxTrigger className="h-6 flex items-center gap-2 border border-border rounded-md px-2.5 py-1 text-sm outline-none">
-                  <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
-                  <ComboboxValue placeholder="Select a project" />
-                </ComboboxTrigger>
-              }
-            />
-            <ChevronRight className="size-3.5 text-foreground-passive" />
-            <DialogTitle>Create Task</DialogTitle>
-          </>
-        )}
+        <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
+        <ChevronRight className="size-3.5 text-foreground-passive" />
+        <DialogTitle>Create Task in Workspace</DialogTitle>
       </DialogHeader>
       <DialogContentArea className="gap-4">
-        {workspaceId && (
-          <MultiProjectBranchSelector
-            workspaceId={workspaceId}
-            selectedProjectIds={selectedProjectIds}
-            onProjectToggle={handleProjectToggle}
-            branchConfigs={branchConfigs}
-            onBranchChange={handleBranchChange}
-          />
-        )}
+        <ProjectBranchSelector
+          workspaceId={workspaceId}
+          selectedProjectIds={selectedProjectIds}
+          onProjectToggle={handleProjectToggle}
+          branchConfigs={branchConfigs}
+          onBranchChange={handleBranchChange}
+        />
 
         <Field>
           <FieldLabel>Task Name</FieldLabel>
@@ -410,7 +305,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
             onChange={(e) => handleTaskNameChange(e.target.value)}
             className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Enter task name"
-            autoFocus={!workspaceId}
+            autoFocus
           />
         </Field>
 

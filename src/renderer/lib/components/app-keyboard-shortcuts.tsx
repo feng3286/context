@@ -1,5 +1,6 @@
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
+import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { toast } from '@renderer/lib/hooks/use-toast';
 import {
   getEffectiveHotkey,
@@ -76,7 +77,10 @@ export function AppKeyboardShortcuts() {
   useHotkey(
     getHotkeyRegistration('newTask', keyboard),
     () => {
-      if (currentProjectId) showCreateTask({ projectId: currentProjectId });
+      if (currentProjectId) {
+        const wsStore = workspaceManagerStore.getWorkspaceStoreForProject(currentProjectId);
+        if (wsStore) showCreateTask({ workspaceId: wsStore.data.id });
+      }
     },
     { enabled: !!currentProjectId && newTaskHotkey !== null }
   );

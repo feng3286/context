@@ -21,6 +21,7 @@ import {
   getRepositoryStore,
   projectViewKind,
 } from '@renderer/features/projects/stores/project-selectors';
+import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import {
   useNavigate,
   useParams,
@@ -184,7 +185,11 @@ export const SidebarProjectItem = observer(function SidebarProjectItem({
             onPointerEnter={() => prefetchRepository()}
             onClick={(e) => {
               e.stopPropagation();
-              showCreateTaskModal({ projectId });
+              // Find workspace containing this project
+              const wsStore = workspaceManagerStore.getWorkspaceStoreForProject(projectId);
+              if (wsStore) {
+                showCreateTaskModal({ workspaceId: wsStore.data.id });
+              }
             }}
             disabled={project.state === 'unregistered'}
           >

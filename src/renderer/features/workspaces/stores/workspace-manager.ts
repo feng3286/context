@@ -47,6 +47,16 @@ export class WorkspaceManagerStore {
   getWorkspace(id: string): WorkspaceStoreClass | undefined {
     return this.workspaces.get(id);
   }
+
+  /** Returns the first ready workspace that contains the given project. */
+  getWorkspaceStoreForProject(projectId: string): WorkspaceStoreClass | undefined {
+    for (const store of this.workspaces.values()) {
+      if (store.status === 'ready' && store.projects.some((p) => p.id === projectId)) {
+        return store;
+      }
+    }
+    return undefined;
+  }
 }
 
 // Singleton

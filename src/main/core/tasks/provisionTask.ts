@@ -47,8 +47,6 @@ export async function provisionTask(taskId: string) {
           .where(eq(projects.id, tpRow.projectId))
           .limit(1);
         worktreePath = path.join(task.workDir, projectRow?.name ?? tpRow.projectId);
-      } else if (task.taskBranch) {
-        worktreePath = await rowProject.getWorktreeForBranch(task.taskBranch);
       }
 
       if (worktreePath) {
@@ -58,11 +56,7 @@ export async function provisionTask(taskId: string) {
   }
 
   if (existingTask) {
-    // For multi-project tasks, return workDir as the base path
-    if (task.workDir) {
-      return { path: task.workDir, workspaceId: wsId };
-    }
-    return { path: primaryProject.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
+    return { path: task.workDir, workspaceId: wsId };
   }
 
   const [existingTerminals, existingConversations] = await Promise.all([
@@ -102,9 +96,6 @@ export async function provisionTask(taskId: string) {
     workspace_id: task.workspaceId,
   });
 
-  // For multi-project tasks, return workDir as the base path
-  if (task.workDir) {
-    return { path: task.workDir, workspaceId: wsId };
-  }
-  return { path: primaryProject.getWorkspace(wsId)?.path ?? '', workspaceId: wsId };
+  // All tasks are multi-project now — return workDir as the workspace path
+  return { path: task.workDir!, workspaceId: wsId };
 }

@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { projectManager } from '@main/core/projects/project-manager';
 import { db } from '@main/db/client';
 import { taskProjects, tasks } from '@main/db/schema';
@@ -43,24 +43,4 @@ export async function archiveTask(taskId: string): Promise<void> {
     .catch((e) => {
       log.warn('archiveTask: teardown failed', { taskId, error: String(e) });
     });
-
-  if (task.taskBranch) {
-    const siblings = await db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.workspaceId, task.workspaceId),
-          eq(tasks.taskBranch, task.taskBranch),
-          isNull(tasks.archivedAt)
-        )
-      )
-      .limit(1);
-
-    if (siblings.length === 0) {
-      await project.removeTaskWorktree(task.taskBranch).catch((e) => {
-        log.warn('archiveTask: worktree removal failed', { taskId, error: String(e) });
-      });
-    }
-  }
 }

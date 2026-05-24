@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { taskDeletedChannel } from '@shared/events/taskEvents';
 import { projectManager } from '@main/core/projects/project-manager';
 import { viewStateService } from '@main/core/view-state/view-state-service';
@@ -34,7 +34,6 @@ export async function deleteTask(taskId: string): Promise<void> {
   const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!task) return;
   const sourceBranch = task.sourceBranch ?? undefined;
-  const workDir = task.workDir ?? undefined;
 
   // Get all task-project associations
   const taskProjectRows = await db
@@ -148,67 +147,5 @@ export async function deleteTask(taskId: string): Promise<void> {
         }
       }
     }
-  }
-  // No workDir - use branch-based lookup with primary project
-  else if (task.taskBranch && primaryProjectId) {
-    const project = projectManager.getProject(primaryProjectId);
-    if (project) {
-      // Prefer saved workDir if available
-      if (workDir) {
-        try {
-          await project.removeWorktreeAtPath(workDir);
-          log.info('deleteTask: removed worktree using saved path', {
-            taskId,
-            workDir,
-          });
-        } catch (e) {
-          log.warn('deleteTask: worktree removal failed, trying direct removal', {
-            taskId,
-            workDir,
-            error: String(e),
-          });
-          await removeWorktreeDirectly(workDir);
-        }
-      } else {
-        // Fallback: check if other tasks share the same branch before removing
-        const siblings = await db
-          .select({ id: tasks.id })
-          .from(tasks)
-          .where(
-            and(eq(tasks.workspaceId, task.workspaceId), eq(tasks.taskBranch, task.taskBranch))
-          )
-          .limit(1);
-
-        if (siblings.length === 0) {
-          await project.removeTaskWorktree(task.taskBranch).catch((e) => {
-            log.warn('deleteTask: worktree removal failed', { taskId, error: String(e) });
-          });
-        }
-      }
-
-      // Delete branch if no other tasks use it
-      if (sourceBranch && task.taskBranch !== sourceBranch.branch) {
-        const siblings = await db
-          .select({ id: tasks.id })
-          .from(tasks)
-          .where(
-            and(eq(tasks.workspaceId, task.workspaceId), eq(tasks.taskBranch, task.taskBranch))
-          )
-          .limit(1);
-
-        if (siblings.length === 0) {
-          const branchDelete = await project.repository.deleteBranch(task.taskBranch).catch((e) => {
-            log.warn('deleteTask: branch deletion failed', { taskId, error: String(e) });
-            return null;
-          });
-          if (branchDelete && !branchDelete.success) {
-            log.warn('deleteTask: branch deletion failed', { taskId, error: branchDelete.error });
-          }
-        }
-      }
-    }
-  } else if (workDir) {
-    // Project not available - try direct removal
-    await removeWorktreeDirectly(workDir);
   }
 }

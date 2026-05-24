@@ -1,4 +1,5 @@
 import { useHotkey } from '@tanstack/react-hotkeys';
+import { useEffect } from 'react';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { toast } from '@renderer/lib/hooks/use-toast';
@@ -34,6 +35,11 @@ export function AppKeyboardShortcuts() {
   const toggleThemeHotkey = getEffectiveHotkey('toggleTheme', keyboard);
   const newProjectHotkey = getEffectiveHotkey('newProject', keyboard);
   const newTaskHotkey = getEffectiveHotkey('newTask', keyboard);
+
+  // Pre-load workspace data at app startup so workspace navigation always has data available.
+  useEffect(() => {
+    void workspaceManagerStore.load();
+  }, []);
 
   // Resolve current project context from whichever view is active
   const { currentView } = useWorkspaceSlots();

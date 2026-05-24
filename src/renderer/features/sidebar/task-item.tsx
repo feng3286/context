@@ -11,8 +11,10 @@ import {
   useWorkspaceSlots,
 } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
+import { debugLog } from '@renderer/utils/debug-logger';
 import { cn } from '@renderer/utils/utils';
 import { PrBadge } from '../../lib/components/pr-badge';
+import { workspaceManagerStore } from '../workspaces/stores/workspace-manager';
 import { SidebarMenuRow } from './sidebar-primitives';
 
 interface SidebarTaskItemProps {
@@ -52,23 +54,63 @@ export const SidebarTaskItem = observer(function SidebarTaskItem({
     taskManager?.provisionTask(taskId);
   };
 
-  const handleArchive = () => {
-    if (isActive) navigate('project', { projectId });
+  const handleWorkspaceNavigation = async () => {
+    if (!isActive) {
+      debugLog('task-item', 'handleWorkspaceNavigation: not active, skipping');
+      return;
+    }
+    if (!('workspaceId' in task.data)) {
+      debugLog('task-item', 'handleWorkspaceNavigation: no workspaceId in task.data');
+      return;
+    }
+    const wsId = task.data.workspaceId;
+    debugLog('task-item', 'handleWorkspaceNavigation: starting', { wsId });
+    await workspaceManagerStore.load();
+    const wsStore = workspaceManagerStore.getWorkspace(wsId);
+    debugLog('task-item', 'handleWorkspaceNavigation: after load', {
+      wsStoreExists: !!wsStore,
+      wsStoreStatus: wsStore?.status,
+      wsStoreProjects: wsStore?.projects.length,
+    });
+    if (wsStore && wsStore.status === 'unloaded') {
+      debugLog('task-item', 'handleWorkspaceNavigation: loading specific workspace');
+      await wsStore.load();
+    }
+    debugLog('task-item', 'handleWorkspaceNavigation: navigating', { wsId });
+    navigate('workspace', { workspaceId: wsId });
+  };
+
+  const handleArchive = async () => {
+    handleWorkspaceNavigation();
     void taskManager?.archiveTask(taskId);
   };
 
   const handleRename = () => showRename({ projectId, taskId, currentName: taskName });
 
-  const handleDelete = () =>
+  const handleDelete = () => {
+    debugLog('task-item', 'handleDelete called', {
+      taskId,
+      projectId,
+      isActive,
+      currentView,
+      paramsTaskId: params.taskId,
+      paramsProjectId: params.projectId,
+      taskName,
+      hasWorkspaceId: 'workspaceId' in task.data,
+      workspaceId: 'workspaceId' in task.data ? task.data.workspaceId : 'N/A',
+    });
     showConfirm({
       title: 'Delete task',
       description: `"${taskName}" will be permanently deleted. This action cannot be undone.`,
       confirmLabel: 'Delete',
-      onSuccess: () => {
-        if (isActive) navigate('project', { projectId });
+      onSuccess: async () => {
+        debugLog('task-item', 'handleDelete.onSuccess called', { taskId });
+        await handleWorkspaceNavigation();
+        debugLog('task-item', 'calling deleteTask', { taskId });
         void taskManager?.deleteTask(taskId);
       },
     });
+  };
 
   const canPin = task.state !== 'unregistered';
 

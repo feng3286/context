@@ -1,9 +1,26 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { createRPCController } from '@shared/ipc/rpc';
 import type { OpenInAppId } from '@shared/openInApps';
 import { capture } from '@main/lib/telemetry';
 import { appService } from './service';
 
+const LOG_FILE = path.join(process.cwd(), '.dev-data', 'renderer-debug.log');
+
 export const appController = createRPCController({
+  debugLog: (args: { tag: string; msg: string; data?: unknown }) => {
+    const ts = new Date().toISOString();
+    const dataStr = args.data !== undefined ? JSON.stringify(args.data) : '';
+    const line = `${ts} [Renderer ${args.tag}] ${args.msg} ${dataStr}\n`;
+    // Append to file so logs survive app crash
+    try {
+      fs.appendFileSync(LOG_FILE, line);
+    } catch {
+      // Ignore if directory doesn't exist yet
+    }
+    console.log(line.trimEnd());
+    return { ok: true };
+  },
   openExternal: async (url: string) => {
     try {
       await appService.openExternal(url);

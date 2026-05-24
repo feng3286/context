@@ -17,6 +17,7 @@ import {
 } from '@renderer/app/view-registry';
 import { useModalContext } from '@renderer/lib/modal/modal-provider';
 import { appState } from '@renderer/lib/stores/app-state';
+import { debugLog } from '@renderer/utils/debug-logger';
 import { focusTracker } from '@renderer/utils/focus-tracker';
 import { clearTelemetryTaskScope, setTelemetryTaskScope } from '@renderer/utils/telemetry-scope';
 import { captureTelemetry } from '@renderer/utils/telemetryClient';
@@ -105,6 +106,7 @@ export function WorkspaceViewProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback(
     (...args: unknown[]) => {
       const [viewId, params] = args as [ViewId, Record<string, unknown> | undefined];
+      debugLog('navigation', 'navigate called', { viewId, params, previousView: currentViewId });
       if (viewId !== currentViewId) {
         const transition = focusTracker.transition(
           viewId === 'task'

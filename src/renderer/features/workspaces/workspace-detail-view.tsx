@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@renderer/lib/ui/dropdown-menu';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
+import { debugLog } from '@renderer/utils/debug-logger';
 import { workspaceManagerStore } from './stores/workspace-manager';
 import { getWorkspaceStore } from './stores/workspace-selectors';
 import { WorkspaceStoreClass } from './stores/workspace-store';
@@ -105,15 +106,30 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
     params: { workspaceId },
   } = useParams('workspace');
 
+  // Ensure the workspace exists in the manager store
+  useEffect(() => {
+    debugLog('workspace-detail', 'WorkspaceDetailMainPanel mounted, loading workspaceManager');
+    void workspaceManagerStore.load();
+  }, []);
+
   const store = getWorkspaceStore(workspaceId);
+
+  debugLog('workspace-detail', 'render', {
+    workspaceId,
+    hasStore: !!store,
+    status: store?.status,
+    projectCount: store?.projects.length,
+  });
 
   useEffect(() => {
     if (store && store.status === 'unloaded') {
-      (store as WorkspaceStoreClass).load();
+      debugLog('workspace-detail', 'loading specific workspace (unloaded)');
+      store.load();
     }
   }, [store]);
 
   if (!store) {
+    debugLog('workspace-detail', 'EARLY RETURN: workspace not found', { workspaceId });
     return <div className="p-6">Workspace not found</div>;
   }
 
@@ -122,11 +138,17 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
   }
 
   if (store.status === 'error') {
+    debugLog('workspace-detail', 'EARLY RETURN: error', { error: store.error });
     return <div className="p-6 text-red-500">Error: {store.error}</div>;
   }
 
   const projects = store.status === 'ready' ? store.projects : [];
   const tasks = store.status === 'ready' ? store.tasks : [];
+
+  debugLog('workspace-detail', 'rendering main content', {
+    projectCount: projects.length,
+    taskCount: tasks.length,
+  });
   const activeTasks = tasks.filter((t) => !t.archivedAt).slice(0, 5);
 
   const handleDeleteWorkspace = async () => {

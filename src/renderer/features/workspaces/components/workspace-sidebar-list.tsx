@@ -24,6 +24,7 @@ import {
 } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Badge } from '@renderer/lib/ui/badge';
+import { debugLog } from '@renderer/utils/debug-logger';
 import { workspaceManagerStore } from '../stores/workspace-manager';
 import { WorkspaceStoreClass } from '../stores/workspace-store';
 
@@ -242,9 +243,16 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
 
   const handleDeleteTask = async (workspaceId: string, task: Task) => {
     if (confirm(`Delete task "${task.name}"?`)) {
+      debugLog('workspace-sidebar', 'handleDeleteTask called', {
+        workspaceId,
+        taskId: task.id,
+        taskName: task.name,
+      });
       const store = workspaceManagerStore.getWorkspace(workspaceId);
       if (store) {
         await (store as WorkspaceStoreClass).deleteTask(task.id);
+        debugLog('workspace-sidebar', 'handleDeleteTask: after delete, navigating to workspace');
+        navigate('workspace', { workspaceId });
       }
     }
   };

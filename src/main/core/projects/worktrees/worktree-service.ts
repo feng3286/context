@@ -217,20 +217,28 @@ export class WorktreeService {
     return ok(targetPath);
   }
 
-  async checkoutExistingBranch(branchName: string): Promise<Result<string, ServeWorktreeError>> {
+  async checkoutExistingBranch(
+    branchName: string,
+    customWorkDir?: string
+  ): Promise<Result<string, ServeWorktreeError>> {
     await this.ensureWorktreePoolDirExists();
-    return this.enqueueGitOp(() => this.doCheckoutExistingBranch(branchName));
+    return this.enqueueGitOp(() =>
+      this.doCheckoutExistingBranch(branchName, customWorkDir)
+    );
   }
 
   private async doCheckoutExistingBranch(
-    branchName: string
+    branchName: string,
+    customWorkDir?: string
   ): Promise<Result<string, ServeWorktreeError>> {
     const checkedOutPath = await this.findCheckedOutPathForBranch(branchName);
     if (checkedOutPath) {
       return ok(checkedOutPath);
     }
 
-    const targetPath = path.join(this.worktreePoolPath, branchName);
+    // If customWorkDir is provided, use it directly as the target path
+    // Otherwise, use default pool path + branchName
+    const targetPath = customWorkDir ?? path.join(this.worktreePoolPath, branchName);
     const remoteCandidates = await this.getRemoteCandidates();
 
     if (await this.rootFs.exists(targetPath)) {

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { SFTPWrapper } from 'ssh2';
+import { eq } from 'drizzle-orm';
 import { Conversation } from '@shared/conversations';
 import type { FetchError } from '@shared/git';
 import { bareRefName } from '@shared/git-utils';
@@ -11,6 +12,8 @@ import { getTaskEnvVars } from '@shared/task/envVars';
 import { Task, type TaskBootstrapStatus } from '@shared/tasks';
 import { Terminal } from '@shared/terminals';
 import { workspaceKey } from '@shared/workspace-key';
+import { db } from '@main/db/client';
+import { taskProjects } from '@main/db/schema';
 import { SshConversationProvider } from '@main/core/conversations/impl/ssh-conversation';
 import { SshFileSystem } from '@main/core/fs/impl/ssh-fs';
 import type { FileSystemProvider } from '@main/core/fs/types';
@@ -331,7 +334,6 @@ export class SshProjectProvider implements ProjectProvider {
       const taskEnv: TaskProvider = {
         taskId: task.id,
         taskBranch: task.taskBranch,
-        sourceBranch: task.sourceBranch,
         taskEnvVars,
         conversations: conversationProvider,
         terminals: terminalProvider,
@@ -616,7 +618,10 @@ export class SshProjectProvider implements ProjectProvider {
       return existing;
     }
 
-    if (!task.sourceBranch || task.taskBranch === task.sourceBranch.branch) {
+    // Get sourceBranch from taskProjects (per-project source branch)
+    const sourceBranchName = await this.getSourceBranchForTask(task.id);
+
+    if (!sourceBranchName || task.taskBranch === sourceBranchName) {
       const result = await this.worktreeService.checkoutExistingBranch(task.taskBranch);
       if (!result.success) {
         throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);
@@ -625,12 +630,21 @@ export class SshProjectProvider implements ProjectProvider {
     }
 
     const result = await this.worktreeService.checkoutBranchWorktree(
-      task.sourceBranch,
+      { type: 'local', branch: sourceBranchName },
       task.taskBranch
     );
     if (!result.success) {
       throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);
     }
     return result.data;
+  }
+
+  private async getSourceBranchForTask(taskId: string): Promise<string | undefined> {
+    const row = await db
+      .select({ sourceBranch: taskProjects.sourceBranch })
+      .from(taskProjects)
+      .where(eq(taskProjects.taskId, taskId))
+      .limit(1);
+    return row[0]?.sourceBranch ?? undefined;
   }
 }

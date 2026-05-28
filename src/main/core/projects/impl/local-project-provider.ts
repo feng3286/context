@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { eq } from 'drizzle-orm';
 import { Conversation } from '@shared/conversations';
 import { gitRefChangedChannel } from '@shared/events/gitEvents';
 import type { FetchError } from '@shared/git';
@@ -11,6 +12,8 @@ import { getTaskEnvVars } from '@shared/task/envVars';
 import { Task, type TaskBootstrapStatus } from '@shared/tasks';
 import { type Terminal } from '@shared/terminals';
 import { workspaceKey } from '@shared/workspace-key';
+import { db } from '@main/db/client';
+import { taskProjects } from '@main/db/schema';
 import { LocalConversationProvider } from '@main/core/conversations/impl/local-conversation';
 import { LocalFileSystem } from '@main/core/fs/impl/local-fs';
 import type { FileSystemProvider } from '@main/core/fs/types';
@@ -306,7 +309,6 @@ export class LocalProjectProvider implements ProjectProvider {
       const taskEnv: TaskProvider = {
         taskId: task.id,
         taskBranch: task.taskBranch,
-        sourceBranch: task.sourceBranch,
         taskEnvVars,
         conversations: conversationProvider,
         terminals: terminalProvider,
@@ -547,8 +549,14 @@ export class LocalProjectProvider implements ProjectProvider {
       return existing;
     }
 
-    if (!task.sourceBranch || task.taskBranch === task.sourceBranch.branch) {
-      const result = await this.worktreeService.checkoutExistingBranch(task.taskBranch);
+    // Get sourceBranch from taskProjects (per-project source branch)
+    const sourceBranchName = await this.getSourceBranchForTask(task.id);
+
+    if (!sourceBranchName || task.taskBranch === sourceBranchName) {
+      const result = await this.worktreeService.checkoutExistingBranch(
+        task.taskBranch,
+        customWorkDir
+      );
       if (!result.success) {
         throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);
       }
@@ -556,7 +564,7 @@ export class LocalProjectProvider implements ProjectProvider {
     }
 
     const result = await this.worktreeService.checkoutBranchWorktree(
-      task.sourceBranch,
+      { type: 'local', branch: sourceBranchName },
       task.taskBranch,
       customWorkDir
     );
@@ -564,6 +572,15 @@ export class LocalProjectProvider implements ProjectProvider {
       throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);
     }
     return result.data;
+  }
+
+  private async getSourceBranchForTask(taskId: string): Promise<string | undefined> {
+    const row = await db
+      .select({ sourceBranch: taskProjects.sourceBranch })
+      .from(taskProjects)
+      .where(eq(taskProjects.taskId, taskId))
+      .limit(1);
+    return row[0]?.sourceBranch ?? undefined;
   }
 
   async getRemoteState(): Promise<ProjectRemoteState> {

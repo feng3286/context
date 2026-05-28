@@ -40,7 +40,6 @@ export const TaskRow = observer(function TaskRow({
 
   // Get project name and current branch
   const projectName = projectStore?.data?.name ?? '';
-  const sourceBranchName = task.data.sourceBranch?.branch ?? null;
   const currentBranch = task.data.taskBranch;
 
   const handleArchive = () => void taskManager?.archiveTask(task.data.id);
@@ -94,13 +93,7 @@ export const TaskRow = observer(function TaskRow({
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <span className="min-w-0 text-left text-sm truncate">{task.data.name}</span>
             <span className="text-xs text-foreground-passive shrink-0">{projectName}</span>
-            {sourceBranchName && (
-              <span className="flex items-center gap-1 text-xs text-foreground-passive shrink-0">
-                <GitBranch className="size-3" />
-                <span className="truncate">{sourceBranchName}</span>
-              </span>
-            )}
-            {currentBranch && currentBranch !== sourceBranchName && (
+            {currentBranch && (
               <span className="flex items-center gap-1 text-xs text-foreground-passive shrink-0">
                 <GitBranch className="size-3" />
                 <span className="truncate">{currentBranch}</span>

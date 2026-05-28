@@ -320,14 +320,17 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                     <GitBranch className="size-3.5" />
                     <span>{provisionedTask.workspace.git.branchName}</span>
                   </span>
-                  {taskPayload.sourceBranch && (
-                    <span className="flex items-center gap-2 text-foreground-passive">
-                      Created from
-                      <span className="flex items-center gap-1 text-foreground-muted">
-                        <GitBranch className="size-3.5" /> {taskPayload.sourceBranch.branch}
+                  {(() => {
+                    const ctx = provisionedTask.projectContexts?.projects.get(projectId);
+                    return ctx?.sourceBranch && (
+                      <span className="flex items-center gap-2 text-foreground-passive">
+                        Created from
+                        <span className="flex items-center gap-1 text-foreground-muted">
+                          <GitBranch className="size-3.5" /> {ctx.sourceBranch}
+                        </span>
                       </span>
-                    </span>
-                  )}
+                    );
+                  })()}
                   <div className="flex items-center gap-1 w-full">
                     {hasUpstream ? (
                       <>

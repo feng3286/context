@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import dockIcon from '@/assets/images/emdash/icon-dock.png?asset';
@@ -31,6 +32,16 @@ registerAppScheme();
 
 app.setName(PRODUCT_NAME);
 app.setPath('userData', join(app.getPath('appData'), 'emdash'));
+
+// Ensure error log directory exists
+try {
+  const logsDir = join(app.getPath('userData'), 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+} catch {
+  // Non-fatal; the error-log-writer handles missing directory gracefully
+}
 
 app.on('second-instance', () => {
   const win = BrowserWindow.getAllWindows()[0];

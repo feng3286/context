@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { workspaceKey } from '@shared/workspace-key';
 import { taskProjects, tasks, workspaceProjects } from '@main/db/schema';
 import { log } from '@main/lib/logger';
 import {
@@ -34,30 +33,24 @@ function inferLegacyTaskLayout(args: {
   taskPath: string | undefined;
   legacyProjectPath: string | undefined;
   useWorktree: number | undefined;
-}): { sourceBranch: { type: 'local'; branch: string } | null; taskBranch: string | null } {
+}): { taskBranch: string | null } {
   const { branch, taskPath, legacyProjectPath, useWorktree } = args;
 
-  if (!branch) return { sourceBranch: null, taskBranch: null };
+  if (!branch) return { taskBranch: null };
 
   if (useWorktree === 0) {
-    return {
-      sourceBranch: { type: 'local', branch },
-      taskBranch: null,
-    };
+    return { taskBranch: null };
   }
 
   if (useWorktree === 1) {
-    return { sourceBranch: null, taskBranch: branch };
+    return { taskBranch: branch };
   }
 
   if (taskPath && legacyProjectPath && taskPath === legacyProjectPath) {
-    return {
-      sourceBranch: { type: 'local', branch },
-      taskBranch: null,
-    };
+    return { taskBranch: null };
   }
 
-  return { sourceBranch: null, taskBranch: branch };
+  return { taskBranch: branch };
 }
 
 export async function portTasks({ appDb, legacyDb, remap }: PortContext): Promise<TaskPortResult> {
@@ -161,7 +154,7 @@ export async function portTasks({ appDb, legacyDb, remap }: PortContext): Promis
     const taskPath = toTrimmedString(row.path);
     const useWorktree = toInteger(row.use_worktree);
     const legacyProjectPath = legacyProjectPathById.get(legacyProjectId);
-    const { sourceBranch, taskBranch } = inferLegacyTaskLayout({
+    const { taskBranch } = inferLegacyTaskLayout({
       branch,
       taskPath,
       legacyProjectPath,
@@ -194,7 +187,6 @@ export async function portTasks({ appDb, legacyDb, remap }: PortContext): Promis
       workspaceId,
       name: toTrimmedString(row.name) ?? branch ?? `Legacy Task ${legacyTaskId.slice(0, 8)}`,
       status: coerceTaskStatus(toTrimmedString(row.status)),
-      sourceBranch,
       taskBranch: taskBranch ?? null,
       archivedAt: toTrimmedString(row.archived_at) ?? null,
       createdAt,

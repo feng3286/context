@@ -2,6 +2,12 @@ export type Level = 'debug' | 'info' | 'warn' | 'error';
 
 const ORDER: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 
+export interface LoggerOptions {
+  envLevel?: string;
+  debugFlag?: boolean;
+  onError?: (args: unknown[]) => void;
+}
+
 export function parseLogLevel(value: string | undefined): Level | undefined {
   if (!value) return undefined;
   const candidate = value.trim().toLowerCase();
@@ -13,7 +19,7 @@ export function resolveLogLevel(args?: { envLevel?: string; debugFlag?: boolean 
   return parseLogLevel(args?.envLevel) ?? (args?.debugFlag ? 'debug' : undefined) ?? 'warn';
 }
 
-export function createLogger(args?: { envLevel?: string; debugFlag?: boolean }) {
+export function createLogger(args?: LoggerOptions) {
   const level = resolveLogLevel({
     envLevel: args?.envLevel ?? import.meta.env.VITE_LOG_LEVEL,
     debugFlag: args?.debugFlag,
@@ -36,6 +42,7 @@ export function createLogger(args?: { envLevel?: string; debugFlag?: boolean }) 
     },
     error: (...input: unknown[]) => {
       console.error(...input);
+      args?.onError?.(input);
     },
   };
 }

@@ -33,7 +33,6 @@ async function removeWorktreeDirectly(worktreePath: string): Promise<boolean> {
 export async function deleteTask(taskId: string): Promise<void> {
   const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!task) return;
-  const sourceBranch = task.sourceBranch ?? undefined;
 
   // Get all task-project associations
   const taskProjectRows = await db
@@ -123,11 +122,12 @@ export async function deleteTask(taskId: string): Promise<void> {
       });
     }
 
-    // Delete branches for each associated project
+    // Delete branches for each associated project (only if taskBranch != sourceBranch)
     if (task.taskBranch) {
       for (const row of taskProjectRows) {
         const rowProject = projectManager.getProject(row.projectId);
-        if (rowProject && sourceBranch && task.taskBranch !== sourceBranch.branch) {
+        // Don't delete branch if it's the same as the source branch for this project
+        if (rowProject && row.sourceBranch && task.taskBranch !== row.sourceBranch) {
           try {
             const branchDelete = await rowProject.repository.deleteBranch(task.taskBranch);
             if (branchDelete && !branchDelete.success) {

@@ -8,9 +8,9 @@ export async function renameTask(taskId: string, newName: string): Promise<void>
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!row) throw new Error(`Task not found: ${taskId}`);
 
-  // Get primary project from task_projects
+  // Get primary project and its sourceBranch from task_projects
   const [tpRow] = await db
-    .select({ projectId: taskProjects.projectId })
+    .select({ projectId: taskProjects.projectId, sourceBranch: taskProjects.sourceBranch })
     .from(taskProjects)
     .where(eq(taskProjects.taskId, taskId))
     .limit(1);
@@ -21,11 +21,11 @@ export async function renameTask(taskId: string, newName: string): Promise<void>
   if (!project) throw new Error(`Project not found: ${tpRow.projectId}`);
 
   const oldBranch = row.taskBranch;
-  const sourceBranch = row.sourceBranch ?? undefined;
+  const sourceBranch = tpRow.sourceBranch ?? undefined;
   let newBranch: string | null = null;
 
   if (oldBranch) {
-    if (sourceBranch && oldBranch !== sourceBranch.branch) {
+    if (sourceBranch && oldBranch !== sourceBranch) {
       const siblings = await db
         .select({ id: tasks.id })
         .from(tasks)

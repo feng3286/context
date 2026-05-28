@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { count, desc, eq, inArray } from 'drizzle-orm';
 import { Task } from '@shared/tasks';
 import { db } from '@main/db/client';
 import { conversations, taskProjects, tasks } from '@main/db/schema';
@@ -14,7 +14,6 @@ export async function getTasks(projectId?: string): Promise<Task[]> {
           workDir: tasks.workDir,
           name: tasks.name,
           status: tasks.status,
-          sourceBranch: tasks.sourceBranch,
           taskBranch: tasks.taskBranch,
           linkedIssue: tasks.linkedIssue,
           archivedAt: tasks.archivedAt,

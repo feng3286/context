@@ -1,4 +1,5 @@
 import type { TelemetryEventProperties } from '@shared/telemetry';
+import { rpc } from '@renderer/lib/ipc';
 import { log } from '@renderer/utils/logger';
 import { captureTelemetry } from '../utils/telemetryClient';
 
@@ -96,6 +97,26 @@ class RendererErrorTracking {
 
       // Send to main process as $exception event (required for PostHog error tracking)
       this.sendToMainProcess('$exception', cleanProperties);
+
+      // Also persist to local error log file
+      try {
+        rpc.app.errorLog({
+          message: errorMessage,
+          stack: errorStack,
+          component: context?.component,
+          severity,
+          errorType: context?.error_type || this.classifyError(errorMessage),
+          context: {
+            task_id: context?.task_id,
+            project_id: context?.project_id,
+            provider: context?.provider,
+            operation: context?.operation,
+            endpoint: context?.endpoint,
+          },
+        });
+      } catch {
+        // Silently fail if RPC is unavailable
+      }
 
       // Also log to console for debugging
       log.error('[ErrorTracking]', errorMessage, {

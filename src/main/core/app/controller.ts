@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { createRPCController } from '@shared/ipc/rpc';
 import type { OpenInAppId } from '@shared/openInApps';
 import { capture } from '@main/lib/telemetry';
+import { formatErrorLine, writeErrorLine } from '@main/lib/error-log-writer';
 import { appService } from './service';
 
 const LOG_FILE = path.join(process.cwd(), '.dev-data', 'renderer-debug.log');
@@ -19,6 +20,32 @@ export const appController = createRPCController({
       // Ignore if directory doesn't exist yet
     }
     console.log(line.trimEnd());
+    return { ok: true };
+  },
+  errorLog: (args: {
+    message: string;
+    stack?: string;
+    component?: string;
+    severity?: string;
+    errorType?: string;
+    context?: Record<string, unknown>;
+  }) => {
+    const error = new Error(args.message);
+    if (args.stack) error.stack = args.stack;
+    const line = formatErrorLine(
+      args.severity ?? 'error',
+      [error],
+      'renderer',
+      args.context
+        ? {
+            component: args.component,
+            errorType: args.errorType,
+            severity: args.severity,
+            ...args.context,
+          }
+        : undefined,
+    );
+    writeErrorLine(line);
     return { ok: true };
   },
   openExternal: async (url: string) => {

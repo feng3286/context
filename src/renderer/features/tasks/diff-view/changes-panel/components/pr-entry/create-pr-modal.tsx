@@ -3,8 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import type { Branch } from '@shared/git';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
-import { getRegisteredTaskData } from '@renderer/features/tasks/stores/task-selectors';
-import { useTaskViewContext } from '@renderer/features/tasks/task-view-context';
+import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import { BranchDisplay } from '@renderer/lib/components/branch-display';
 import { ProjectBranchSelector } from '@renderer/lib/components/project-branch-selector';
 import { rpc } from '@renderer/lib/ipc';
@@ -43,6 +42,7 @@ export const CreatePrModal = observer(function CreatePrModal({
   onSuccess,
 }: Props) {
   const { projectId, taskId } = useTaskViewContext();
+  const provisionedTask = useProvisionedTask();
   const [title, setTitle] = useState(branchName);
   const [description, setDescription] = useState('');
   const [selectedBaseOverride, setSelectedBaseOverride] = useState<Branch | undefined>();
@@ -50,7 +50,9 @@ export const CreatePrModal = observer(function CreatePrModal({
   const [error, setError] = useState<string | null>(null);
   const repo = getRepositoryStore(projectId);
   const defaultBranch = repo?.defaultBranch;
-  const taskPayload = getRegisteredTaskData(projectId, taskId);
+  // Get sourceBranch from projectContext using the current projectId
+  const projectContext = provisionedTask?.projectContexts?.projects.get(projectId);
+  const sourceBranchName = projectContext?.sourceBranch ?? undefined;
   const isOnRemote = repo?.isBranchOnRemote(branchName) ?? false;
   const aheadCount = repo?.getBranchDivergence(branchName)?.ahead ?? 0;
   const needsPush = !isOnRemote || aheadCount > 0;
@@ -60,7 +62,7 @@ export const CreatePrModal = observer(function CreatePrModal({
     selectedBaseOverride ??
     resolveInitialBaseBranch(
       repo?.remoteBranches ?? [],
-      taskPayload?.sourceBranch?.branch,
+      sourceBranchName,
       defaultBranch
     );
 

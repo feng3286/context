@@ -1,4 +1,4 @@
-import type { Branch, CreateBranchError, PushError } from '@shared/git';
+import type { CreateBranchError, PushError } from '@shared/git';
 import { PullRequest } from './pull-requests';
 
 export type TaskLifecycleStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled';
@@ -23,7 +23,6 @@ export type Task = {
   workDir?: string;
   name: string;
   status: TaskLifecycleStatus;
-  sourceBranch: Branch | undefined;
   taskBranch?: string;
   createdAt: string;
   updatedAt: string;

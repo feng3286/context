@@ -201,6 +201,8 @@ async function posthogCapture(
   event: TelemetryEvent,
   properties?: Record<string, unknown>
 ): Promise<void> {
+  // Disable remote exception telemetry — errors are logged locally instead
+  if (event === '$exception') return;
   if (!isEnabled()) return;
   try {
     const u = (host ?? '').replace(/\/$/, '') + '/capture/';
@@ -395,21 +397,13 @@ export function capture<E extends TelemetryEvent>(
 
 /**
  * Capture an exception for PostHog error tracking.
+ * DISABLED: exceptions are no longer sent to PostHog, logged locally instead.
  */
 export function captureException(
-  error: Error | unknown,
-  additionalProperties?: Record<string, unknown>
+  _error: Error | unknown,
+  _additionalProperties?: Record<string, unknown>
 ): void {
-  if (!isEnabled()) return;
-
-  const errorObj = error instanceof Error ? error : new Error(String(error));
-
-  void posthogCapture('$exception', {
-    $exception_message: errorObj.message || 'Unknown error',
-    $exception_type: errorObj.name || 'Error',
-    $exception_stack_trace_raw: errorObj.stack || '',
-    ...additionalProperties,
-  });
+  // No-op: exception telemetry is disabled, errors are logged locally via error-log-writer
 }
 
 export function shutdown(): void {

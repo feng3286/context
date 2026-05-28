@@ -1,95 +1,95 @@
 # Context
 
-> [中文](README_zh.md) | English
+> [English](README_en.md) | 中文
 
 ---
 
-> **This project is a derivative work of [Emdash](https://github.com/generalaction/emdash)** — an agentic development environment developed by [General Action, Inc.](https://github.com/generalaction) that lets you run multiple coding agents in parallel, each isolated in its own git worktree, either locally or over SSH.
+> **本项目是 [Emdash](https://github.com/generalaction/emdash) 的衍生作品** — Emdash 是由 [General Action, Inc.](https://github.com/generalaction) 开发的智能开发环境，支持并行运行多个编码助手，每个助手隔离在独立的 git worktree 中，可在本地或远程 SSH 上运行。
 >
-> Context is derived from the upstream Emdash project under the Apache License 2.0. The vast majority of the upstream codebase remains intact; this project adds workspace orchestration, multi-project task management, UI refinements, and Windows compatibility fixes on top of the Emdash foundation.
+> Context 基于上游 Emdash 项目（Apache License 2.0）构建，在此基础上增加了工作空间编排、多项目任务管理、UI 优化以及 Windows 兼容性修复等功能。
 
-## Upstream Attribution
+## 上游项目声明
 
-The origin and core of this project is [Emdash](https://github.com/generalaction/emdash), originally developed and open-sourced by General Action, Inc. under the [Apache License 2.0](https://github.com/generalaction/emdash/blob/main/LICENSE).
+本项目起源于 [Emdash](https://github.com/generalaction/emdash)，由 General Action, Inc. 根据 [Apache License 2.0](https://github.com/generalaction/emdash/blob/main/LICENSE) 开源。
 
-This repository was created as an independent clone from the upstream Emdash repository, with all subsequent development tracked on local branches (`v1`, `v1.1`, `v1.2`, `v2.0`, `v2.1`).
+本仓库是从上游 Emdash 仓库独立克隆而来，后续所有开发均跟踪本地分支（`v1`、`v1.1`、`v1.2`、`v2.0`、`v2.1`）。
 
-All upstream copyright and license terms are preserved in [LICENSE.md](LICENSE.md).
+所有上游版权和许可条款均保留在 [LICENSE.md](LICENSE.md) 中。
 
-## Features
+## 功能特性
 
-### Flexible Context Management
+### 灵活的上下文管理
 
-Context's core innovation is using git worktree as a bridge — **freeing different git repositories from their physical boundaries and composing them into a single, unified coding agent context**.
+Context 的核心创新是将 git worktree 作为桥梁 — **将不同的 git 项目从物理边界中解放出来，自由组合到编码助手的统一上下文中**。
 
-**Unified Agent Context via Worktree** — Pick any combination of git repositories and inject them into one coding agent session (Claude Code, Codex, Qwen Code, etc.). The agent sees all projects in its workspace as a single working context: it can read files across repos, make coordinated changes spanning a frontend and its backend, and manage them under one PTY session. Each project is checked out into its own worktree subdirectory, maintaining independent git history and branch state, while the agent operates on them as one logical workspace.
+**通过 Worktree 实现统一代理上下文** — 任意选择多个 git 项目，将它们注入到同一个编码助手会话中（Claude Code、Codex、Qwen Code 等）。代理将工作空间中的所有项目视为一个统一的工作上下文：它可以跨仓库读取文件、协调前端和后端的修改，并在一个 PTY 会话中管理所有项目。每个项目检出到独立的 worktree 子目录，保持各自的 git 历史和分支状态，而代理将它们作为一个逻辑工作区来操作。
 
-**Workspace Isolation** — Each workspace is a fully isolated context with its own filesystem provider, git operations, project settings, and lifecycle scripts. Workspaces are reference-counted and disposed independently, so running multiple workspaces simultaneously never leaks state or resources. Branch-based workspace keying ensures that different task branches operate in completely separate environments.
+**工作空间隔离** — 每个工作空间是一个完全隔离的上下文，拥有独立的文件系统提供者、git 操作、项目设置和生命周期脚本。工作空间采用引用计数管理，独立释放，同时运行多个工作空间不会泄漏状态或资源。基于分支的工作空间 key 机制确保不同任务分支在完全隔离的环境中运行。
 
-**Free Task-Project Binding** — Tasks are no longer locked to a single project. A task can span multiple projects, each with its own source branch and worktree. Conversely, a single project can participate in multiple tasks across different workspaces. This many-to-many relationship means you can:
-- Create one task that touches both `web-app` and `api-server`, tracking changes across both in a single view
-- Spin up separate tasks for the same project — one for a feature branch, another for a hotfix — without conflict
-- Add or remove projects from a workspace dynamically as the scope of work evolves
+**Task 与 Project 自由绑定** — Task 不再绑定到单一项目。一个 Task 可以跨越多个项目，每个项目有独立的源分支和 worktree。反过来，一个项目也可以参与多个不同工作空间中的 Task。这种多对多的关系意味着你可以：
+- 创建一个同时涉及 `web-app` 和 `api-server` 的 Task，在一个视图中跟踪两个项目的变更
+- 为同一个项目分别创建不同任务 — 一个做功能分支，一个做热修复 — 互不冲突
+- 随着工作范围的演变，动态向工作空间添加或移除项目
 
-### Parallel Agent Execution
+### 并行代理执行
 
-Run multiple coding agents (Claude Code, Codex, Qwen Code, etc.) in parallel, each in an isolated git worktree. Agents operate within the context of their workspace, with per-project PTY sessions and file watching.
+并行运行多个编码助手（Claude Code、Codex、Qwen Code 等），每个代理隔离在独立的 git worktree 中。代理在工作空间的上下文中运行，每个项目有独立的 PTY 会话和文件监视。
 
-### Remote Development
+### 远程开发
 
-Connect to remote machines via SSH to work with remote codebases. Supports SSH agent and key authentication, with secure credential storage in your OS keychain.
+通过 SSH 连接到远程机器，在远程代码库上工作。支持 SSH Agent 和密钥认证，凭据安全存储在系统密钥链中。
 
-### Ticket Integration
+### 工单集成
 
-Pass tickets directly from Linear, GitHub, or Jira to your coding agent. Review diffs, test changes, create PRs, and merge — all from one place.
+将 Linear、GitHub 或 Jira 工单直接传递给编码助手。在同一个界面中审查差异、测试变更、创建 PR 和合并。
 
-## Custom Development
+## 自主开发
 
-Beyond the upstream Emdash project, the following additions have been made across the `v1` through `v2.1` development branches:
+在 Emdash 上游项目的基础上，`v1` 到 `v2.1` 开发分支中新增了以下内容：
 
-### v2.1 (Latest)
+### v2.1（最新）
 
-- **Flexible context management**: Full workspace-centric data model with `workspaces`, `workspace_projects`, and `task_projects` tables — decoupling projects, tasks, and sessions into a many-to-many relationship
-- **Multi-project workspace orchestration**: Add/remove projects from a workspace dynamically; each project maintains its own git context, worktree, and PTY session while sharing the workspace boundary
-- **Task-project free binding**: Tasks can span multiple projects (each with independent source branches) or coexist in multiple workspaces — no longer locked to a single project
-- **Workspace isolation**: Reference-counted workspace instances with isolated filesystem, git, settings, and lifecycle providers; branch-based keying ensures cross-task state safety
-- **Single-project task cleanup**: Removed legacy task creation paths, fixed task deletion crash, use project subdirectory as cwd for single-project task sessions
-- **Windows code signing**: Restored Azure TrustedSigning configuration for CI builds
+- **灵活的上下文管理**：以工作空间为中心的数据模型，包含 `workspaces`、`workspace_projects` 和 `task_projects` 表 — 将项目、任务、会话解耦为多对多关系
+- **多项目工作空间编排**：动态添加/移除工作空间中的项目；每个项目保持独立的 git 上下文、worktree 和 PTY 会话，同时共享工作空间边界
+- **Task-Project 自由绑定**：Task 可跨多个项目（每个项目有独立的源分支），也可存在于多个工作空间中 — 不再锁定到单一项目
+- **工作空间隔离**：引用计数的工作空间实例，隔离的文件系统、git、设置和生命周期提供者；基于分支的 keying 确保跨任务状态安全
+- **单项目 Task 清理**：移除旧版 Task 创建路径，修复 Task 删除崩溃，单项目 Task 使用项目子目录作为工作目录
+- **Windows 代码签名**：恢复 Azure TrustedSigning 配置用于 CI 构建
 
 ### v2.0
 
-- **Workspace infrastructure**: Full workspace database schema (`workspaces`, `workspace_projects`, `task_projects` tables)
-- **Workspace UI**: Workspace list, detail view, and sidebar navigation
-- **Workspace RPC**: Dedicated workspace controller and operations in the main process
-- **Dev database**: Separate development database configuration via `cross-env`
+- **工作空间基础设施**：完整的工作空间数据库 schema（`workspaces`、`workspace_projects`、`task_projects` 表）
+- **工作空间 UI**：工作空间列表、详情视图和侧边栏导航
+- **工作空间 RPC**：主进程中专用的工作空间控制器和操作
+- **开发数据库**：通过 `cross-env` 配置独立的开发数据库
 
 ### v1.2
 
-- **Windows compatibility**: PTY session spawn, worktree checkout, and IDE integration fixes for Windows desktop
-- **IDE integration**: Open files from editor/diff view in VS Code, Cursor, and Windsurf
-- **Worktree config**: Customizable branch names, skip-new-branch option, configurable worktree directory
-- **Code signing**: Azure TrustedSigning setup for Windows builds
+- **Windows 兼容性**：PTY 会话生成、worktree 检出和 IDE 集成的 Windows 桌面修复
+- **IDE 集成**：从编辑器/差异视图在 VS Code、Cursor 和 Windsurf 中打开文件
+- **Worktree 配置**：可自定义分支名、跳过新建分支选项、可配置 worktree 目录
+- **代码签名**：Windows 构建的 Azure TrustedSigning 配置
 
 ### v1.1
 
-- **Remote development**: SSH/SFTP support for remote codebases with secure credential storage in OS keychain
-- **Onboarding improvements**: Flow refinements and bug fixes
-- **App identity**: Promotion from v1-beta to v1-stable release channel
-- **Telemetry**: Opt-in anonymous telemetry via PostHog, fully disableable in-app or via `TELEMETRY_ENABLED=false`
-- **Privacy controls**: No code, file paths, repo names, prompts, or PII sent
+- **远程开发**：SSH/SFTP 远程代码库支持，凭据安全存储在系统密钥链中
+- **引导流程优化**：流程改进和 bug 修复
+- **应用身份**：从 v1-beta 升级到 v1-stable 发布通道
+- **遥测**：通过 PostHog 的可选匿名遥测，可在应用内或通过 `TELEMETRY_ENABLED=false` 完全禁用
+- **隐私控制**：不发送代码、文件路径、仓库名、提示词或个人信息
 
 ### v1
 
-- **Initial setup**: Electron app with TypeScript and Tailwind CSS
-- **Repository manager**: Multi-repo project management
-- **Ticket integration**: Linear, GitHub, and Jira ticket pass-through to coding agents
-- **Provider orchestration**: Claude Code, Codex, Qwen Code, and other agent CLI integration
-- **Git worktree isolation**: Parallel agent execution in isolated worktrees
-- **Onboarding flow**: First-time user setup and configuration
+- **初始设置**：Electron 应用，TypeScript 和 Tailwind CSS
+- **仓库管理器**：多仓库项目管理
+- **工单集成**：Linear、GitHub 和 Jira 工单透传到编码助手
+- **提供者编排**：Claude Code、Codex、Qwen Code 等编码助手 CLI 集成
+- **Git worktree 隔离**：在隔离 worktree 中并行执行代理
+- **引导流程**：首次用户设置和配置
 
-## Installation
+## 安装
 
-Downloads are available from the [GitHub Releases](https://github.com/feng3286/context/releases) page.
+可从 [GitHub Releases](https://github.com/feng3286/context/releases) 页面下载。
 
 ### macOS
 
@@ -98,70 +98,70 @@ Downloads are available from the [GitHub Releases](https://github.com/feng3286/c
 
 ### Windows
 
-- Installer (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.msi
-- Portable (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.exe
+- 安装程序 (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.msi
+- 便携版 (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.exe
 
 ### Linux
 
 - AppImage (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x86_64.AppImage
-- Debian package (x64): https://github.com/feng3286/context/releases/latest/download/emdash-amd64.deb
+- Debian 包 (x64): https://github.com/feng3286/context/releases/latest/download/emdash-amd64.deb
 
-### Build from Source
+### 从源码构建
 
 ```bash
 pnpm install
 pnpm run dev
 ```
 
-## Development
+## 开发
 
 ```bash
-# Install dependencies
+# 安装依赖
 pnpm install
 
-# Start development server
+# 启动开发服务器
 pnpm run dev
 
-# Build for production
+# 构建生产版本
 pnpm run build
 
-# Package for your platform
+# 打包对应平台
 pnpm run package:win   # Windows
 pnpm run package:mac   # macOS
 pnpm run package:linux # Linux
 ```
 
-## Contributing
+## 贡献
 
-Contributions are welcome! Please read the codebase conventions in `AGENTS.md` and open a PR.
+欢迎提交贡献！请先阅读 `AGENTS.md` 中的代码规范，然后提交 PR。
 
-## License
+## 许可证
 
-This project is licensed under the [Apache License 2.0](LICENSE.md).
+本项目采用 [Apache License 2.0](LICENSE.md) 许可。
 
-Context is a derivative work of [Emdash](https://github.com/generalaction/emdash), originally developed by General Action, Inc. and licensed under the Apache License 2.0. Modifications and additions in this repository are Copyright 2026 maofeng and contributors.
+Context 是 [Emdash](https://github.com/generalaction/emdash) 的衍生作品，原始项目由 General Action, Inc. 开发并根据 Apache License 2.0 许可。本仓库中的修改和补充版权归 maofeng 和贡献者所有，Copyright 2026。
 
-See [LICENSE.md](LICENSE.md) for full terms.
+详见 [LICENSE.md](LICENSE.md) 中的完整条款。
 
-## FAQ
+## 常见问题
 
 <details>
-<summary><b>What telemetry do you collect and can I disable it?</b></summary>
+<summary><b>你们收集什么遥测数据？可以禁用吗？</b></summary>
 
-> Anonymous, allow-listed events (app start/close, feature usage names, app/platform versions) are sent to PostHog.
-> We do not send code, file paths, repo names, prompts, or PII.
+> 匿名、白名单事件（应用启动/关闭、功能使用名称、应用/平台版本）会发送到 PostHog。
+> 我们不会发送代码、文件路径、仓库名、提示词或个人信息。
 >
-> **Disable telemetry:**
+> **禁用遥测：**
 >
-> - In the app: **Settings → General → Privacy & Telemetry** (toggle off)
-> - Or via env var before launch: `TELEMETRY_ENABLED=false`
+> - 在应用内：**Settings → General → Privacy & Telemetry**（关闭开关）
+> - 或在启动前设置环境变量：`TELEMETRY_ENABLED=false`
 
 </details>
 
 <details>
-<summary><b>Where is my data stored?</b></summary>
+<summary><b>我的数据存储在哪里？</b></summary>
 
-> **App data is local-first**. We store app state in a local SQLite database:
+> **应用数据本地优先**。我们将应用状态存储在本地 SQLite 数据库中：
 >
 > ```
 > macOS:   ~/Library/Application Support/emdash/emdash.db
@@ -169,19 +169,19 @@ See [LICENSE.md](LICENSE.md) for full terms.
 > Linux:   ~/.config/emdash/emdash.db
 > ```
 >
-> Privacy Note: When you use any coding agent (Claude Code, Codex, Qwen, etc.), your code and prompts are sent to that provider's cloud API servers for processing. Each provider has their own data handling and retention policies.
+> 隐私说明：使用任何编码助手（Claude Code、Codex、Qwen 等）时，你的代码和提示词会发送到该提供商的云端 API 服务器进行处理。每个提供商都有自己的数据处理和保留政策。
 >
-> You can reset the local DB by deleting it (quit the app first). The file is recreated on next launch.
+> 你可以通过删除本地数据库来重置（请先退出应用）。文件会在下次启动时重新创建。
 
 </details>
 
 <details>
-<summary><b>Can I work with remote projects over SSH?</b></summary>
+<summary><b>可以通过 SSH 处理远程项目吗？</b></summary>
 
-> Yes! Go to **Settings → SSH Connections** and add your server details.
-> Choose authentication: SSH agent (recommended), private key, or password.
-> Add a remote project and specify the path on the server.
+> 可以！前往 **Settings → SSH Connections** 添加你的服务器详情。
+> 选择认证方式：SSH Agent（推荐）、私钥或密码。
+> 添加远程项目并指定服务器上的路径。
 >
-> Requirements: SSH access to the remote server, Git installed on the remote server.
+> 要求：能够 SSH 访问远程服务器，远程服务器上已安装 Git。
 
 </details>

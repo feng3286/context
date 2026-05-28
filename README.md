@@ -12,6 +12,33 @@ This repository was created as an independent clone from the upstream Emdash rep
 
 All upstream copyright and license terms are preserved in [LICENSE.md](LICENSE.md).
 
+## Features
+
+### Flexible Context Management
+
+Context's core innovation is using git worktree as a bridge — **freeing different git repositories from their physical boundaries and composing them into a single, unified coding agent context**.
+
+**Unified Agent Context via Worktree** — Pick any combination of git repositories and inject them into one coding agent session (Claude Code, Codex, Qwen Code, etc.). The agent sees all projects in its workspace as a single working context: it can read files across repos, make coordinated changes spanning a frontend and its backend, and manage them under one PTY session. Each project is checked out into its own worktree subdirectory, maintaining independent git history and branch state, while the agent operates on them as one logical workspace.
+
+**Workspace Isolation** — Each workspace is a fully isolated context with its own filesystem provider, git operations, project settings, and lifecycle scripts. Workspaces are reference-counted and disposed independently, so running multiple workspaces simultaneously never leaks state or resources. Branch-based workspace keying ensures that different task branches operate in completely separate environments.
+
+**Free Task-Project Binding** — Tasks are no longer locked to a single project. A task can span multiple projects, each with its own source branch and worktree. Conversely, a single project can participate in multiple tasks across different workspaces. This many-to-many relationship means you can:
+- Create one task that touches both `web-app` and `api-server`, tracking changes across both in a single view
+- Spin up separate tasks for the same project — one for a feature branch, another for a hotfix — without conflict
+- Add or remove projects from a workspace dynamically as the scope of work evolves
+
+### Parallel Agent Execution
+
+Run multiple coding agents (Claude Code, Codex, Qwen Code, etc.) in parallel, each in an isolated git worktree. Agents operate within the context of their workspace, with per-project PTY sessions and file watching.
+
+### Remote Development
+
+Connect to remote machines via SSH to work with remote codebases. Supports SSH agent and key authentication, with secure credential storage in your OS keychain.
+
+### Ticket Integration
+
+Pass tickets directly from Linear, GitHub, or Jira to your coding agent. Review diffs, test changes, create PRs, and merge — all from one place.
+
 ## Custom Development
 
 Beyond the upstream Emdash project, the following additions have been made across the `v1` through `v2.1` development branches:
@@ -55,37 +82,6 @@ Beyond the upstream Emdash project, the following additions have been made acros
 - **Provider orchestration**: Claude Code, Codex, Qwen Code, and other agent CLI integration
 - **Git worktree isolation**: Parallel agent execution in isolated worktrees
 - **Onboarding flow**: First-time user setup and configuration
-
-## Features
-
-### Flexible Context Management
-
-Context introduces a workspace-centric architecture that decouples projects, tasks, and sessions — giving you full control over how work is organized.
-
-**Multi-Project Workspace** — Place any number of git repositories into a single workspace session. Work on a frontend and its backend API side-by-side, or coordinate changes across a monorepo's packages. Each project retains its own git context, branch, and worktree, but they share the same workspace boundary for task orchestration and lifecycle management.
-
-**Workspace Isolation** — Each workspace is a fully isolated context with its own filesystem provider, git operations, project settings, and lifecycle scripts. Workspaces are reference-counted and disposed independently, so running multiple workspaces simultaneously never leaks state or resources. Branch-based workspace keying ensures that different task branches operate in completely separate environments.
-
-**Free Task-Project Binding** — Tasks are no longer locked to a single project. A task can span multiple projects, each with its own source branch and worktree. Conversely, a single project can participate in multiple tasks across different workspaces. This many-to-many relationship means you can:
-- Create one task that touches both `web-app` and `api-server`, tracking changes across both in a single view
-- Spin up separate tasks for the same project — one for a feature branch, another for a hotfix — without conflict
-- Add or remove projects from a workspace dynamically as the scope of work evolves
-
-### Parallel Agent Execution
-
-Run multiple coding agents (Claude Code, Codex, Qwen Code, etc.) in parallel, each in an isolated git worktree. Agents operate within the context of their workspace, with per-project PTY sessions and file watching.
-
-### Workspace Management
-
-Organize projects into workspaces for structured multi-repo development. Add and remove projects from workspaces, view project details, and track tasks across all projects in a workspace.
-
-### Remote Development
-
-Connect to remote machines via SSH to work with remote codebases. Supports SSH agent and key authentication, with secure credential storage in your OS keychain.
-
-### Ticket Integration
-
-Pass tickets directly from Linear, GitHub, or Jira to your coding agent. Review diffs, test changes, create PRs, and merge — all from one place.
 
 ## Installation
 

@@ -8,7 +8,7 @@
 
 The origin and core of this project is [Emdash](https://github.com/generalaction/emdash), originally developed and open-sourced by General Action, Inc. under the [Apache License 2.0](https://github.com/generalaction/emdash/blob/main/LICENSE).
 
-This repository was created as an independent clone from the upstream Emdash repository, with all subsequent development tracked on local branches (`v1`, `v1.1`, `v1.2`, `v2.0`, `v2.1`). Throughout development, upstream Emdash changes were regularly merged to stay synchronized, while 900+ unique commits were authored in this repository for custom features, bug fixes, and improvements.
+This repository was created as an independent clone from the upstream Emdash repository, with all subsequent development tracked on local branches (`v1`, `v1.1`, `v1.2`, `v2.0`, `v2.1`).
 
 All upstream copyright and license terms are preserved in [LICENSE.md](LICENSE.md).
 

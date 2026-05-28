@@ -18,10 +18,11 @@ Beyond the upstream Emdash project, the following additions have been made acros
 
 ### v2.1 (Latest)
 
-- **Workspace orchestration**: Multi-project workspace management with add/remove project operations
-- **Task model refactor**: Replaced `tasks.project_id` with `workspace_id` as the primary foreign key
-- **Single-project task cleanup**: Removed legacy task creation paths, fixed task deletion crash
-- **Task session improvements**: Use project subdirectory as cwd for single-project task sessions
+- **Flexible context management**: Full workspace-centric data model with `workspaces`, `workspace_projects`, and `task_projects` tables — decoupling projects, tasks, and sessions into a many-to-many relationship
+- **Multi-project workspace orchestration**: Add/remove projects from a workspace dynamically; each project maintains its own git context, worktree, and PTY session while sharing the workspace boundary
+- **Task-project free binding**: Tasks can span multiple projects (each with independent source branches) or coexist in multiple workspaces — no longer locked to a single project
+- **Workspace isolation**: Reference-counted workspace instances with isolated filesystem, git, settings, and lifecycle providers; branch-based keying ensures cross-task state safety
+- **Single-project task cleanup**: Removed legacy task creation paths, fixed task deletion crash, use project subdirectory as cwd for single-project task sessions
 - **Windows code signing**: Restored Azure TrustedSigning configuration for CI builds
 
 ### v2.0
@@ -57,9 +58,22 @@ Beyond the upstream Emdash project, the following additions have been made acros
 
 ## Features
 
+### Flexible Context Management
+
+Context introduces a workspace-centric architecture that decouples projects, tasks, and sessions — giving you full control over how work is organized.
+
+**Multi-Project Workspace** — Place any number of git repositories into a single workspace session. Work on a frontend and its backend API side-by-side, or coordinate changes across a monorepo's packages. Each project retains its own git context, branch, and worktree, but they share the same workspace boundary for task orchestration and lifecycle management.
+
+**Workspace Isolation** — Each workspace is a fully isolated context with its own filesystem provider, git operations, project settings, and lifecycle scripts. Workspaces are reference-counted and disposed independently, so running multiple workspaces simultaneously never leaks state or resources. Branch-based workspace keying ensures that different task branches operate in completely separate environments.
+
+**Free Task-Project Binding** — Tasks are no longer locked to a single project. A task can span multiple projects, each with its own source branch and worktree. Conversely, a single project can participate in multiple tasks across different workspaces. This many-to-many relationship means you can:
+- Create one task that touches both `web-app` and `api-server`, tracking changes across both in a single view
+- Spin up separate tasks for the same project — one for a feature branch, another for a hotfix — without conflict
+- Add or remove projects from a workspace dynamically as the scope of work evolves
+
 ### Parallel Agent Execution
 
-Run multiple coding agents (Claude Code, Codex, Qwen Code, etc.) in parallel, each in an isolated git worktree.
+Run multiple coding agents (Claude Code, Codex, Qwen Code, etc.) in parallel, each in an isolated git worktree. Agents operate within the context of their workspace, with per-project PTY sessions and file watching.
 
 ### Workspace Management
 

@@ -12,7 +12,7 @@
 
 The origin and core of this project is [Emdash](https://github.com/generalaction/emdash), originally developed and open-sourced by General Action, Inc. under the [Apache License 2.0](https://github.com/generalaction/emdash/blob/main/LICENSE).
 
-This repository was created as an independent clone from the upstream Emdash repository, with all subsequent development tracked on local branches (`v1`, `v1.1`, `v1.2`, `v2.0`, `v2.1`).
+This repository was created as an independent clone from the upstream Emdash repository, with all subsequent development tracked on local branches (`v1.2`, `v2.0`, `v2.1`).
 
 All upstream copyright and license terms are preserved in [LICENSE.md](LICENSE.md).
 
@@ -45,7 +45,7 @@ Pass tickets directly from Linear, GitHub, or Jira to your coding agent. Review 
 
 ## Custom Development
 
-Beyond the upstream Emdash project, the following additions have been made across the `v1` through `v2.1` development branches:
+Beyond the upstream Emdash project, the following additions have been made across the `v1.2` through `v2.1` development branches:
 
 ### v2.1 (Latest)
 
@@ -70,41 +70,14 @@ Beyond the upstream Emdash project, the following additions have been made acros
 - **Worktree config**: Customizable branch names, skip-new-branch option, configurable worktree directory
 - **Code signing**: Azure TrustedSigning setup for Windows builds
 
-### v1.1
-
-- **Remote development**: SSH/SFTP support for remote codebases with secure credential storage in OS keychain
-- **Onboarding improvements**: Flow refinements and bug fixes
-- **App identity**: Promotion from v1-beta to v1-stable release channel
-- **Telemetry**: Opt-in anonymous telemetry via PostHog, fully disableable in-app or via `TELEMETRY_ENABLED=false`
-- **Privacy controls**: No code, file paths, repo names, prompts, or PII sent
-
-### v1
-
-- **Initial setup**: Electron app with TypeScript and Tailwind CSS
-- **Repository manager**: Multi-repo project management
-- **Ticket integration**: Linear, GitHub, and Jira ticket pass-through to coding agents
-- **Provider orchestration**: Claude Code, Codex, Qwen Code, and other agent CLI integration
-- **Git worktree isolation**: Parallel agent execution in isolated worktrees
-- **Onboarding flow**: First-time user setup and configuration
-
 ## Installation
 
 Downloads are available from the [GitHub Releases](https://github.com/feng3286/context/releases) page.
-
-### macOS
-
-- Apple Silicon: https://github.com/feng3286/context/releases/latest/download/emdash-arm64.dmg
-- Intel x64: https://github.com/feng3286/context/releases/latest/download/emdash-x64.dmg
 
 ### Windows
 
 - Installer (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.msi
 - Portable (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.exe
-
-### Linux
-
-- AppImage (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x86_64.AppImage
-- Debian package (x64): https://github.com/feng3286/context/releases/latest/download/emdash-amd64.deb
 
 ### Build from Source
 
@@ -125,10 +98,8 @@ pnpm run dev
 # Build for production
 pnpm run build
 
-# Package for your platform
+# Package
 pnpm run package:win   # Windows
-pnpm run package:mac   # macOS
-pnpm run package:linux # Linux
 ```
 
 ## Contributing

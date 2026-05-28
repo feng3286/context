@@ -1,5 +1,9 @@
 # Context
 
+> [English](README.md) | 中文
+
+---
+
 > **本项目是 [Emdash](https://github.com/generalaction/emdash) 的衍生作品** — Emdash 是由 [General Action, Inc.](https://github.com/generalaction) 开发的智能开发环境，支持并行运行多个编码助手，每个助手隔离在独立的 git worktree 中，可在本地或远程 SSH 上运行。
 >
 > Context 基于上游 Emdash 项目（Apache License 2.0）构建，在此基础上增加了工作空间编排、多项目任务管理、UI 优化以及 Windows 兼容性修复等功能。

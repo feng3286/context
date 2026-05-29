@@ -100,7 +100,7 @@ const RepositorySettingsCard: React.FC = () => {
       </div>
       <SettingRow
         title="Auto-update .gitignore"
-        description="When Emdash writes CLI hook configs, also add their paths to .gitignore."
+        description="When Context writes CLI hook configs, also add their paths to .gitignore."
         control={
           <>
             <ResetToDefaultButton

@@ -1,8 +1,8 @@
-import { FolderPlus, Layers, MessageSquare, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { FolderPlus, GitBranch, Layers, ListTodo, MoreVertical, Pin, Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, type ReactNode } from 'react';
 import type { Project } from '@shared/projects';
-import type { Task } from '@shared/tasks';
+import type { Task, TaskLifecycleStatus } from '@shared/tasks';
 import { SidebarItemMiniButton } from '@renderer/features/sidebar/sidebar-primitives';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { useNavigate, useParams } from '@renderer/lib/layout/navigation-provider';
@@ -16,7 +16,9 @@ import {
   DropdownMenuTrigger,
 } from '@renderer/lib/ui/dropdown-menu';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
+import { RelativeTime } from '@renderer/lib/ui/relative-time';
 import { debugLog } from '@renderer/utils/debug-logger';
+import { cn } from '@renderer/utils/utils';
 import { workspaceManagerStore } from './stores/workspace-manager';
 import { getWorkspaceStore } from './stores/workspace-selectors';
 import { WorkspaceStoreClass } from './stores/workspace-store';
@@ -54,20 +56,30 @@ function ProjectCard({
 }) {
   return (
     <div
-      className="group flex items-start gap-3 p-4 rounded-xl border border-border bg-background hover:bg-background-1 transition-colors cursor-pointer"
+      className="group flex gap-2.5 w-full px-3 py-2.5 rounded-lg border border-border bg-background hover:bg-background-1 transition-colors cursor-pointer"
       onClick={onNavigate}
     >
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background-2 shrink-0">
+      {/* Left icon */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background-2 group-hover:bg-background-2/60 transition-colors mt-0.5">
         <Layers className="h-4 w-4 text-foreground-muted" />
       </div>
-      <div className="flex flex-col min-w-0 flex-1">
-        <span className="font-medium truncate">{project.name}</span>
-        <span className="text-sm text-muted-foreground truncate mt-0.5">{project.path}</span>
+
+      {/* Content */}
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        {/* Row 1: name + type */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm truncate flex-1">{project.name}</span>
+          <Badge variant="secondary" className="text-[10px] px-1 h-4 shrink-0 font-normal">
+            {project.type === 'ssh' ? 'SSH' : 'Local'}
+          </Badge>
+        </div>
+
+        {/* Row 2: path */}
+        <span className="text-xs text-foreground-passive truncate">{project.path}</span>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Badge variant="secondary" className="text-xs">
-          {project.type === 'ssh' ? 'SSH' : 'Local'}
-        </Badge>
+
+      {/* Remove button */}
+      <div className="flex items-center shrink-0 mt-0.5">
         <SidebarItemMiniButton
           onClick={(e) => {
             e.stopPropagation();
@@ -83,17 +95,70 @@ function ProjectCard({
   );
 }
 
+const STATUS_COLORS: Record<TaskLifecycleStatus, string> = {
+  todo: 'text-foreground-passive',
+  in_progress: 'text-blue-500',
+  review: 'text-amber-500',
+  done: 'text-green-500',
+  cancelled: 'text-red-500',
+};
+
+const STATUS_BADGE_VARIANT: Record<TaskLifecycleStatus, 'outline' | 'secondary'> = {
+  todo: 'outline',
+  in_progress: 'secondary',
+  review: 'secondary',
+  done: 'secondary',
+  cancelled: 'outline',
+};
+
 function TaskRowCompact({ task, onClick }: { task: Task; onClick: () => void }) {
+  const statusColor = STATUS_COLORS[task.status] ?? 'text-foreground-muted';
+  const badgeVariant = STATUS_BADGE_VARIANT[task.status] ?? 'outline';
+  const prCount = task.prs?.length ?? 0;
+
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 p-3 hover:bg-background-1 transition-colors w-full text-left"
+      className="group flex gap-2.5 w-full px-3 py-2.5 rounded-lg border border-border bg-background hover:bg-background-1 transition-colors text-left min-w-0 cursor-pointer"
     >
-      <MessageSquare className="h-4 w-4 text-foreground-muted shrink-0" />
-      <span className="truncate flex-1">{task.name}</span>
-      <Badge variant="outline" className="text-xs shrink-0">
-        {task.status}
-      </Badge>
+      {/* Left icon */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background-2 group-hover:bg-background-2/60 transition-colors mt-0.5">
+        <ListTodo className="h-4 w-4 text-foreground-muted" />
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        {/* Row 1: name + status */}
+        <div className="flex items-center gap-2 min-w-0">
+          {task.isPinned && (
+            <Pin className="h-3 w-3 text-foreground-passive shrink-0 rotate-45" />
+          )}
+          <span className="text-sm truncate flex-1">{task.name}</span>
+          <Badge variant={badgeVariant} className={cn('text-[10px] px-1 h-4 shrink-0 font-normal', statusColor)}>
+            {task.status === 'in_progress' ? 'in progress' : task.status}
+          </Badge>
+        </div>
+
+        {/* Row 2: branch + PR + time */}
+        <div className="flex items-center gap-2 text-xs text-foreground-passive min-w-0">
+          {task.taskBranch && (
+            <span className="flex items-center gap-1 shrink-0 truncate max-w-[80px]">
+              <GitBranch className="h-3 w-3" />
+              <span className="truncate">{task.taskBranch}</span>
+            </span>
+          )}
+          {prCount > 0 && (
+            <span className="shrink-0">{prCount} PR{prCount > 1 ? 's' : ''}</span>
+          )}
+          <span className="shrink-0 ml-auto font-mono">
+            <RelativeTime
+              value={task.lastInteractedAt ?? task.createdAt}
+              className="text-[10px]"
+              compact
+            />
+          </span>
+        </div>
+      </div>
     </button>
   );
 }
@@ -149,7 +214,7 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
     projectCount: projects.length,
     taskCount: tasks.length,
   });
-  const activeTasks = tasks.filter((t) => !t.archivedAt).slice(0, 5);
+  const activeTasks = tasks.filter((t) => !t.archivedAt);
 
   const handleDeleteWorkspace = async () => {
     if (confirm('Are you sure you want to delete this workspace?')) {
@@ -249,14 +314,14 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
         </section>
 
         {/* Tasks Section */}
-        {tasks.length > 0 && (
+        {activeTasks.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-foreground-muted">
-                Recent Tasks ({activeTasks.length}/{tasks.length})
+                Tasks ({activeTasks.length})
               </h3>
             </div>
-            <div className="rounded-lg border border-border divide-y divide-border">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {activeTasks.map((task: Task) => (
                 <TaskRowCompact
                   key={task.id}

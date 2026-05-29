@@ -85,7 +85,7 @@ export function SettingsPage({
     },
     account: {
       title: 'Account',
-      description: 'Manage your Emdash account.',
+      description: 'Manage your Context account.',
       sections: [{ component: <AccountTab /> }],
     },
     'clis-models': {

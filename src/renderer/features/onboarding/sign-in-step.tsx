@@ -68,9 +68,9 @@ export function SignInStep({ onComplete }: { onComplete: () => void }) {
       <div className="flex flex-col items-center justify-center gap-6">
         <Github className="h-10 w-10" absoluteStrokeWidth strokeWidth={1.5} />
         <div className="flex flex-col items-center justify-center gap-2">
-          <h1 className="text-xl text-center">Connect your GitHub account to Emdash</h1>
+          <h1 className="text-xl text-center">Connect your GitHub account to Context</h1>
           <p className="text-md text-foreground-muted text-center">
-            This will allow you to work with your GitHub repositories in Emdash
+            This will allow you to work with your GitHub repositories in Context
           </p>
         </div>
       </div>

@@ -12,6 +12,7 @@ import {
   RefreshCcw,
   Terminal,
 } from 'lucide-react';
+import { useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   asMounted,
@@ -27,7 +28,10 @@ import {
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import { RightPanelView } from '@renderer/features/tasks/types';
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
-import { OpenInMenu } from '@renderer/lib/components/titlebar/open-in-menu';
+import {
+  OpenInMenu,
+  type OpenInProjectOption,
+} from '@renderer/lib/components/titlebar/open-in-menu';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { getActiveEditorPosition } from '@renderer/lib/editor/activeCodeEditor';
 import { useDelayedBoolean } from '@renderer/lib/hooks/use-delay-boolean';
@@ -176,6 +180,22 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
         provisionedTask.path)
       : provisionedTask.path;
 
+  // Build project options for multi-project tasks
+  const projectOptions = useMemo<OpenInProjectOption[] | undefined>(() => {
+    const opts = (() => {
+      if (!provisionedTask.isMultiProject || !provisionedTask.projectContexts) return undefined;
+      return Array.from(provisionedTask.projectContexts.projects.values())
+        .filter((ctx) => ctx.worktreePath)
+        .map((ctx) => ({
+          projectId: ctx.projectId,
+          projectName: ctx.projectName,
+          worktreePath: ctx.worktreePath!,
+        }));
+    })();
+    console.log('[task-titlebar] projectOptions:', opts?.map(p => p.projectName), 'isMultiProject:', provisionedTask.isMultiProject, 'projectContexts:', !!provisionedTask.projectContexts);
+    return opts;
+  }, [provisionedTask.isMultiProject, provisionedTask.projectContexts]);
+
   return (
     <Titlebar
       leftSlot={
@@ -199,6 +219,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 filePath={activeFilePath}
                 lineNumber={activeLineNumber}
                 projectId={activeFileProjectId}
+                projectOptions={projectOptions}
               />
               {provisionedTask.isMultiProject && provisionedTask.projectContexts ? (
                 // Multi-project: show each project's git section
@@ -468,6 +489,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
               filePath={activeFilePath}
               lineNumber={activeLineNumber}
               projectId={activeFileProjectId}
+              projectOptions={projectOptions}
               className="h-7  bg-background"
             />
           )}

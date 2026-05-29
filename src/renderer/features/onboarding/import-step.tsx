@@ -103,7 +103,7 @@ export function ImportStep({ onComplete }: { onComplete: () => void }) {
         <div className="flex flex-col items-center justify-center gap-6">
           <Import className="h-10 w-10" absoluteStrokeWidth strokeWidth={1.5} />
           <div className="flex flex-col items-center justify-center gap-2">
-            <h1 className="text-xl text-center">Import your Emdash v0 data</h1>
+            <h1 className="text-xl text-center">Import your Context v0 data</h1>
             {previewLoading ? (
               <p className="text-md text-foreground-muted text-center">
                 Scanning legacy database...
@@ -113,7 +113,7 @@ export function ImportStep({ onComplete }: { onComplete: () => void }) {
                 Found <span className="text-foreground font-medium">{projectCount}</span>{' '}
                 {projectCount === 1 ? 'project' : 'projects'} and{' '}
                 <span className="text-foreground font-medium">{taskCount}</span>{' '}
-                {taskCount === 1 ? 'task' : 'tasks'} from your previous Emdash installation
+                {taskCount === 1 ? 'task' : 'tasks'} from your previous Context installation
               </p>
             )}
           </div>

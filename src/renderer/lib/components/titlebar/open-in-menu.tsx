@@ -1,6 +1,6 @@
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { ChevronDown } from 'lucide-react';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { getAppById, isValidOpenInAppId, type OpenInAppId } from '@shared/openInApps';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useToast } from '@renderer/lib/hooks/use-toast';
@@ -10,10 +10,16 @@ import {
 } from '@renderer/lib/hooks/useKeyboardShortcuts';
 import { useOpenInApps } from '@renderer/lib/hooks/useOpenInApps';
 import { rpc } from '@renderer/lib/ipc';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@renderer/lib/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/lib/ui/select';
 import { ShortcutHint } from '@renderer/lib/ui/shortcut-hint';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/lib/ui/tooltip';
 import { cn } from '@renderer/utils/utils';
+
+export interface OpenInProjectOption {
+  projectId: string;
+  projectName: string;
+  worktreePath: string;
+}
 
 interface OpenInMenuProps {
   path: string;
@@ -24,6 +30,8 @@ interface OpenInMenuProps {
   className?: string;
   /** For multi-project tasks, optional projectId to determine the correct worktree path */
   projectId?: string;
+  /** Project options for multi-project tasks. When length > 1, a project selector is shown */
+  projectOptions?: OpenInProjectOption[];
 }
 
 export const OpenInMenu: React.FC<OpenInMenuProps> = ({
@@ -34,12 +42,28 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
   isRemote = false,
   sshConnectionId = null,
   projectId,
+  projectOptions,
 }) => {
   const { toast } = useToast();
   const { icons, labels, installedApps, availability, loading } = useOpenInApps();
   const { value: openIn, update } = useAppSettingsKey('openIn');
   const { value: keyboard } = useAppSettingsKey('keyboard');
   const openInHotkey = getEffectiveHotkey('openInEditor', keyboard);
+
+  const showProjectSelector = projectOptions && projectOptions.length > 1;
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(projectId);
+
+  const effectiveProjectId = useMemo(() => {
+    if (selectedProjectId) return selectedProjectId;
+    return projectId;
+  }, [selectedProjectId, projectId]);
+
+  const effectivePath = useMemo(() => {
+    if (!selectedProjectId) return path;
+    const option = projectOptions?.find((p) => p.projectId === selectedProjectId);
+    return option?.worktreePath ?? path;
+  }, [selectedProjectId, projectOptions, path]);
 
   const defaultApp: OpenInAppId | null =
     openIn?.default && isValidOpenInAppId(openIn.default) ? openIn.default : null;
@@ -57,12 +81,12 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
       try {
         const res = await rpc.app.openIn({
           app: appId,
-          path,
+          path: effectivePath,
           filePath,
           lineNumber,
           isRemote,
           sshConnectionId: sshConnectionId ?? undefined,
-          projectId,
+          projectId: effectiveProjectId,
         });
         if (!res?.success) {
           toast({
@@ -79,7 +103,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         });
       }
     },
-    [labels, path, filePath, lineNumber, isRemote, sshConnectionId, projectId, toast]
+    [labels, effectivePath, filePath, lineNumber, isRemote, sshConnectionId, effectiveProjectId, toast]
   );
 
   const sortedApps = useMemo(() => {
@@ -114,28 +138,55 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
     { enabled: !!buttonAppId && !loading && openInHotkey !== null }
   );
 
-  const displayPath = useMemo(() => {
-    if (filePath) {
-      // Show file name with line number when file is being opened
-      const fileName = filePath.split('/').pop() ?? filePath;
-      return lineNumber ? `${fileName}:${lineNumber}` : fileName;
-    }
-    return path.split('/').slice(-2).join('/');
-  }, [path, filePath, lineNumber]);
+  const displayProjectName = useMemo(() => {
+    if (!effectiveProjectId || !projectOptions) return '';
+    const option = projectOptions.find((p) => p.projectId === effectiveProjectId);
+    return option?.projectName ?? '';
+  }, [effectiveProjectId, projectOptions]);
 
   return (
     <div
       className={cn(
-        'border border-border rounded-md h-6 flex items-center text-foreground-muted overflow-hidden',
+        'group border border-border rounded-md h-6 flex items-center text-foreground-muted overflow-hidden cursor-pointer',
         className
       )}
     >
       <TooltipProvider delay={0}>
+        {showProjectSelector && (
+          <Select
+            value={effectiveProjectId ?? ''}
+            onValueChange={(value) => {
+              setSelectedProjectId(value || undefined);
+            }}
+          >
+            <SelectTrigger
+              showChevron={false}
+              className="group shrink-0 h-6 min-w-16 max-w-32 rounded-r-none bg-transparent flex items-center justify-center px-1.5 text-xs truncate transition-colors hover:bg-background-1 hover:text-foreground cursor-pointer"
+              aria-label="Select project"
+            >
+              {displayProjectName ? (
+                <span className="truncate">{displayProjectName}</span>
+              ) : (
+                <SelectValue />
+              )}
+            </SelectTrigger>
+            <SelectContent align="start" alignItemWithTrigger={false} sideOffset={6}>
+              {projectOptions.map((option) => (
+                <SelectItem key={option.projectId} value={option.projectId}>
+                  {option.projectName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Tooltip>
-          <TooltipTrigger className="flex-1 flex min-w-0">
+          <TooltipTrigger className="flex-1 flex min-w-0 cursor-pointer">
             <button
               type="button"
-              className="group flex items-center w-full min-w-0 gap-1.5 border-r border-border truncate rounded-r-none px-2 text-xs transition-colors hover:bg-background-1 hover:text-foreground"
+              className={cn(
+                'group flex items-center w-full min-w-0 gap-1.5 border-r border-border truncate rounded-r-none px-2 text-xs transition-colors hover:bg-background-1 hover:text-foreground',
+                showProjectSelector && 'border-l border-border rounded-l-none'
+              )}
               onClick={() => {
                 if (!buttonAppId) return;
                 void triggerOpenIn(buttonAppId);
@@ -152,7 +203,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
                   }`}
                 />
               )}
-              <span>{displayPath}</span>
+              <span>{buttonAppLabel || 'Open'}</span>
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
@@ -176,7 +227,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
             render={
               <SelectTrigger
                 showChevron={false}
-                className="group shrink-0 size-6 border-none bg-transparent flex items-center justify-center transition-colors hover:bg-background-1 hover:text-foreground"
+                className="group shrink-0 size-6 border-none bg-transparent flex items-center justify-center transition-colors hover:bg-background-1 hover:text-foreground cursor-pointer"
                 aria-label="Open in options"
               >
                 <ChevronDown className="size-3.5" />

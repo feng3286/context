@@ -247,7 +247,7 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
   return (
     <>
       <div className="flex flex-col items-center px-8 py-12">
-        <img src={emdashLogo} alt="Emdash" className="mb-8 h-8 opacity-90" />
+        <img src={emdashLogo} alt="Context" className="mb-8 h-8 opacity-90" />
 
         {success ? (
           // Success State
@@ -291,7 +291,7 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
             <div className="space-y-2 text-center">
               <h2 className="text-2xl font-semibold">Connect to GitHub</h2>
               <p className="text-sm text-muted-foreground">
-                Follow these steps to authorize Emdash
+                Follow these steps to authorize Context
               </p>
             </div>
 

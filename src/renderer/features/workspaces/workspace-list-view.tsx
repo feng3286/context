@@ -113,7 +113,7 @@ export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel()
             <h2 className="text-sm font-medium text-muted-foreground mb-3">
               Projects ({allProjects.length})
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {allProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
@@ -160,25 +160,31 @@ function WorkspaceCard({
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col rounded-xl border border-border bg-background p-5 text-left hover:bg-background-1 transition-colors cursor-pointer"
+      className="group flex gap-2.5 w-full px-3 py-2.5 rounded-lg border border-border bg-background hover:bg-background-1 transition-colors text-left cursor-pointer"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-            <Layers className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-lg font-semibold truncate">{data.name}</span>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {isLoading
-                ? 'Loading...'
-                : `${projects.length} project${projects.length !== 1 ? 's' : ''}, ${tasks.length} task${tasks.length !== 1 ? 's' : ''}`}
-            </p>
-          </div>
-        </div>
+      {/* Left icon */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background-2 group-hover:bg-background-2/60 transition-colors mt-0.5">
+        <Layers className="h-4 w-4 text-foreground-muted" />
       </div>
-      <div className="mt-3 text-xs text-muted-foreground">
-        Created <RelativeTime value={data.createdAt} />
+
+      {/* Content */}
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        {/* Row 1: name */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm truncate flex-1">{data.name}</span>
+        </div>
+
+        {/* Row 2: project/task count + created time */}
+        <div className="flex items-center gap-2 text-xs text-foreground-passive min-w-0">
+          <span className="shrink-0">
+            {isLoading
+              ? 'Loading...'
+              : `${projects.length} project${projects.length !== 1 ? 's' : ''}, ${tasks.length} task${tasks.length !== 1 ? 's' : ''}`}
+          </span>
+          <span className="shrink-0 ml-auto font-mono">
+            <RelativeTime value={data.createdAt} compact />
+          </span>
+        </div>
       </div>
     </button>
   );
@@ -190,23 +196,29 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className="group flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-left hover:bg-background-1 transition-colors cursor-pointer"
+      className="group flex gap-2.5 w-full px-3 py-2.5 rounded-lg border border-border bg-background hover:bg-background-1 transition-colors text-left cursor-pointer"
     >
-      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-background-2 shrink-0">
+      {/* Left icon */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background-2 group-hover:bg-background-2/60 transition-colors mt-0.5">
         {isSsh ? (
-          <Wifi className="h-4 w-4 text-muted-foreground" />
+          <Wifi className="h-4 w-4 text-foreground-muted" />
         ) : (
-          <Folder className="h-4 w-4 text-muted-foreground" />
+          <Folder className="h-4 w-4 text-foreground-muted" />
         )}
       </div>
-      <div className="flex flex-col min-w-0 flex-1">
-        <span className="font-medium truncate text-sm">{project.name}</span>
-        <span className="text-xs text-muted-foreground truncate">{project.path}</span>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-background-2 px-1.5 py-0.5 rounded">
-          {isSsh ? 'SSH' : 'Local'}
-        </span>
+
+      {/* Content */}
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        {/* Row 1: name + type */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm truncate flex-1">{project.name}</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-foreground-passive bg-background-2 px-1.5 py-0.5 rounded shrink-0">
+            {isSsh ? 'SSH' : 'Local'}
+          </span>
+        </div>
+
+        {/* Row 2: path */}
+        <span className="text-xs text-foreground-passive truncate">{project.path}</span>
       </div>
     </button>
   );

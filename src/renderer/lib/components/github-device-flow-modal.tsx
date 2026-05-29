@@ -373,7 +373,7 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
                 Having{' '}
                 <button
                   onClick={() =>
-                    rpc.app.openExternal('https://github.com/generalaction/emdash/issues')
+                    rpc.app.openExternal('https://github.com/feng3286/context/issues')
                   }
                   className="text-primary hover:underline focus:underline focus:outline-none"
                 >

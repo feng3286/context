@@ -41,7 +41,7 @@ export function SettingsPage({
   onTabChange: (tab: SettingsPageTab) => void;
 }) {
   const handleDocsClick = useCallback(() => {
-    rpc.app.openExternal('https://docs.emdash.sh');
+    rpc.app.openExternal('https://github.com/feng3286/context#readme');
   }, []);
 
   const tabs: Array<{

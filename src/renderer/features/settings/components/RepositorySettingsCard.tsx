@@ -40,7 +40,7 @@ const RepositorySettingsCard: React.FC = () => {
           </div>
           <ResetToDefaultButton
             visible={isFieldOverridden('defaultWorktreeDirectory')}
-            defaultLabel="~/emdash/worktrees"
+            defaultLabel="~/context/worktrees"
             onReset={() => resetField('defaultWorktreeDirectory')}
             disabled={loading || saving}
           />
@@ -64,7 +64,7 @@ const RepositorySettingsCard: React.FC = () => {
               defaultWorktreeDirectory ? 'text-foreground' : ''
             )}
           >
-            {defaultWorktreeDirectory || '~/emdash/worktrees'}
+            {defaultWorktreeDirectory || '~/context/worktrees'}
           </p>
           <Button variant="outline" size="xs" tabIndex={-1}>
             Choose
@@ -89,7 +89,7 @@ const RepositorySettingsCard: React.FC = () => {
           />
           <ResetToDefaultButton
             visible={isFieldOverridden('branchPrefix')}
-            defaultLabel="emdash"
+            defaultLabel="context"
             onReset={() => resetField('branchPrefix')}
             disabled={loading || saving}
           />

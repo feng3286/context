@@ -11,16 +11,16 @@ export async function getEffectiveTaskSettings(args: {
   taskFs: FileSystemProvider;
 }): Promise<ProjectSettings> {
   const { projectSettings, taskFs } = args;
-  const exists = await taskFs.exists('.emdash.json');
+  const exists = await taskFs.exists('.context.json');
   if (!exists) {
     return projectSettings.get();
   }
 
   try {
-    const { content } = await taskFs.read('.emdash.json');
+    const { content } = await taskFs.read('.context.json');
     return projectSettingsSchema.parse(JSON.parse(content));
   } catch (err) {
-    log.warn('Failed to parse task .emdash.json, falling back to project settings', err);
+    log.warn('Failed to parse task .context.json, falling back to project settings', err);
     return projectSettings.get();
   }
 }

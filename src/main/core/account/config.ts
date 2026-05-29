@@ -1,6 +1,6 @@
 export const ACCOUNT_CONFIG = {
   authServer: {
-    baseUrl: 'https://auth.emdash.sh',
-    authTimeoutMs: Number(process.env.EMDASH_AUTH_TIMEOUT_MS || 300000),
+    baseUrl: 'https://auth.context.sh',
+    authTimeoutMs: Number(process.env.CONTEXT_AUTH_TIMEOUT_MS || 300000),
   },
 };

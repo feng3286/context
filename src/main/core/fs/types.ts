@@ -235,23 +235,23 @@ export interface FileSystemProvider {
   }>;
 
   /**
-   * Read (or auto-create) the project's .emdash.json config file
+   * Read (or auto-create) the project's .context.json config file
    * @returns Promise resolving to the config file content
    */
   getProjectConfig?(): Promise<{ success: boolean; content?: string; error?: string }>;
 
   /**
-   * Write the project's .emdash.json config file after validating JSON
+   * Write the project's .context.json config file after validating JSON
    * @param content - JSON string to write
    * @returns Promise resolving to success status
    */
   saveProjectConfig?(content: string): Promise<{ success: boolean; error?: string }>;
 
   /**
-   * Copy a local file into the project's .emdash attachments directory.
+   * Copy a local file into the project's .context attachments directory.
    * Only supported on local filesystems (srcPath is an absolute local path).
    * @param srcPath - Absolute local path of the source file
-   * @param subdir - Subdirectory inside .emdash/ (defaults to "attachments")
+   * @param subdir - Subdirectory inside .context/ (defaults to "attachments")
    * @returns Promise resolving to the saved file paths
    */
   saveAttachment?(
@@ -283,10 +283,10 @@ export interface FileSystemProvider {
 }
 
 /**
- * Default content written to .emdash.json when the file is first created.
+ * Default content written to .context.json when the file is first created.
  * Shared between LocalFileSystem and SshFileSystem so both produce identical defaults.
  */
-export const DEFAULT_EMDASH_CONFIG = `{
+export const DEFAULT_CONTEXT_CONFIG = `{
   "preservePatterns": [
     ".env",
     ".env.keys",
@@ -294,7 +294,7 @@ export const DEFAULT_EMDASH_CONFIG = `{
     ".env.*.local",
     ".envrc",
     "docker-compose.override.yml",
-    ".emdash.json"
+    ".context.json"
   ],
   "scripts": {
     "setup": "",

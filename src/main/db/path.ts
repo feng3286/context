@@ -9,7 +9,7 @@ export interface ResolveDatabasePathOptions {
 }
 
 export function resolveDatabasePath(options: ResolveDatabasePathOptions = {}): string {
-  const explicitDbFile = process.env.EMDASH_DB_FILE?.trim();
+  const explicitDbFile = process.env.CONTEXT_DB_FILE?.trim();
   if (explicitDbFile) {
     const resolvedPath = resolve(explicitDbFile);
     // Ensure directory exists for explicit path (e.g., dev database)

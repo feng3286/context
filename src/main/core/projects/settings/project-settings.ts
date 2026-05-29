@@ -36,7 +36,7 @@ export class LocalProjectSettingsProvider implements ProjectSettingsProvider {
   ) {}
 
   async get(): Promise<ProjectSettings> {
-    const settingsPath = path.join(this.projectPath, '.emdash.json');
+    const settingsPath = path.join(this.projectPath, '.context.json');
     if (!fs.existsSync(settingsPath)) {
       return defaults();
     }
@@ -65,7 +65,7 @@ export class LocalProjectSettingsProvider implements ProjectSettingsProvider {
     nextSettings.worktreeDirectory = worktreeDirectoryResult.data;
 
     try {
-      const settingsPath = path.join(this.projectPath, '.emdash.json');
+      const settingsPath = path.join(this.projectPath, '.context.json');
       fs.writeFileSync(settingsPath, JSON.stringify(nextSettings, null, 2));
       return ok();
     } catch {
@@ -74,7 +74,7 @@ export class LocalProjectSettingsProvider implements ProjectSettingsProvider {
   }
 
   async ensure(): Promise<void> {
-    const settingsPath = path.join(this.projectPath, '.emdash.json');
+    const settingsPath = path.join(this.projectPath, '.context.json');
     if (!fs.existsSync(settingsPath)) {
       fs.writeFileSync(settingsPath, JSON.stringify(defaults(), null, 2));
     }
@@ -144,14 +144,14 @@ export class SshProjectSettingsProvider implements ProjectSettingsProvider {
   }
 
   async get(): Promise<ProjectSettings> {
-    const exists = await this.fs.exists('.emdash.json');
+    const exists = await this.fs.exists('.context.json');
     if (!exists) {
       return defaults();
     }
 
     return parseSettingsOrDefault(
-      (await this.fs.read('.emdash.json')).content,
-      '.emdash.json (ssh)'
+      (await this.fs.read('.context.json')).content,
+      '.context.json (ssh)'
     );
   }
 
@@ -182,7 +182,7 @@ export class SshProjectSettingsProvider implements ProjectSettingsProvider {
 
     nextSettings.worktreeDirectory = worktreeDirectoryResult.data;
     try {
-      await this.fs.write('.emdash.json', JSON.stringify(nextSettings, null, 2));
+      await this.fs.write('.context.json', JSON.stringify(nextSettings, null, 2));
       return ok();
     } catch {
       return err({ type: 'error' });
@@ -190,9 +190,9 @@ export class SshProjectSettingsProvider implements ProjectSettingsProvider {
   }
 
   async ensure(): Promise<void> {
-    const exists = await this.fs.exists('.emdash.json');
+    const exists = await this.fs.exists('.context.json');
     if (!exists) {
-      await this.fs.write('.emdash.json', JSON.stringify(defaults(), null, 2));
+      await this.fs.write('.context.json', JSON.stringify(defaults(), null, 2));
     }
   }
 

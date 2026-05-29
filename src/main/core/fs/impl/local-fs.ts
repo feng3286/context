@@ -6,7 +6,7 @@ import { glob } from 'glob';
 import ignore from 'ignore';
 import type { FileWatchEvent } from '@shared/fs';
 import {
-  DEFAULT_EMDASH_CONFIG,
+  DEFAULT_CONTEXT_CONFIG,
   FileEntry,
   FileListResult,
   FileSystemError,
@@ -101,7 +101,7 @@ const WATCH_IGNORED_NAMES = [
   '.terraform',
   '.serverless',
   'worktrees',
-  '.emdash',
+  '.context',
   '.conductor',
   '.cursor',
   '.claude',
@@ -627,7 +627,7 @@ export class LocalFileSystem implements FileSystemProvider {
   }
 
   async getProjectConfig(): Promise<{ success: boolean; content?: string; error?: string }> {
-    const configPath = join(this.projectPath, '.emdash.json');
+    const configPath = join(this.projectPath, '.context.json');
     try {
       try {
         const content = await fs.readFile(configPath, 'utf-8');
@@ -636,8 +636,8 @@ export class LocalFileSystem implements FileSystemProvider {
         const code = (err as NodeJS.ErrnoException).code;
         if (code !== 'ENOENT') throw err;
         // File doesn't exist — create with defaults
-        await fs.writeFile(configPath, DEFAULT_EMDASH_CONFIG, 'utf-8');
-        return { success: true, content: DEFAULT_EMDASH_CONFIG };
+        await fs.writeFile(configPath, DEFAULT_CONTEXT_CONFIG, 'utf-8');
+        return { success: true, content: DEFAULT_CONTEXT_CONFIG };
       }
     } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -650,7 +650,7 @@ export class LocalFileSystem implements FileSystemProvider {
     } catch {
       return { success: false, error: 'Invalid JSON format' };
     }
-    const configPath = join(this.projectPath, '.emdash.json');
+    const configPath = join(this.projectPath, '.context.json');
     try {
       await fs.writeFile(configPath, content, 'utf-8');
       return { success: true };
@@ -691,7 +691,7 @@ export class LocalFileSystem implements FileSystemProvider {
         return { success: false, error: 'Unsupported attachment type' };
       }
 
-      const destDir = join(this.projectPath, '.emdash', subdir ?? 'attachments');
+      const destDir = join(this.projectPath, '.context', subdir ?? 'attachments');
       await fs.mkdir(destDir, { recursive: true });
 
       const baseName = basename(srcPath);

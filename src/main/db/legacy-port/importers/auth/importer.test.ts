@@ -105,7 +105,7 @@ describe('portLegacyAuthState', () => {
       'utf8'
     );
     fs.writeFileSync(
-      path.join(userDataDir, 'emdash-account.json'),
+      path.join(userDataDir, 'context-account.json'),
       JSON.stringify({
         hasAccount: true,
         userId: 'user-1',
@@ -118,14 +118,14 @@ describe('portLegacyAuthState', () => {
     );
 
     const secretMap = new Map<string, string>([
-      ['emdash-github:github-token', 'gh_123'],
-      ['emdash-linear:api-token', 'lin_123'],
-      ['emdash-jira:api-token', 'jira_123'],
-      ['emdash-plain:api-token', 'plain_123'],
-      ['emdash-forgejo:forgejo-token', 'forgejo_123'],
-      ['emdash-gitlab:gitlab-token', 'gitlab_123'],
-      ['emdash-account:session-token', 'session_123'],
-      ['emdash-ssh:legacy-ssh-1:password', 'ssh_pwd_123'],
+      ['context-github:github-token', 'gh_123'],
+      ['context-linear:api-token', 'lin_123'],
+      ['context-jira:api-token', 'jira_123'],
+      ['context-plain:api-token', 'plain_123'],
+      ['context-forgejo:forgejo-token', 'forgejo_123'],
+      ['context-gitlab:gitlab-token', 'gitlab_123'],
+      ['context-account:session-token', 'session_123'],
+      ['context-ssh:legacy-ssh-1:password', 'ssh_pwd_123'],
     ]);
 
     const { appSqlite, appDb } = createAppDbWithConfigTables();
@@ -158,10 +158,10 @@ describe('portLegacyAuthState', () => {
     ]);
     expect(summary.importedSshPasswords).toBe(1);
 
-    expect(readSecret(appSqlite, 'emdash-github-token')).toBe(
+    expect(readSecret(appSqlite, 'context-github-token')).toBe(
       Buffer.from('enc:gh_123', 'utf8').toString('base64')
     );
-    expect(readSecret(appSqlite, 'emdash-account-token')).toBe(
+    expect(readSecret(appSqlite, 'context-account-token')).toBe(
       Buffer.from('enc:session_123', 'utf8').toString('base64')
     );
     expect(readSecret(appSqlite, 'ssh:ssh-app-1:password')).toBe(
@@ -193,7 +193,7 @@ describe('portLegacyAuthState', () => {
 
     fs.writeFileSync(path.join(userDataDir, 'jira.json'), '{bad-json', 'utf8');
     fs.writeFileSync(
-      path.join(userDataDir, 'emdash-account.json'),
+      path.join(userDataDir, 'context-account.json'),
       JSON.stringify({ hasAccount: true, userId: '', username: '' }),
       'utf8'
     );
@@ -246,7 +246,7 @@ describe('portLegacyAuthState', () => {
       .prepare('INSERT INTO app_secrets (key, secret) VALUES (?, ?)')
       .run('ssh:ssh-app-1:password', Buffer.from('enc:existing_pwd', 'utf8').toString('base64'));
 
-    const secretMap = new Map<string, string>([['emdash-ssh:legacy-ssh-1:password', 'legacy_pwd']]);
+    const secretMap = new Map<string, string>([['context-ssh:legacy-ssh-1:password', 'legacy_pwd']]);
 
     const summary = await portLegacyAuthState(userDataDir, {
       appDb,

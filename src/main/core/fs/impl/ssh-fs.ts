@@ -8,7 +8,7 @@ import type { FileWatchEvent } from '@shared/fs';
 import { quoteShellArg } from '../../../utils/shellEscape';
 import type { SshClientProxy } from '../../ssh/ssh-client-proxy';
 import {
-  DEFAULT_EMDASH_CONFIG,
+  DEFAULT_CONTEXT_CONFIG,
   FileEntry,
   FileListResult,
   FileSystemError,
@@ -759,19 +759,19 @@ export class SshFileSystem implements FileSystemProvider {
   }
 
   /**
-   * Read (or auto-create) the project's .emdash.json config file via SFTP
+   * Read (or auto-create) the project's .context.json config file via SFTP
    */
   async getProjectConfig(): Promise<{ success: boolean; content?: string; error?: string }> {
     try {
-      const result = await this.read('.emdash.json').catch(async (err: unknown) => {
+      const result = await this.read('.context.json').catch(async (err: unknown) => {
         const code = (err as FileSystemError).code;
         if (code !== FileSystemErrorCodes.NOT_FOUND) throw err;
         // File doesn't exist — create with defaults then return defaults
-        await this.write('.emdash.json', DEFAULT_EMDASH_CONFIG);
+        await this.write('.context.json', DEFAULT_CONTEXT_CONFIG);
         return {
-          content: DEFAULT_EMDASH_CONFIG,
+          content: DEFAULT_CONTEXT_CONFIG,
           truncated: false,
-          totalSize: Buffer.byteLength(DEFAULT_EMDASH_CONFIG),
+          totalSize: Buffer.byteLength(DEFAULT_CONTEXT_CONFIG),
         };
       });
       return { success: true, content: result.content };
@@ -781,7 +781,7 @@ export class SshFileSystem implements FileSystemProvider {
   }
 
   /**
-   * Write the project's .emdash.json config file via SFTP after validating JSON
+   * Write the project's .context.json config file via SFTP after validating JSON
    */
   async saveProjectConfig(content: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -790,7 +790,7 @@ export class SshFileSystem implements FileSystemProvider {
       return { success: false, error: 'Invalid JSON format' };
     }
     try {
-      await this.write('.emdash.json', content);
+      await this.write('.context.json', content);
       return { success: true };
     } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };

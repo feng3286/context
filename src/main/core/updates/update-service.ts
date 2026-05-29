@@ -315,7 +315,7 @@ class UpdateService {
       if (!version) return null;
 
       const response = await fetch(
-        `https://api.github.com/repos/generalaction/emdash/releases/tags/v${version}`
+        `https://api.github.com/repos/feng3286/context/releases/tags/v${version}`
       );
 
       if (response.ok) {

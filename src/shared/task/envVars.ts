@@ -11,12 +11,12 @@ export function getTaskEnvVars(ctx: TaskEnvContext): Record<string, string> {
   const taskName = slugify(ctx.taskName) || 'task';
   const portSeed = ctx.portSeed || ctx.taskPath || ctx.taskId;
   return {
-    EMDASH_TASK_ID: ctx.taskId,
-    EMDASH_TASK_NAME: taskName,
-    EMDASH_TASK_PATH: ctx.taskPath,
-    EMDASH_ROOT_PATH: ctx.projectPath,
-    EMDASH_DEFAULT_BRANCH: ctx.defaultBranch || 'main',
-    EMDASH_PORT: String(getBasePort(portSeed)),
+    CONTEXT_TASK_ID: ctx.taskId,
+    CONTEXT_TASK_NAME: taskName,
+    CONTEXT_TASK_PATH: ctx.taskPath,
+    CONTEXT_ROOT_PATH: ctx.projectPath,
+    CONTEXT_DEFAULT_BRANCH: ctx.defaultBranch || 'main',
+    CONTEXT_PORT: String(getBasePort(portSeed)),
   };
 }
 

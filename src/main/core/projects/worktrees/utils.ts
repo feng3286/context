@@ -9,7 +9,7 @@ export const ensureLocalWorktreeDirectory = ({
   directory?: string;
   projectName: string;
 }): string => {
-  directory = directory ?? path.join('emdash', 'projects', 'worktrees', projectName);
+  directory = directory ?? path.join('context', 'projects', 'worktrees', projectName);
   if (!fs.existsSync(directory)) {
     fs.mkdirSync(directory, { recursive: true });
   }
@@ -25,7 +25,7 @@ export const ensureSshWorktreeDirectory = async ({
   projectName: string;
   rootFs: FileSystemProvider;
 }): Promise<string> => {
-  directory = directory ?? path.join('emdash', 'projects', 'worktrees', projectName);
+  directory = directory ?? path.join('context', 'projects', 'worktrees', projectName);
 
   const exists = await rootFs.exists(directory);
   if (!exists) {

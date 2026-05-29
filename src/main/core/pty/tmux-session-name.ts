@@ -1,7 +1,7 @@
 import type { ExecFn } from '@main/core/utils/exec';
 import { log } from '@main/lib/logger';
 
-const TMUX_SESSION_PREFIX = 'emdash-';
+const TMUX_SESSION_PREFIX = 'context-';
 
 export function makeTmuxSessionName(sessionId: string): string {
   const encoded = Buffer.from(sessionId, 'utf8').toString('base64url');

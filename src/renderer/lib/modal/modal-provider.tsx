@@ -56,7 +56,7 @@ export const ModalProvider = observer(function ModalProvider({
 }) {
   const showModal = useCallback(<TId extends ModalId>(id: TId, args: UserArgs<TId>) => {
     modalStore.setModal(id, wrapArgs(args));
-    window.dispatchEvent(new CustomEvent('emdash:overlay:changed', { detail: { open: true } }));
+    window.dispatchEvent(new CustomEvent('context:overlay:changed', { detail: { open: true } }));
   }, []);
 
   const transitionModal = useCallback(<TId extends ModalId>(id: TId, args: UserArgs<TId>) => {

@@ -55,7 +55,7 @@ export interface GitHubConnectionService {
   logout(): Promise<void>;
 }
 
-const GITHUB_TOKEN_SECRET_KEY = 'emdash-github-token';
+const GITHUB_TOKEN_SECRET_KEY = 'context-github-token';
 
 interface GitHubKVSchema extends Record<string, unknown> {
   tokenSource: Exclude<TokenSource, null>;

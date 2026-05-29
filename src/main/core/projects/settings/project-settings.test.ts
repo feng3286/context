@@ -46,7 +46,7 @@ describe('ProjectSettingsProvider worktreeDirectory validation', () => {
     });
     expect(rootFs.realPath).toHaveBeenCalledWith(path.resolve(projectPath, 'worktrees'));
 
-    const persisted = JSON.parse(fs.readFileSync(path.join(projectPath, '.emdash.json'), 'utf8'));
+    const persisted = JSON.parse(fs.readFileSync(path.join(projectPath, '.context.json'), 'utf8'));
     expect(persisted.worktreeDirectory).toBe('/canonical/worktrees');
   });
 
@@ -82,7 +82,7 @@ describe('ProjectSettingsProvider worktreeDirectory validation', () => {
     expect(result.success).toBe(true);
 
     expect(rootFs.mkdir).not.toHaveBeenCalled();
-    const persisted = JSON.parse(fs.readFileSync(path.join(projectPath, '.emdash.json'), 'utf8'));
+    const persisted = JSON.parse(fs.readFileSync(path.join(projectPath, '.context.json'), 'utf8'));
     expect(persisted.worktreeDirectory).toBeUndefined();
   });
 
@@ -114,7 +114,7 @@ describe('ProjectSettingsProvider worktreeDirectory validation', () => {
     } as unknown as SshFileSystem;
 
     const provider = new SshProjectSettingsProvider(projectFs, 'main', undefined, '/remote/repo');
-    await expect(provider.getWorktreeDirectory()).resolves.toBe('/remote/repo/.emdash/worktrees');
+    await expect(provider.getWorktreeDirectory()).resolves.toBe('/remote/repo/.context/worktrees');
   });
 
   it('rejects tilde worktreeDirectory for ssh projects', async () => {
@@ -148,7 +148,7 @@ describe('ProjectSettingsProvider worktreeDirectory validation', () => {
     } as unknown as SshFileSystem;
 
     const provider = new SshProjectSettingsProvider(projectFs, 'main', undefined, '/remote/repo');
-    await expect(provider.getWorktreeDirectory()).resolves.toBe('/remote/repo/.emdash/worktrees');
+    await expect(provider.getWorktreeDirectory()).resolves.toBe('/remote/repo/.context/worktrees');
   });
 
   it('expands and caches ssh home for tilde worktreeDirectory values', async () => {

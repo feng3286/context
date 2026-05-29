@@ -31,7 +31,7 @@ if (process.platform === 'linux') {
 registerAppScheme();
 
 app.setName(PRODUCT_NAME);
-app.setPath('userData', join(app.getPath('appData'), 'emdash'));
+app.setPath('userData', join(app.getPath('appData'), 'context'));
 
 // Ensure error log directory exists
 try {

@@ -163,7 +163,7 @@ describe('runLegacyPort', () => {
     }
   });
 
-  it('marks no-legacy-file when emdash.db is missing', async () => {
+  it('marks no-legacy-file when context.db is missing', async () => {
     const appDb = createAppDb();
     openDbs.push(appDb);
 
@@ -184,7 +184,7 @@ describe('runLegacyPort', () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'legacy-port-once-'));
     tempDirs.push(tmpDir);
 
-    const legacyPath = path.join(tmpDir, 'emdash.db');
+    const legacyPath = path.join(tmpDir, 'context.db');
     seedLegacyDb(legacyPath);
 
     const stateStore = new InMemoryLegacyPortStateStore();

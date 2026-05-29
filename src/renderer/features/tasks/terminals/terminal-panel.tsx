@@ -199,7 +199,7 @@ export const TerminalsPanel = observer(function TerminalsPanel() {
       <EmptyState
         icon={<LayoutList className="h-5 w-5 text-muted-foreground" />}
         label="No lifecycle scripts"
-        description="Add setup or run scripts to .emdash.json to see them here."
+        description="Add setup or run scripts to .context.json to see them here."
         action={
           <Button size="sm" variant="outline" onClick={() => setMode('terminals')}>
             Back to terminals

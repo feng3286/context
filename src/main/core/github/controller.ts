@@ -323,7 +323,7 @@ export const githubController = createRPCController({
       const settings = {};
       const projectDir =
         (settings as { projects?: { defaultDirectory?: string } }).projects?.defaultDirectory ??
-        path.join(homedir(), 'emdash-projects');
+        path.join(homedir(), 'context-projects');
       const localPath = path.join(projectDir, name);
       const exec = getGitLocalExec(() => githubConnectionService.getToken());
       const parentFs = new LocalFileSystem(path.dirname(localPath));

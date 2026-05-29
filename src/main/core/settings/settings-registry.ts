@@ -14,9 +14,9 @@ type SettingsDefaultsMap = {
 
 export const SETTINGS_DEFAULTS = {
   localProject: () => ({
-    defaultProjectsDirectory: join(homedir(), 'emdash', 'repositories'),
+    defaultProjectsDirectory: join(homedir(), 'context', 'repositories'),
     defaultWorktreeDirectory: getDefaultLocalWorktreeDirectory(),
-    branchPrefix: 'emdash',
+    branchPrefix: 'context',
     writeAgentConfigToGitIgnore: true,
   }),
   tasks: {

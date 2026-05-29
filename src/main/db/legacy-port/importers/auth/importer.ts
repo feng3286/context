@@ -63,45 +63,45 @@ export type LegacyAuthPortSummary = {
 const LEGACY_SECRET_SPECS: LegacySecretSpec[] = [
   {
     label: 'github',
-    legacyService: 'emdash-github',
+    legacyService: 'context-github',
     legacyAccount: 'github-token',
-    appSecretKey: 'emdash-github-token',
+    appSecretKey: 'context-github-token',
   },
   {
     label: 'linear',
-    legacyService: 'emdash-linear',
+    legacyService: 'context-linear',
     legacyAccount: 'api-token',
-    appSecretKey: 'emdash-linear-token',
+    appSecretKey: 'context-linear-token',
   },
   {
     label: 'jira',
-    legacyService: 'emdash-jira',
+    legacyService: 'context-jira',
     legacyAccount: 'api-token',
-    appSecretKey: 'emdash-jira-token',
+    appSecretKey: 'context-jira-token',
   },
   {
     label: 'plain',
-    legacyService: 'emdash-plain',
+    legacyService: 'context-plain',
     legacyAccount: 'api-token',
-    appSecretKey: 'emdash-plain-token',
+    appSecretKey: 'context-plain-token',
   },
   {
     label: 'forgejo',
-    legacyService: 'emdash-forgejo',
+    legacyService: 'context-forgejo',
     legacyAccount: 'forgejo-token',
-    appSecretKey: 'emdash-forgejo-token',
+    appSecretKey: 'context-forgejo-token',
   },
   {
     label: 'gitlab',
-    legacyService: 'emdash-gitlab',
+    legacyService: 'context-gitlab',
     legacyAccount: 'gitlab-token',
-    appSecretKey: 'emdash-gitlab-token',
+    appSecretKey: 'context-gitlab-token',
   },
   {
     label: 'account',
-    legacyService: 'emdash-account',
+    legacyService: 'context-account',
     legacyAccount: 'session-token',
-    appSecretKey: 'emdash-account-token',
+    appSecretKey: 'context-account-token',
   },
 ];
 
@@ -369,7 +369,7 @@ export async function portLegacyAuthState(
           continue;
         }
 
-        const rawPassword = await readLegacySecret('emdash-ssh', `${legacyConnectionId}:password`);
+        const rawPassword = await readLegacySecret('context-ssh', `${legacyConnectionId}:password`);
         const password = readTrimmedString(rawPassword);
         if (!password) {
           continue;
@@ -449,7 +449,7 @@ export async function portLegacyAuthState(
     });
   }
 
-  const accountResult = readJsonFile(join(userDataPath, 'emdash-account.json'));
+  const accountResult = readJsonFile(join(userDataPath, 'context-account.json'));
   if (accountResult.kind === 'invalid') {
     summary.skipped.push('account.profile:invalid-json');
   }

@@ -97,7 +97,7 @@ export async function runLegacyPort(
   }
 
   if (!hasLegacyFile(userDataPath)) {
-    log.info('legacy-port: no legacy emdash.db found, marking complete');
+    log.info('legacy-port: no legacy context.db found, marking complete');
     await markStatus(stateStore, 'no-legacy-file');
     return;
   }

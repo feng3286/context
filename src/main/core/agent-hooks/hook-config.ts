@@ -5,7 +5,7 @@ import type { FileSystemProvider } from '@main/core/fs/types';
 import type { ExecFn } from '@main/core/utils/exec';
 import { log } from '@main/lib/logger';
 
-const EMDASH_MARKER = 'EMDASH_HOOK_PORT';
+const CONTEXT_MARKER = 'CONTEXT_HOOK_PORT';
 
 const CLAUDE_SETTINGS_PATH = '.claude/settings.local.json';
 const CODEX_CONFIG_PATH = '.codex/config.toml';
@@ -18,31 +18,31 @@ const HOOK_EVENT_MAP = [
 ] satisfies { eventType: string; hookKey: string }[];
 
 function makeClaudeHookCommand(eventType: string): string {
-  // Wrap with sh -c to check EMDASH_HOOK_PORT exists before executing curl.
+  // Wrap with sh -c to check CONTEXT_HOOK_PORT exists before executing curl.
   // This prevents curl from running (and potentially flashing a console window)
-  // when Claude Code is used outside of Emdash (where EMDASH_HOOK_PORT is unset).
+  // when Claude Code is used outside of Context (where CONTEXT_HOOK_PORT is unset).
   const curlCmd =
     'curl -sf -X POST ' +
     '-H "Content-Type: application/json" ' +
-    '-H "X-Emdash-Token: $EMDASH_HOOK_TOKEN" ' +
-    '-H "X-Emdash-Pty-Id: $EMDASH_PTY_ID" ' +
-    `-H "X-Emdash-Event-Type: ${eventType}" ` +
+    '-H "X-Context-Token: $CONTEXT_HOOK_TOKEN" ' +
+    '-H "X-Context-Pty-Id: $CONTEXT_PTY_ID" ' +
+    `-H "X-Context-Event-Type: ${eventType}" ` +
     '-d @- ' +
-    '"http://127.0.0.1:$EMDASH_HOOK_PORT/hook"';
-  return `sh -c '[ -n "$EMDASH_HOOK_PORT" ] && ${curlCmd}' || true`;
+    '"http://127.0.0.1:$CONTEXT_HOOK_PORT/hook"';
+  return `sh -c '[ -n "$CONTEXT_HOOK_PORT" ] && ${curlCmd}' || true`;
 }
 
 function makeCodexNotifyCommand(): string[] {
-  // Guard with EMDASH_HOOK_PORT check to skip when not running under Emdash
+  // Guard with CONTEXT_HOOK_PORT check to skip when not running under Context
   const curlCmd =
     'curl -sf -X POST ' +
     "-H 'Content-Type: application/json' " +
-    '-H "X-Emdash-Token: $EMDASH_HOOK_TOKEN" ' +
-    '-H "X-Emdash-Pty-Id: $EMDASH_PTY_ID" ' +
-    '-H "X-Emdash-Event-Type: notification" ' +
+    '-H "X-Context-Token: $CONTEXT_HOOK_TOKEN" ' +
+    '-H "X-Context-Pty-Id: $CONTEXT_PTY_ID" ' +
+    '-H "X-Context-Event-Type: notification" ' +
     '-d "$1" ' +
-    '"http://127.0.0.1:$EMDASH_HOOK_PORT/hook"';
-  return ['bash', '-c', `[ -n "$EMDASH_HOOK_PORT" ] && ${curlCmd}`, '_'];
+    '"http://127.0.0.1:$CONTEXT_HOOK_PORT/hook"';
+  return ['bash', '-c', `[ -n "$CONTEXT_HOOK_PORT" ] && ${curlCmd}`, '_'];
 }
 
 export class HookConfigWriter {
@@ -116,7 +116,7 @@ export class HookConfigWriter {
   }
 
   private buildHookEntries(existing: unknown[], command: string): unknown[] {
-    const userEntries = existing.filter((entry) => !JSON.stringify(entry).includes(EMDASH_MARKER));
+    const userEntries = existing.filter((entry) => !JSON.stringify(entry).includes(CONTEXT_MARKER));
     return [...userEntries, { hooks: [{ type: 'command', command }] }];
   }
 

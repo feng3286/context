@@ -1,5 +1,5 @@
 {
-  "name": "emdash",
+  "name": "context",
   "version": "2.2.0",
   "description": "A cross-platform Electron app that orchestrates multiple coding agents in parallel",
   "type": "module",
@@ -7,14 +7,14 @@
   "packageManager": "pnpm@10.28.2",
   "scripts": {
     "d": "pnpm install && pnpm run dev",
-    "dev": "cross-env EMDASH_DB_FILE=.dev-data/emdash.db electron-vite dev",
+    "dev": "cross-env CONTEXT_DB_FILE=.dev-data/context.db electron-vite dev",
     "dev:debug": "VITE_LOG_LEVEL=debug electron-vite dev",
     "dev:main": "electron-vite dev --watch main",
     "dev:renderer": "electron-vite dev --watch renderer",
     "db:generate": "drizzle-kit generate",
     "db:reset": "pnpm run db:reset:3 && pnpm run db:reset:4",
-    "db:reset:3": "rm -f \"$HOME/Library/Application Support/emdash/emdash3.db\" \"$HOME/Library/Application Support/emdash/emdash3.db-wal\" \"$HOME/Library/Application Support/emdash/emdash3.db-shm\" \"$HOME/.config/emdash/emdash3.db\" \"$HOME/.config/emdash/emdash3.db-wal\" \"$HOME/.config/emdash/emdash3.db-shm\"",
-    "db:reset:4": "rm -f \"$HOME/Library/Application Support/emdash/emdash4.db\" \"$HOME/Library/Application Support/emdash/emdash4.db-wal\" \"$HOME/Library/Application Support/emdash/emdash4.db-shm\" \"$HOME/.config/emdash/emdash4.db\" \"$HOME/.config/emdash/emdash4.db-wal\" \"$HOME/.config/emdash/emdash4.db-shm\"",
+    "db:reset:3": "rm -f \"$HOME/Library/Application Support/context/context3.db\" \"$HOME/Library/Application Support/context/context3.db-wal\" \"$HOME/Library/Application Support/context/context3.db-shm\" \"$HOME/.config/context/context3.db\" \"$HOME/.config/context/context3.db-wal\" \"$HOME/.config/context/context3.db-shm\"",
+    "db:reset:4": "rm -f \"$HOME/Library/Application Support/context/context4.db\" \"$HOME/Library/Application Support/context/context4.db-wal\" \"$HOME/Library/Application Support/context/context4.db-shm\" \"$HOME/.config/context/context4.db\" \"$HOME/.config/context/context4.db-wal\" \"$HOME/.config/context/context4.db-shm\"",
     "test": "vitest run",
     "build": "electron-vite build",
     "build:main": "electron-vite build --filter main",
@@ -44,7 +44,7 @@
     "openai"
   ],
   "author": {
-    "name": "Emdash Contributors",
+    "name": "Context Contributors",
     "email": "support@emdash.sh"
   },
   "engines": {

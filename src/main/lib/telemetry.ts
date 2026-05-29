@@ -37,7 +37,7 @@ let cachedGithubUsername: string | null = null;
 let cachedAccountId: string | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
 
-const libName = 'emdash';
+const libName = 'context';
 
 type TelemetryKVSchema = {
   instanceId: string;

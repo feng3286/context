@@ -1,5 +1,5 @@
 {
-  description = "Nix dev shell for the Emdash Electron workspace";
+  description = "Nix dev shell for the Context Electron workspace";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -44,7 +44,7 @@
             pnpmBase;
 
         # Electron version must match package.json
-        electronVersion = "30.5.1";
+        electronVersion = "40.7.0";
 
         # Pre-fetch Electron binary for Linux x64
         # electron-builder expects zips named: electron-v${version}-linux-x64.zip
@@ -85,7 +85,7 @@
         emdashPackage =
           if pkgs.stdenv.isLinux then
             pkgs.stdenv.mkDerivation rec {
-              pname = "emdash";
+              pname = "context";
               version = packageJson.version;
               src = cleanSrc;
               pnpmDeps =
@@ -154,30 +154,30 @@
                   exit 1
                 fi
 
-                install -d $out/share/emdash
-                cp -R "$unpackedDir" $out/share/emdash/
+                install -d $out/share/context
+                cp -R "$unpackedDir" $out/share/context/
 
                 if ls "$distDir"/*.AppImage >/dev/null 2>&1; then
                   for image in "$distDir"/*.AppImage; do
-                    install -Dm755 "$image" "$out/share/emdash/$(basename "$image")"
+                    install -Dm755 "$image" "$out/share/context/$(basename "$image")"
                   done
                 fi
 
                 install -d $out/bin
-                cat <<EOF > $out/bin/emdash
+                cat <<EOF > $out/bin/context
 #!${pkgs.bash}/bin/bash
 set -euo pipefail
 
-APP_ROOT="$out/share/emdash/linux-unpacked"
-exec "\$APP_ROOT/emdash" "\$@"
+APP_ROOT="$out/share/context/linux-unpacked"
+exec "\$APP_ROOT/context" "\$@"
 EOF
-                chmod +x $out/bin/emdash
+                chmod +x $out/bin/context
 
                 runHook postInstall
               '';
 
               meta = {
-                description = "Emdash – multi-agent orchestration desktop app";
+                description = "Context – multi-agent orchestration desktop app";
                 homepage = "https://emdash.sh";
                 license = lib.licenses.mit;
                 platforms = [ "x86_64-linux" ];
@@ -193,7 +193,7 @@ EOF
           packages = sharedEnv;
 
           shellHook = ''
-            echo "Emdash dev shell ready"
+            echo "Context dev shell ready"
             echo "Node: $(node --version)"
             echo "Run 'pnpm run d' for the full dev loop."
           '';

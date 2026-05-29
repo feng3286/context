@@ -37,6 +37,6 @@ jobs:
       - name: (Optional) Upload Nix artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nix-emdash-share
-          path: result/share/emdash
+          name: nix-context-share
+          path: result/share/context
           if-no-files-found: ignore

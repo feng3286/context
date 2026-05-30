@@ -1,6 +1,7 @@
 import { Check, ChevronRight, FolderOpen, GitBranch } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
@@ -40,20 +41,17 @@ const ProjectBranchSelector = observer(function ProjectBranchSelector({
   branchConfigs,
   onBranchChange,
 }: ProjectBranchSelectorProps) {
+  const { t } = useTranslation();
   const store = workspaceManagerStore.getWorkspace(workspaceId);
   const projects = store && store.status === 'ready' ? store.projects : [];
 
   if (projects.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No projects in this workspace. Add projects first.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">{t('addProject:noProjectsInWorkspace')}</p>;
   }
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Select Projects & Branches</label>
+      <label className="text-sm font-medium">{t('createTask:selectProjectsBranches')}</label>
       <div className="border border-border rounded-md divide-y divide-border">
         {projects.map((project) => {
           const isSelected = selectedProjectIds.has(project.id);
@@ -107,6 +105,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
 }: BaseModalProps & {
   workspaceId: string;
 }) {
+  const { t } = useTranslation();
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(() => {
     const store = workspaceManagerStore.getWorkspace(workspaceId);
     if (store && store.status === 'ready' && store.projects.length > 0) {
@@ -286,7 +285,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
       <DialogHeader className="flex items-center gap-2">
         <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
         <ChevronRight className="size-3.5 text-foreground-passive" />
-        <DialogTitle>Create Task in Workspace</DialogTitle>
+        <DialogTitle>{t('createTask:title')}</DialogTitle>
       </DialogHeader>
       <DialogContentArea className="gap-4">
         <ProjectBranchSelector
@@ -298,19 +297,19 @@ export const CreateTaskModal = observer(function CreateTaskModal({
         />
 
         <Field>
-          <FieldLabel>Task Name</FieldLabel>
+          <FieldLabel>{t('createTask:taskName')}</FieldLabel>
           <input
             type="text"
             value={taskName}
             onChange={(e) => handleTaskNameChange(e.target.value)}
             className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Enter task name"
+            placeholder={t('createTask:taskNamePlaceholder')}
             autoFocus
           />
         </Field>
 
         <Field>
-          <FieldLabel>Task Branch</FieldLabel>
+          <FieldLabel>{t('createTask:taskBranch')}</FieldLabel>
           <input
             type="text"
             value={taskBranch}
@@ -319,15 +318,16 @@ export const CreateTaskModal = observer(function CreateTaskModal({
               setBranchManuallyEdited(true);
             }}
             className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Auto-generated from name"
+            placeholder={t('createTask:taskBranchPlaceholder')}
           />
           {previewBranchName && (
             <p className="text-xs text-muted-foreground mt-1">
-              Final branch: <code className="rounded bg-muted/60 px-1">{previewBranchName}</code>
+              {t('createTask:finalBranch')}{' '}
+              <code className="rounded bg-muted/60 px-1">{previewBranchName}</code>
             </p>
           )}
           <p className="text-xs text-muted-foreground mt-1">
-            All projects will use this branch name.
+            {t('createTask:allProjectsUseBranch')}
           </p>
         </Field>
 
@@ -338,7 +338,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
             onChange={(e) => setPushBranch(e.target.checked)}
             className="h-4 w-4 rounded border-border"
           />
-          <span className="text-sm">Push branch to remote</span>
+          <span className="text-sm">{t('createTask:pushBranch')}</span>
         </label>
       </DialogContentArea>
       <DialogFooter>
@@ -347,7 +347,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
           onClick={() => void handleCreateTask()}
           disabled={!canCreate || loading}
         >
-          {loading ? 'Creating...' : 'Create'}
+          {loading ? t('createTask:creating') : t('createTask:create')}
         </ConfirmButton>
       </DialogFooter>
     </>

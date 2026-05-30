@@ -1,5 +1,6 @@
 import { PanelLeft, PanelRight } from 'lucide-react';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWorkspaceLayoutContext } from '@renderer/lib/layout/layout-provider';
 import { useWorkspaceSlots } from '@renderer/lib/layout/navigation-provider';
 import { ShortcutHint } from '@renderer/lib/ui/shortcut-hint';
@@ -8,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/lib/ui/toolti
 import { cn } from '@renderer/utils/utils';
 
 export function Titlebar({ leftSlot, rightSlot }: { leftSlot?: ReactNode; rightSlot?: ReactNode }) {
+  const { t } = useTranslation();
   const { isRightOpen, setCollapsed, isLeftOpen } = useWorkspaceLayoutContext();
   const { RightPanel } = useWorkspaceSlots();
   return (
@@ -35,7 +37,7 @@ export function Titlebar({ leftSlot, rightSlot }: { leftSlot?: ReactNode; rightS
                   </Toggle>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Toggle left sidebar
+                  {t('titlebar:toggleLeftSidebar')}
                   <ShortcutHint settingsKey="toggleLeftSidebar" />
                 </TooltipContent>
               </Tooltip>
@@ -57,7 +59,7 @@ export function Titlebar({ leftSlot, rightSlot }: { leftSlot?: ReactNode; rightS
                 </Toggle>
               </TooltipTrigger>
               <TooltipContent>
-                Toggle right sidebar
+                {t('titlebar:toggleRightSidebar')}
                 <ShortcutHint settingsKey="toggleRightSidebar" />
               </TooltipContent>
             </Tooltip>

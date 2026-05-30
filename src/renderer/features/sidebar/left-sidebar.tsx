@@ -1,6 +1,7 @@
 import { FolderPlus, MessageSquareShare, Plug, Plus, Puzzle, Settings } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { WorkspaceSidebarList } from '@renderer/features/workspaces/components/workspace-sidebar-list';
 import {
   isCurrentView,
@@ -23,6 +24,7 @@ import { SidebarSpace } from './sidebar-space';
 import { UpdateSection } from './update-section';
 
 export const LeftSidebar: React.FC = observer(function LeftSidebar() {
+  const { t } = useTranslation();
   const { navigate } = useNavigate();
   const { currentView } = useWorkspaceSlots();
 
@@ -38,7 +40,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
           <SidebarPinnedTaskList />
           <SidebarGroup className="mb-0 min-h-0 flex-1 flex flex-col">
             <div className="flex items-center px-3 py-1.5 text-[11px] font-semibold text-foreground-tertiary-muted uppercase tracking-widest">
-              Workspaces
+              {t('sidebar:workspaces')}
             </div>
             <SidebarGroupContent className="min-h-0 flex-1 flex flex-col">
               <SidebarMenu className="flex-1 min-h-0 flex flex-col">
@@ -57,7 +59,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
             >
               <span className="flex items-center gap-2 min-w-0 w-full">
                 <Plus className="h-5 w-5 sm:h-4 sm:w-4 shrink-0" />
-                <span className="truncate min-w-0">Create Workspace</span>
+                <span className="truncate min-w-0">{t('sidebar:createWorkspace')}</span>
               </span>
             </SidebarMenuButton>
             <SidebarMenuButton
@@ -68,7 +70,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
             >
               <span className="flex items-center gap-2 min-w-0 w-full">
                 <FolderPlus className="h-5 w-5 sm:h-4 sm:w-4 shrink-0" />
-                <span className="truncate min-w-0">Add Project</span>
+                <span className="truncate min-w-0">{t('sidebar:addProject')}</span>
               </span>
               <ShortcutHint settingsKey="newProject" />
             </SidebarMenuButton>
@@ -80,7 +82,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
             className="w-full justify-start"
           >
             <Puzzle className="h-5 w-5 sm:h-4 sm:w-4" />
-            Skills
+            {t('sidebar:skills')}
           </SidebarMenuButton>
           <SidebarMenuButton
             isActive={isCurrentView(currentView, 'mcp')}
@@ -99,7 +101,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
           >
             <span className="flex items-center gap-2">
               <Settings className="h-5 w-5 sm:h-4 sm:w-4" />
-              Settings
+              {t('sidebar:settings')}
             </span>
             <ShortcutHint settingsKey="settings" />
           </SidebarMenuButton>
@@ -111,7 +113,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
             onClick={() => showFeedbackModal({})}
           >
             <MessageSquareShare className="size-3.5 shrink-0" />
-            <span className="truncate text-xs">Give feedback</span>
+            <span className="truncate text-xs">{t('sidebar:giveFeedback')}</span>
           </button>
           <UpdateSection />
         </div>

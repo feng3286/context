@@ -4,6 +4,7 @@ import { WelcomeScreen } from './app/welcome';
 import { Workspace } from './app/workspace';
 import { IntegrationsProvider } from './features/integrations/integrations-provider';
 import { Onboarding } from './features/onboarding/onboarding';
+import { useLanguageSync } from './i18n/use-language';
 import { useAccountSession } from './lib/hooks/useAccount';
 import { useLegacyPortStatus } from './lib/hooks/useLegacyPort';
 import { WorkspaceLayoutContextProvider } from './lib/layout/layout-provider';
@@ -22,6 +23,8 @@ type AppView = 'onboarding' | 'welcome' | 'workspace';
 type OnboardingStep = 'sign-in' | 'import';
 
 function AppContent() {
+  useLanguageSync();
+
   const [view, setView] = useState<AppView>(() =>
     localStorage.getItem(HAS_SEEN_ONBOARDING) === 'true' ? 'workspace' : 'onboarding'
   );

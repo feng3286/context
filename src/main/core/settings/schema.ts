@@ -108,6 +108,8 @@ export const openInSettingsSchema = z.object({
   hidden: z.array(openInAppIdSchema),
 });
 
+export const languageSchema = z.enum(['en', 'zh']).default('zh');
+
 export const APP_SETTINGS_SCHEMA_MAP = {
   localProject: localProjectSettingsSchema,
   tasks: taskSettingsSchema,
@@ -121,6 +123,7 @@ export const APP_SETTINGS_SCHEMA_MAP = {
   interface: interfaceSettingsSchema,
   terminal: terminalSettingsSchema,
   browserPreview: browserPreviewSettingsSchema,
+  language: languageSchema,
 } as const;
 
 export const appSettingsSchema = z.object({
@@ -136,4 +139,5 @@ export const appSettingsSchema = z.object({
   interface: interfaceSettingsSchema,
   terminal: terminalSettingsSchema,
   browserPreview: browserPreviewSettingsSchema,
+  language: languageSchema,
 });

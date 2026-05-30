@@ -1,10 +1,12 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Theme } from '@shared/app-settings';
 import { useTheme } from '@renderer/lib/hooks/useTheme';
 import { captureTelemetry } from '@renderer/utils/telemetryClient';
 
 const ThemeCard: React.FC = () => {
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
 
   const handleSetTheme = (next: Theme) => {
@@ -23,8 +25,8 @@ const ThemeCard: React.FC = () => {
   return (
     <div className="grid gap-3 text-sm">
       <div>
-        <div className="font-medium text-foreground">Color mode</div>
-        <div className="text-foreground-muted">Choose how Context looks.</div>
+        <div className="font-medium text-foreground">{t('settings:interface.theme.title')}</div>
+        <div className="text-foreground-muted">{t('settings:interface.theme.description')}</div>
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(6.5rem,1fr))] gap-2">
         <button
@@ -32,30 +34,30 @@ const ThemeCard: React.FC = () => {
           onClick={() => handleSetTheme(null)}
           className={`${buttonBase} ${theme === null ? activeClass : inactiveClass}`}
           aria-pressed={theme === null}
-          aria-label="Set theme to system preference"
+          aria-label={t('settings:interface.theme.systemAria')}
         >
           <Monitor className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="text-centert">System</span>
+          <span className="text-center">{t('settings:interface.theme.system')}</span>
         </button>
         <button
           type="button"
           onClick={() => handleSetTheme('emlight')}
           className={`${buttonBase} ${theme === 'emlight' ? activeClass : inactiveClass}`}
           aria-pressed={theme === 'emlight'}
-          aria-label="Set theme to Context Light"
+          aria-label={t('settings:interface.theme.lightAria')}
         >
           <Sun className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="text-center">Context Light</span>
+          <span className="text-center">{t('settings:interface.theme.light')}</span>
         </button>
         <button
           type="button"
           onClick={() => handleSetTheme('emdark')}
           className={`${buttonBase} ${theme === 'emdark' ? activeClass : inactiveClass}`}
           aria-pressed={theme === 'emdark'}
-          aria-label="Set theme to Context Dark"
+          aria-label={t('settings:interface.theme.darkAria')}
         >
           <Moon className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="text-center">Context Dark</span>
+          <span className="text-center">{t('settings:interface.theme.dark')}</span>
         </button>
       </div>
     </div>

@@ -1,0 +1,199 @@
+{
+  "settings": {
+    "tabs": {
+      "general": "通用",
+      "account": "账户",
+      "agents": "智能体",
+      "integrations": "集成",
+      "repository": "仓库",
+      "interface": "界面",
+      "docs": "文档"
+    },
+    "general": {
+      "title": "通用",
+      "description": "管理你的账户、隐私设置、通知和应用更新。",
+      "language": {
+        "label": "语言",
+        "description": "选择应用的显示语言。"
+      },
+      "telemetry": {
+        "title": "隐私与遥测",
+        "description": "通过发送匿名使用数据来帮助改进 {{productName}}。",
+        "linkText": "遥测信息",
+        "forDetails": "了解详情。",
+        "ariaLabel": "启用匿名遥测",
+        "inactive": "在此构建中未激活（缺少 PostHog 密钥）"
+      },
+      "taskSettings": {
+        "autoGenerateName": {
+          "title": "自动生成任务名称",
+          "description": "创建新任务时自动建议任务名称。",
+          "defaultLabel": "开启"
+        },
+        "autoTrustWorktrees": {
+          "title": "自动信任 worktree 目录",
+          "description": "在 Claude Code 中为新任务跳过文件夹信任提示。",
+          "infoLabel": "关于自动信任 worktree 的更多信息",
+          "infoContent": "仅适用于 Claude Code。在启动前将信任条目写入 ~/.claude.json。",
+          "defaultLabel": "开启"
+        }
+      },
+      "notifications": {
+        "title": "通知",
+        "description": "当智能体需要你注意时收到通知。",
+        "sound": {
+          "title": "声音",
+          "description": "为智能体事件播放音频提示。",
+          "defaultLabel": "开启"
+        },
+        "soundTiming": {
+          "title": "声音时机",
+          "description": "何时播放声音。",
+          "defaultLabel": "总是",
+          "always": "总是",
+          "unfocused": "仅在未聚焦时"
+        },
+        "osNotifications": {
+          "title": "系统通知",
+          "description": "当智能体需要注意或完成任务时显示系统横幅（当 Context 未聚焦时）。",
+          "defaultLabel": "开启"
+        }
+      },
+      "update": {
+        "version": "版本",
+        "checking": "正在检查更新...",
+        "available": "版本 {{version}} 已可用",
+        "availableGeneric": "有可用更新",
+        "downloading": "正在下载更新",
+        "downloadProgress": "正在下载更新 ({{label}})",
+        "downloaded": "更新已就绪。重启 {{productName}} 以使用新版本。",
+        "installing": "正在安装更新。{{productName}} 将关闭并自动重启——这可能需要几秒钟。",
+        "error": "更新暂时不可用——请稍后再试",
+        "upToDate": "你已是最新版本。",
+        "checkAriaLabel": "检查更新",
+        "download": "下载",
+        "downloadingBtn": "下载中",
+        "restart": "重启",
+        "installingBtn": "安装中"
+      }
+    },
+    "agents": {
+      "title": "智能体",
+      "description": "管理 CLI 智能体和模型配置。",
+      "reviewPrompt": "审查提示",
+      "cliAgents": "CLI 智能体"
+    },
+    "integrations": {
+      "title": "集成",
+      "description": "连接外部服务和工具。"
+    },
+    "repository": {
+      "title": "仓库",
+      "description": "配置仓库和分支设置。",
+      "branchPrefix": "分支前缀"
+    },
+    "interface": {
+      "title": "界面",
+      "description": "自定义应用的外观和行为。",
+      "theme": {
+        "title": "颜色模式",
+        "description": "选择 Context 的显示主题。",
+        "system": "跟随系统",
+        "light": "Context 浅色",
+        "dark": "Context 深色",
+        "systemAria": "将主题设置为跟随系统",
+        "lightAria": "将主题设置为 Context 浅色",
+        "darkAria": "将主题设置为 Context 深色"
+      },
+      "keyboardShortcuts": "键盘快捷键",
+      "tools": "工具"
+    },
+    "account": {
+      "title": "账户",
+      "description": "管理你的 Context 账户。",
+      "signInFailed": "登录失败",
+      "signedIn": "已登录 Context",
+      "sessionExpired": "会话已过期",
+      "signOut": "退出登录",
+      "signIn": "登录",
+      "creatingAccount": "正在创建账户...",
+      "createAccount": "创建账户",
+      "contextAccount": "Context 账户"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "signIn": "登录",
+      "import": "导入"
+    },
+    "signIn": {
+      "loading": "加载中...",
+      "connectedAs": "已连接为 @{{username}}",
+      "connectGithub": "将你的 GitHub 账户连接到 Context",
+      "connectGithubSubtitle": "这将允许你在 Context 中使用你的 GitHub 仓库",
+      "signInGithub": "使用 GitHub 登录",
+      "signingIn": "登录中...",
+      "continue": "继续",
+      "skip": "跳过"
+    },
+    "importData": {
+      "title": "导入你的 Context v0 数据",
+      "scanning": "正在扫描旧版数据库...",
+      "foundProjects_one": "找到 {{count}} 个项目",
+      "foundProjects_other": "找到 {{count}} 个项目",
+      "foundTasks_one": "{{count}} 个任务",
+      "foundTasks_other": "{{count}} 个任务",
+      "fromPrevious": "来自你之前的 Context 安装",
+      "importData": "导入数据",
+      "importing": "导入中...",
+      "skip": "跳过",
+      "importFailed": "导入失败"
+    }
+  },
+  "home": {
+    "welcome": "欢迎。",
+    "startShipping": "开始构建",
+    "tagline": "智能体开发环境",
+    "openProject": "打开项目",
+    "createNewProject": "创建新项目",
+    "cloneFromGithub": "从 GitHub 克隆",
+    "addRemoteProject": "添加远程项目"
+  },
+  "sidebar": {
+    "workspaces": "工作区",
+    "createWorkspace": "创建工作区",
+    "addProject": "添加项目",
+    "skills": "技能",
+    "mcp": "MCP",
+    "settings": "设置",
+    "giveFeedback": "提供反馈"
+  },
+  "titlebar": {
+    "toggleLeftSidebar": "切换左侧边栏",
+    "toggleRightSidebar": "切换右侧边栏"
+  },
+  "addProject": {
+    "title": "添加项目",
+    "pick": "选择",
+    "new": "新建",
+    "clone": "克隆",
+    "local": "本地",
+    "ssh": "SSH",
+    "sshConnection": "SSH 连接",
+    "create": "创建",
+    "noProjectsInWorkspace": "此工作区中没有项目。请先添加项目。"
+  },
+  "createTask": {
+    "title": "在工作区中创建任务",
+    "selectProjectsBranches": "选择项目和分支",
+    "taskName": "任务名称",
+    "taskNamePlaceholder": "输入任务名称",
+    "taskBranch": "任务分支",
+    "taskBranchPlaceholder": "从名称自动生成",
+    "finalBranch": "最终分支：",
+    "allProjectsUseBranch": "所有项目将使用此分支名称。",
+    "pushBranch": "推送分支到远程",
+    "creating": "创建中...",
+    "create": "创建"
+  }
+}

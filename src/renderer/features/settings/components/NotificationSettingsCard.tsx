@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import {
   Select,
@@ -13,6 +14,7 @@ import { ResetToDefaultButton } from './ResetToDefaultButton';
 import { SettingRow } from './SettingRow';
 
 const NotificationSettingsCard: React.FC = () => {
+  const { t } = useTranslation();
   const {
     value: notifications,
     update,
@@ -24,8 +26,8 @@ const NotificationSettingsCard: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <SettingRow
-        title="Notifications"
-        description="Get notified when agents need your attention."
+        title={t('settings:general.notifications.title')}
+        description={t('settings:general.notifications.description')}
         control={
           <>
             <ResetToDefaultButton
@@ -49,13 +51,13 @@ const NotificationSettingsCard: React.FC = () => {
         )}
       >
         <SettingRow
-          title="Sound"
-          description="Play audio cues for agent events."
+          title={t('settings:general.notifications.sound.title')}
+          description={t('settings:general.notifications.sound.description')}
           control={
             <>
               <ResetToDefaultButton
                 visible={isFieldOverridden('sound')}
-                defaultLabel="on"
+                defaultLabel={t('settings:general.notifications.sound.defaultLabel')}
                 onReset={() => resetField('sound')}
                 disabled={loading}
               />
@@ -69,13 +71,13 @@ const NotificationSettingsCard: React.FC = () => {
         />
 
         <SettingRow
-          title="Sound timing"
-          description="When to play sounds."
+          title={t('settings:general.notifications.soundTiming.title')}
+          description={t('settings:general.notifications.soundTiming.description')}
           control={
             <>
               <ResetToDefaultButton
                 visible={isFieldOverridden('soundFocusMode')}
-                defaultLabel="always"
+                defaultLabel={t('settings:general.notifications.soundTiming.defaultLabel')}
                 onReset={() => resetField('soundFocusMode')}
                 disabled={loading}
               />
@@ -87,8 +89,12 @@ const NotificationSettingsCard: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="min-w-max">
-                  <SelectItem value="always">Always</SelectItem>
-                  <SelectItem value="unfocused">Only when unfocused</SelectItem>
+                  <SelectItem value="always">
+                    {t('settings:general.notifications.soundTiming.always')}
+                  </SelectItem>
+                  <SelectItem value="unfocused">
+                    {t('settings:general.notifications.soundTiming.unfocused')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </>
@@ -96,13 +102,13 @@ const NotificationSettingsCard: React.FC = () => {
         />
 
         <SettingRow
-          title="OS notifications"
-          description="Show system banners when agents need attention or finish (while Context is unfocused)."
+          title={t('settings:general.notifications.osNotifications.title')}
+          description={t('settings:general.notifications.osNotifications.description')}
           control={
             <>
               <ResetToDefaultButton
                 visible={isFieldOverridden('osNotifications')}
-                defaultLabel="on"
+                defaultLabel={t('settings:general.notifications.osNotifications.defaultLabel')}
                 onReset={() => resetField('osNotifications')}
                 disabled={loading}
               />

@@ -1,4 +1,5 @@
 import { FolderOpen, Github, Plus, Server, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import emdashLogoWhite from '@/assets/images/emdash/emdash_logo_white.svg';
 import emdashLogo from '@/assets/images/emdash/emdash_logo.svg';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
@@ -7,22 +8,22 @@ import { useShowModal } from '@renderer/lib/modal/modal-provider';
 
 const PROJECT_ACTIONS = [
   {
-    label: 'Open project',
+    labelKey: 'home:openProject',
     icon: FolderOpen,
     modalArgs: { strategy: 'local', mode: 'pick' },
   },
   {
-    label: 'Create New Project',
+    labelKey: 'home:createNewProject',
     icon: Plus,
     modalArgs: { strategy: 'local', mode: 'new' },
   },
   {
-    label: 'Clone from GitHub',
+    labelKey: 'home:cloneFromGithub',
     icon: Github,
     modalArgs: { strategy: 'local', mode: 'clone' },
   },
   {
-    label: 'Add Remote Project',
+    labelKey: 'home:addRemoteProject',
     icon: Server,
     modalArgs: { strategy: 'ssh', mode: 'pick' },
   },
@@ -33,6 +34,7 @@ export function HomeTitlebar() {
 }
 
 export function HomeMainPanel() {
+  const { t } = useTranslation();
   const { effectiveTheme } = useTheme();
   const showAddProjectModal = useShowModal('addProjectModal');
 
@@ -64,15 +66,13 @@ export function HomeMainPanel() {
               />
             </div>
           </div>
-          <p className="whitespace-nowrap text-xs text-muted-foreground">
-            Agentic Development Environment
-          </p>
+          <p className="whitespace-nowrap text-xs text-muted-foreground">{t('home:tagline')}</p>
         </div>
         <div className="mx-auto mt-4 grid w-full max-w-[600px] grid-cols-2 gap-2 sm:grid-cols-[repeat(4,minmax(132px,1fr))]">
           {PROJECT_ACTIONS.map((action) => (
             <HomeProjectAction
-              key={action.label}
-              label={action.label}
+              key={action.labelKey}
+              label={t(action.labelKey)}
               icon={action.icon}
               onClick={() => showAddProjectModal(action.modalArgs)}
             />

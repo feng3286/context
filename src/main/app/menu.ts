@@ -8,6 +8,7 @@ import {
 } from '@shared/events/appEvents';
 import { EMDASH_DOCS_URL, EMDASH_RELEASES_URL } from '@shared/urls';
 import { events } from '@main/lib/events';
+import { getMenuT as t } from '@main/lib/i18n/menu';
 
 export function setupApplicationMenu(): void {
   const isMac = process.platform === 'darwin';
@@ -20,17 +21,17 @@ export function setupApplicationMenu(): void {
             label: app.name,
             submenu: [
               {
-                label: `About ${app.name}`,
+                label: t('app', { name: app.name }),
                 click: () => app.showAboutPanel(),
               },
               { type: 'separator' as const },
               {
-                label: 'Settings\u2026',
+                label: t('settings'),
                 accelerator: 'CmdOrCtrl+,',
                 click: () => events.emit(menuOpenSettingsChannel, undefined),
               },
               {
-                label: 'Check for Updates\u2026',
+                label: t('checkForUpdates'),
                 click: () => events.emit(menuCheckForUpdatesChannel, undefined),
               },
               { type: 'separator' as const },
@@ -41,7 +42,7 @@ export function setupApplicationMenu(): void {
               { role: 'unhide' as const },
               { type: 'separator' as const },
               {
-                label: `Quit ${app.name}`,
+                label: t('quit', { name: app.name }),
                 accelerator: 'CmdOrCtrl+Q',
                 click: () => app.quit(),
               },
@@ -51,13 +52,13 @@ export function setupApplicationMenu(): void {
       : []),
     // File menu
     {
-      label: 'File',
+      label: t('file'),
       submenu: [
         // On non-macOS, put Settings in File menu
         ...(!isMac
           ? [
               {
-                label: 'Settings\u2026',
+                label: t('settings'),
                 accelerator: 'CmdOrCtrl+,',
                 click: () => events.emit(menuOpenSettingsChannel, undefined),
               },
@@ -66,7 +67,7 @@ export function setupApplicationMenu(): void {
           : []),
         isMac
           ? {
-              label: 'Close Tab',
+              label: t('closeTab'),
               accelerator: 'CmdOrCtrl+W',
               click: () => events.emit(menuCloseTabChannel, undefined),
             }
@@ -75,15 +76,15 @@ export function setupApplicationMenu(): void {
     },
     // Edit menu
     {
-      label: 'Edit',
+      label: t('edit'),
       submenu: [
         {
-          label: 'Undo',
+          label: t('undo'),
           accelerator: 'CmdOrCtrl+Z',
           click: () => events.emit(menuUndoChannel, undefined),
         },
         {
-          label: 'Redo',
+          label: t('redo'),
           accelerator: isMac ? 'Shift+CmdOrCtrl+Z' : 'CmdOrCtrl+Y',
           click: () => events.emit(menuRedoChannel, undefined),
         },
@@ -98,7 +99,7 @@ export function setupApplicationMenu(): void {
     },
     // View menu
     {
-      label: 'View',
+      label: t('view'),
       submenu: [
         { role: 'reload' as const },
         { role: 'forceReload' as const },
@@ -112,24 +113,39 @@ export function setupApplicationMenu(): void {
       ],
     },
     // Window menu
-    { role: 'windowMenu' as const },
+    {
+      role: 'windowMenu' as const,
+      label: t('window'),
+      submenu: [
+        { role: 'minimize' as const, label: t('minimize') },
+        { role: 'zoom' as const, label: t('zoom') },
+        ...(isMac
+          ? [
+              { type: 'separator' as const },
+              { role: 'front' as const, label: t('bringAllToFront') },
+              { type: 'separator' as const },
+              { role: 'close' as const },
+            ]
+          : []),
+      ],
+    },
     // Help menu
     {
-      label: 'Help',
+      label: t('help'),
       submenu: [
         {
-          label: 'Docs',
+          label: t('docs'),
           click: () => shell.openExternal(EMDASH_DOCS_URL),
         },
         {
-          label: 'Changelog',
+          label: t('changelog'),
           click: () => shell.openExternal(EMDASH_RELEASES_URL),
         },
         ...(!isMac
           ? [
               { type: 'separator' as const },
               {
-                label: 'Check for Updates\u2026',
+                label: t('checkForUpdates'),
                 click: () => events.emit(menuCheckForUpdatesChannel, undefined),
               },
             ]

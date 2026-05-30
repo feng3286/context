@@ -1,31 +1,33 @@
 import { CheckCircle, Github, LogIn, User } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAccountSession, useAccountSignIn } from '@renderer/lib/hooks/useAccount';
 import { Button } from '@renderer/lib/ui/button';
 
 export function SignInStep({ onComplete }: { onComplete: () => void }) {
-  const { data: session, isLoading: sessionLoading } = useAccountSession();
+  const { t } = useTranslation();
   const signInMutation = useAccountSignIn();
   const [error, setError] = useState<string | null>(null);
+  const { data: session, isLoading: sessionLoading } = useAccountSession();
 
   const handleSignIn = async () => {
     setError(null);
     try {
       const result = await signInMutation.mutateAsync(undefined);
       if (!result.success) {
-        setError(result.error || 'Sign in failed');
+        setError(result.error || t('onboarding:signIn.loading'));
         return;
       }
       onComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed');
+      setError(err instanceof Error ? err.message : t('onboarding:signIn.loading'));
     }
   };
 
   if (sessionLoading) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-foreground-muted">
-        Loading...
+        {t('onboarding:signIn.loading')}
       </div>
     );
   }
@@ -50,14 +52,16 @@ export function SignInStep({ onComplete }: { onComplete: () => void }) {
             <CheckCircle className="absolute -bottom-1 -right-1 h-5 w-5 text-primary fill-background" />
           </div>
           <div className="flex flex-col items-center justify-center gap-1">
-            <h1 className="text-xl text-center">Connected as @{user.username}</h1>
+            <h1 className="text-xl text-center">
+              {t('onboarding:signIn.connectedAs', { username: user.username })}
+            </h1>
             {user.email && (
               <p className="text-sm text-foreground-muted text-center">{user.email}</p>
             )}
           </div>
         </div>
         <Button size={'lg'} onClick={onComplete}>
-          Continue
+          {t('onboarding:signIn.continue')}
         </Button>
       </div>
     );
@@ -68,9 +72,9 @@ export function SignInStep({ onComplete }: { onComplete: () => void }) {
       <div className="flex flex-col items-center justify-center gap-6">
         <Github className="h-10 w-10" absoluteStrokeWidth strokeWidth={1.5} />
         <div className="flex flex-col items-center justify-center gap-2">
-          <h1 className="text-xl text-center">Connect your GitHub account to Context</h1>
+          <h1 className="text-xl text-center">{t('onboarding:signIn.connectGithub')}</h1>
           <p className="text-md text-foreground-muted text-center">
-            This will allow you to work with your GitHub repositories in Context
+            {t('onboarding:signIn.connectGithubSubtitle')}
           </p>
         </div>
       </div>
@@ -78,10 +82,12 @@ export function SignInStep({ onComplete }: { onComplete: () => void }) {
       <div className="flex flex-col w-full gap-2">
         <Button size={'lg'} onClick={handleSignIn} disabled={signInMutation.isPending}>
           <LogIn className="h-4 w-4" />
-          {signInMutation.isPending ? 'Signing in...' : 'Sign in with GitHub'}
+          {signInMutation.isPending
+            ? t('onboarding:signIn.signingIn')
+            : t('onboarding:signIn.signInGithub')}
         </Button>
         <Button variant="ghost" onClick={onComplete} disabled={signInMutation.isPending}>
-          Skip
+          {t('onboarding:signIn.skip')}
         </Button>
       </div>
     </div>

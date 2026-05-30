@@ -19,6 +19,7 @@ import { prSyncScheduler } from './core/pull-requests/pr-sync-scheduler';
 import { appSettingsService } from './core/settings/settings-service';
 import { updateService } from './core/updates/update-service';
 import { initializeDatabase } from './db/initialize';
+import { loadMenuLanguage } from './lib/i18n/menu';
 import { log } from './lib/logger';
 import * as telemetry from './lib/telemetry';
 import { rpcRouter } from './rpc';
@@ -120,6 +121,7 @@ app.whenReady().then(async () => {
   });
 
   setupAppProtocol(join(app.getAppPath(), 'out', 'renderer'));
+  await loadMenuLanguage();
   setupApplicationMenu();
   createMainWindow();
 

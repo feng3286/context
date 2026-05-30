@@ -13,9 +13,13 @@ import { modelRegistry } from '@renderer/lib/monaco/monaco-model-registry';
 import { wirePrCacheInvalidation } from '@renderer/lib/pr-cache-invalidation';
 import { log } from '@renderer/utils/logger';
 import { initSoundPlayer } from '@renderer/utils/soundPlayer';
+import { initI18n } from './i18n/config';
 import { appState } from './lib/stores/app-state';
 
 async function bootstrap() {
+  // Initialize i18n before rendering
+  await initI18n('zh');
+
   // Wire invalidation bridges so FS and git events flow into the model registry.
   wireModelRegistryInvalidation(modelRegistry);
   wirePrCacheInvalidation();

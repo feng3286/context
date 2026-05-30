@@ -1,5 +1,6 @@
 import { Import } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLegacyPortImport, useLegacyPortPreview } from '@renderer/lib/hooks/useLegacyPort';
 import { Button } from '@renderer/lib/ui/button';
 
@@ -7,6 +8,7 @@ const PROGRESS_DURATION_MS = 4000;
 const COMPLETE_DELAY_MS = 1000;
 
 export function ImportStep({ onComplete }: { onComplete: () => void }) {
+  const { t } = useTranslation();
   const { data: preview, isLoading: previewLoading } = useLegacyPortPreview(true);
   const importMutation = useLegacyPortImport();
 
@@ -76,7 +78,7 @@ export function ImportStep({ onComplete }: { onComplete: () => void }) {
           cancelAnimationFrame(animationRef.current);
           animationRef.current = null;
         }
-        setImportError(result.error ?? 'Import failed');
+        setImportError(result.error ?? t('onboarding:importData.importFailed'));
         setIsImporting(false);
         setProgress(0);
         return;
@@ -88,7 +90,7 @@ export function ImportStep({ onComplete }: { onComplete: () => void }) {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
-      setImportError(err instanceof Error ? err.message : 'Import failed');
+      setImportError(err instanceof Error ? err.message : t('onboarding:importData.importFailed'));
       setIsImporting(false);
       setProgress(0);
     }
@@ -103,17 +105,16 @@ export function ImportStep({ onComplete }: { onComplete: () => void }) {
         <div className="flex flex-col items-center justify-center gap-6">
           <Import className="h-10 w-10" absoluteStrokeWidth strokeWidth={1.5} />
           <div className="flex flex-col items-center justify-center gap-2">
-            <h1 className="text-xl text-center">Import your Context v0 data</h1>
+            <h1 className="text-xl text-center">{t('onboarding:importData.title')}</h1>
             {previewLoading ? (
               <p className="text-md text-foreground-muted text-center">
-                Scanning legacy database...
+                {t('onboarding:importData.scanning')}
               </p>
             ) : (
               <p className="text-md text-foreground-muted text-center">
-                Found <span className="text-foreground font-medium">{projectCount}</span>{' '}
-                {projectCount === 1 ? 'project' : 'projects'} and{' '}
-                <span className="text-foreground font-medium">{taskCount}</span>{' '}
-                {taskCount === 1 ? 'task' : 'tasks'} from your previous Context installation
+                {t('onboarding:importData.foundProjects', { count: projectCount })}{' '}
+                {t('onboarding:importData.foundTasks', { count: taskCount })}{' '}
+                {t('onboarding:importData.fromPrevious')}
               </p>
             )}
           </div>
@@ -133,10 +134,12 @@ export function ImportStep({ onComplete }: { onComplete: () => void }) {
 
       <div className="flex flex-col w-full gap-2">
         <Button size={'lg'} onClick={handleImport} disabled={isImporting || previewLoading}>
-          {isImporting ? 'Importing...' : 'Import data'}
+          {isImporting
+            ? t('onboarding:importData.importing')
+            : t('onboarding:importData.importData')}
         </Button>
         <Button variant="ghost" onClick={onComplete} disabled={isImporting}>
-          Skip
+          {t('onboarding:importData.skip')}
         </Button>
       </div>
     </div>

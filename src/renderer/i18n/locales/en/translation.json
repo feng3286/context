@@ -1,0 +1,199 @@
+{
+  "settings": {
+    "tabs": {
+      "general": "General",
+      "account": "Account",
+      "agents": "Agents",
+      "integrations": "Integrations",
+      "repository": "Repository",
+      "interface": "Interface",
+      "docs": "Docs"
+    },
+    "general": {
+      "title": "General",
+      "description": "Manage your account, privacy settings, notifications, and app updates.",
+      "language": {
+        "label": "Language",
+        "description": "Choose the display language for the app."
+      },
+      "telemetry": {
+        "title": "Privacy & Telemetry",
+        "description": "Help improve {{productName}} by sending anonymous usage data.",
+        "linkText": "Telemetry information",
+        "forDetails": "for details.",
+        "ariaLabel": "Enable anonymous telemetry",
+        "inactive": "Inactive in this build (no PostHog keys)"
+      },
+      "taskSettings": {
+        "autoGenerateName": {
+          "title": "Auto-generate task names",
+          "description": "Automatically suggests a task name when creating a new task.",
+          "defaultLabel": "on"
+        },
+        "autoTrustWorktrees": {
+          "title": "Auto-trust worktree directories",
+          "description": "Skip the folder trust prompt in Claude Code for new tasks.",
+          "infoLabel": "More info about auto-trust worktrees",
+          "infoContent": "Only applies to Claude Code. Writes trust entries to ~/.claude.json before launching.",
+          "defaultLabel": "on"
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Get notified when agents need your attention.",
+        "sound": {
+          "title": "Sound",
+          "description": "Play audio cues for agent events.",
+          "defaultLabel": "on"
+        },
+        "soundTiming": {
+          "title": "Sound timing",
+          "description": "When to play sounds.",
+          "defaultLabel": "always",
+          "always": "Always",
+          "unfocused": "Only when unfocused"
+        },
+        "osNotifications": {
+          "title": "OS notifications",
+          "description": "Show system banners when agents need attention or finish (while Context is unfocused).",
+          "defaultLabel": "on"
+        }
+      },
+      "update": {
+        "version": "Version",
+        "checking": "Checking for updates...",
+        "available": "Version {{version}} is available",
+        "availableGeneric": "An update is available",
+        "downloading": "Downloading update",
+        "downloadProgress": "Downloading update ({{label}})",
+        "downloaded": "Update ready. Restart {{productName}} to use the new version.",
+        "installing": "Installing update. {{productName}} will close and restart automatically — this may take a few seconds.",
+        "error": "Update temporarily unavailable — please try again later",
+        "upToDate": "You're up to date.",
+        "checkAriaLabel": "Check for updates",
+        "download": "Download",
+        "downloadingBtn": "Downloading",
+        "restart": "Restart",
+        "installingBtn": "Installing"
+      }
+    },
+    "agents": {
+      "title": "Agents",
+      "description": "Manage CLI agents and model configurations.",
+      "reviewPrompt": "Review Prompt",
+      "cliAgents": "CLI agents"
+    },
+    "integrations": {
+      "title": "Integrations",
+      "description": "Connect external services and tools."
+    },
+    "repository": {
+      "title": "Repository",
+      "description": "Configure repository and branch settings.",
+      "branchPrefix": "Branch prefix"
+    },
+    "interface": {
+      "title": "Interface",
+      "description": "Customize the appearance and behavior of the app.",
+      "theme": {
+        "title": "Color mode",
+        "description": "Choose how Context looks.",
+        "system": "System",
+        "light": "Context Light",
+        "dark": "Context Dark",
+        "systemAria": "Set theme to system preference",
+        "lightAria": "Set theme to Context Light",
+        "darkAria": "Set theme to Context Dark"
+      },
+      "keyboardShortcuts": "Keyboard shortcuts",
+      "tools": "Tools"
+    },
+    "account": {
+      "title": "Account",
+      "description": "Manage your Context account.",
+      "signInFailed": "Sign in failed",
+      "signedIn": "Signed in to Context",
+      "sessionExpired": "Session expired",
+      "signOut": "Sign Out",
+      "signIn": "Sign In",
+      "creatingAccount": "Creating account...",
+      "createAccount": "Create Account",
+      "contextAccount": "Context Account"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "signIn": "Sign in",
+      "import": "Import"
+    },
+    "signIn": {
+      "loading": "Loading...",
+      "connectedAs": "Connected as @{{username}}",
+      "connectGithub": "Connect your GitHub account to Context",
+      "connectGithubSubtitle": "This will allow you to work with your GitHub repositories in Context",
+      "signInGithub": "Sign in with GitHub",
+      "signingIn": "Signing in...",
+      "continue": "Continue",
+      "skip": "Skip"
+    },
+    "importData": {
+      "title": "Import your Context v0 data",
+      "scanning": "Scanning legacy database...",
+      "foundProjects_one": "Found {{count}} project",
+      "foundProjects_other": "Found {{count}} projects",
+      "foundTasks_one": "{{count}} task",
+      "foundTasks_other": "{{count}} tasks",
+      "fromPrevious": "from your previous Context installation",
+      "importData": "Import data",
+      "importing": "Importing...",
+      "skip": "Skip",
+      "importFailed": "Import failed"
+    }
+  },
+  "home": {
+    "welcome": "Welcome.",
+    "startShipping": "Start shipping",
+    "tagline": "Agentic Development Environment",
+    "openProject": "Open project",
+    "createNewProject": "Create New Project",
+    "cloneFromGithub": "Clone from GitHub",
+    "addRemoteProject": "Add Remote Project"
+  },
+  "sidebar": {
+    "workspaces": "Workspaces",
+    "createWorkspace": "Create Workspace",
+    "addProject": "Add Project",
+    "skills": "Skills",
+    "mcp": "MCP",
+    "settings": "Settings",
+    "giveFeedback": "Give feedback"
+  },
+  "titlebar": {
+    "toggleLeftSidebar": "Toggle left sidebar",
+    "toggleRightSidebar": "Toggle right sidebar"
+  },
+  "addProject": {
+    "title": "Add Project",
+    "pick": "Pick",
+    "new": "New",
+    "clone": "Clone",
+    "local": "Local",
+    "ssh": "SSH",
+    "sshConnection": "SSH Connection",
+    "create": "Create",
+    "noProjectsInWorkspace": "No projects in this workspace. Add projects first."
+  },
+  "createTask": {
+    "title": "Create Task in Workspace",
+    "selectProjectsBranches": "Select Projects & Branches",
+    "taskName": "Task Name",
+    "taskNamePlaceholder": "Enter task name",
+    "taskBranch": "Task Branch",
+    "taskBranchPlaceholder": "Auto-generated from name",
+    "finalBranch": "Final branch:",
+    "allProjectsUseBranch": "All projects will use this branch name.",
+    "pushBranch": "Push branch to remote",
+    "creating": "Creating...",
+    "create": "Create"
+  }
+}

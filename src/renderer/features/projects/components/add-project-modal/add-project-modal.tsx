@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Home, Server } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SshConnectionSelector } from '@renderer/features/projects/components/add-project-modal/ssh-connection-selector';
 import { getProjectManagerStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
@@ -75,6 +76,7 @@ export const AddProjectModal = observer(function AddProjectModal({
     strategy === 'ssh' ? (connectionId ?? availableConnectionIds[0]) : connectionId;
 
   const { navigate } = useNavigate();
+  const { t } = useTranslation();
   const { isInitialized, needsGhAuth } = useGithubContext();
 
   const showSshConnModal = useShowModal('addSshConnModal');
@@ -253,13 +255,13 @@ export const AddProjectModal = observer(function AddProjectModal({
     <ModalLayout
       header={
         <DialogHeader>
-          <DialogTitle>Add Project</DialogTitle>
+          <DialogTitle>{t('addProject:title')}</DialogTitle>
         </DialogHeader>
       }
       footer={
         <DialogFooter>
           <ConfirmButton type="button" onClick={() => void handleSubmit()} disabled={!canCreate}>
-            Create
+            {t('addProject:create')}
           </ConfirmButton>
         </DialogFooter>
       }
@@ -274,13 +276,13 @@ export const AddProjectModal = observer(function AddProjectModal({
             }}
           >
             <ToggleGroupItem value="pick" className="flex-1">
-              Pick
+              {t('addProject:pick')}
             </ToggleGroupItem>
             <ToggleGroupItem value="new" className="flex-1">
-              New
+              {t('addProject:new')}
             </ToggleGroupItem>
             <ToggleGroupItem value="clone" className="flex-1">
-              Clone
+              {t('addProject:clone')}
             </ToggleGroupItem>
           </ToggleGroup>
           <ToggleGroup
@@ -292,25 +294,33 @@ export const AddProjectModal = observer(function AddProjectModal({
           >
             <Tooltip>
               <TooltipTrigger>
-                <ToggleGroupItem value="local" aria-label="Local" className="rounded-l-md">
+                <ToggleGroupItem
+                  value="local"
+                  aria-label={t('addProject:local')}
+                  className="rounded-l-md"
+                >
                   <Home className="size-3.5" />
                 </ToggleGroupItem>
               </TooltipTrigger>
-              <TooltipContent>Local</TooltipContent>
+              <TooltipContent>{t('addProject:local')}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger>
-                <ToggleGroupItem value="ssh" aria-label="SSH" className="rounded-r-md">
+                <ToggleGroupItem
+                  value="ssh"
+                  aria-label={t('addProject:ssh')}
+                  className="rounded-r-md"
+                >
                   <Server className="size-3.5" />
                 </ToggleGroupItem>
               </TooltipTrigger>
-              <TooltipContent>SSH</TooltipContent>
+              <TooltipContent>{t('addProject:ssh')}</TooltipContent>
             </Tooltip>
           </ToggleGroup>
         </div>
         {strategy === 'ssh' && !showGithubAuthDisclaimer && (
           <Field>
-            <FieldLabel>SSH Connection</FieldLabel>
+            <FieldLabel>{t('addProject:sshConnection')}</FieldLabel>
             <SshConnectionSelector
               connectionId={selectedConnectionId}
               onConnectionIdChange={setConnectionId}

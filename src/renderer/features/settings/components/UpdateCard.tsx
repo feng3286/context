@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, Download, Loader2, RefreshCw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { PRODUCT_NAME } from '@shared/app-identity';
 import { appState } from '@renderer/lib/stores/app-state';
 import { Badge } from '@renderer/lib/ui/badge';
@@ -9,6 +10,7 @@ import { formatBytes } from '@renderer/utils/formatBytes';
 import { SettingRow } from './SettingRow';
 
 export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
+  const { t } = useTranslation();
   const update = appState.update;
   const downloadProgress =
     update.state.status === 'downloading' ? update.state.progress : undefined;
@@ -18,7 +20,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
 
   const versionTitle = (
     <div className="flex items-center gap-2">
-      Version
+      {t('settings:general.update.version')}
       {update.currentVersion && (
         <Badge variant="outline" className="h-5 px-2 font-mono text-xs">
           v{update.currentVersion}
@@ -42,7 +44,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
                 className="h-8 w-8"
                 onClick={() => update.check()}
                 disabled={update.state.status === 'checking'}
-                aria-label="Check for updates"
+                aria-label={t('settings:general.update.checkAriaLabel')}
               >
                 <RefreshCw
                   className={`h-3 w-3 ${update.state.status === 'checking' ? 'animate-spin' : ''}`}
@@ -79,7 +81,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
         return (
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Checking for updates...
+            {t('settings:general.update.checking')}
           </p>
         );
 
@@ -87,16 +89,22 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
         if (update.state.info?.version) {
           return (
             <p className="text-sm text-muted-foreground">
-              Version {update.state.info.version} is available
+              {t('settings:general.update.available', { version: update.state.info.version })}
             </p>
           );
         }
-        return <p className="text-sm text-muted-foreground">An update is available</p>;
+        return (
+          <p className="text-sm text-muted-foreground">
+            {t('settings:general.update.availableGeneric')}
+          </p>
+        );
 
       case 'downloading':
         return (
           <p className="text-sm text-muted-foreground">
-            Downloading update{update.progressLabel ? ` (${update.progressLabel})` : '...'}
+            {update.progressLabel
+              ? t('settings:general.update.downloadProgress', { label: update.progressLabel })
+              : t('settings:general.update.downloading')}
           </p>
         );
 
@@ -104,7 +112,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
         return (
           <p className="flex items-center gap-1 text-sm text-green-600 dark:text-green-500">
             <CheckCircle2 className="h-3 w-3" />
-            Update ready. Restart {PRODUCT_NAME} to use the new version.
+            {t('settings:general.update.downloaded', { productName: PRODUCT_NAME })}
           </p>
         );
 
@@ -112,8 +120,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
         return (
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Installing update. {PRODUCT_NAME} will close and restart automatically — this may take a
-            few seconds.
+            {t('settings:general.update.installing', { productName: PRODUCT_NAME })}
           </p>
         );
 
@@ -124,7 +131,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
             className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
           >
             <AlertCircle className="h-3 w-3" />
-            Update temporarily unavailable — please try again later
+            {t('settings:general.update.error')}
           </Badge>
         );
 
@@ -132,7 +139,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
         return (
           <p className="flex items-center gap-1 text-sm text-muted-foreground">
             <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-500" />
-            You're up to date.{' '}
+            {t('settings:general.update.upToDate')}
           </p>
         );
     }
@@ -149,7 +156,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
             className="h-7 text-xs"
           >
             <Download className="mr-1.5 h-3 w-3" />
-            Download
+            {t('settings:general.update.download')}
           </Button>
         );
 
@@ -157,7 +164,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
         return (
           <Button size="sm" variant="outline" disabled className="h-7 text-xs">
             <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-            Downloading
+            {t('settings:general.update.downloadingBtn')}
           </Button>
         );
 
@@ -170,7 +177,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
             className="h-7 text-xs"
           >
             <RefreshCw className="mr-1.5 h-3 w-3" />
-            Restart
+            {t('settings:general.update.restart')}
           </Button>
         );
 
@@ -178,7 +185,7 @@ export const UpdateCard = observer(function UpdateCard(): React.JSX.Element {
         return (
           <Button size="sm" variant="outline" disabled className="h-7 text-xs">
             <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-            Installing
+            {t('settings:general.update.installingBtn')}
           </Button>
         );
 

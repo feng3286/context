@@ -13,6 +13,7 @@ import { RenameTaskModal } from '@renderer/features/tasks/rename-task-modal';
 import { CreateWorkspaceModal } from '@renderer/features/workspaces/components/create-workspace-modal';
 import { SelectProjectModal } from '@renderer/features/workspaces/components/select-project-modal';
 import { AddSshConnModal } from '@renderer/lib/components/add-ssh-conn-modal';
+import { AlertWarningDialog } from '@renderer/lib/components/alert-warning-dialog';
 import { ChangeProjectConnectionModal } from '@renderer/lib/components/change-project-connection-modal';
 import { ConfirmActionDialog } from '@renderer/lib/components/confirm-action-dialog';
 import { FeedbackModal } from '@renderer/lib/components/feedback-modal/feedback-modal';
@@ -41,6 +42,7 @@ export const modalRegistry = {
   changeProjectConnectionModal: createModal(ChangeProjectConnectionModal, { size: 'sm' }),
   githubDeviceFlowModal: createModal(GithubDeviceFlowModalOverlay, { size: 'md' }),
   confirmActionModal: createModal(ConfirmActionDialog, { size: 'xs' }),
+  alertWarningDialog: createModal(AlertWarningDialog, { size: 'xs' }),
   createConversationModal: createModal(CreateConversationModal),
   feedbackModal: createModal(FeedbackModal),
   mcpServerModal: createModal(McpModal),

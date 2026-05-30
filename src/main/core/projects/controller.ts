@@ -1,4 +1,5 @@
 import { createRPCController } from '@shared/ipc/rpc';
+import { canDeleteProject } from './operations/canDeleteProject';
 import {
   createLocalProject,
   createSshProject,
@@ -27,4 +28,5 @@ export const projectController = createRPCController({
   updateProjectConnection,
   getProjectBootstrapStatus,
   openProject,
+  canDeleteProject,
 });

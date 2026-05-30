@@ -16,12 +16,12 @@ import {
   UnregisteredProject,
 } from '@renderer/features/projects/stores/project';
 import {
-  getProjectManagerStore,
   getProjectStore,
   getRepositoryStore,
   projectViewKind,
 } from '@renderer/features/projects/stores/project-selectors';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
+import { rpc } from '@renderer/lib/ipc';
 import {
   useNavigate,
   useParams,
@@ -58,6 +58,7 @@ export const SidebarProjectItem = observer(function SidebarProjectItem({
   const { params: taskParams } = useParams('task');
   const showCreateTaskModal = useShowModal('taskModal');
   const showConfirmDeleteProject = useShowModal('confirmActionModal');
+  const showAlertWarning = useShowModal('alertWarningDialog');
   const showChangeConnectionModal = useShowModal('changeProjectConnectionModal');
 
   const project = getProjectStore(projectId);
@@ -225,21 +226,44 @@ export const SidebarProjectItem = observer(function SidebarProjectItem({
         )}
         <ContextMenuItem
           variant="destructive"
-          onClick={() => {
+          onClick={async () => {
+            // Scene 1: Remove from workspace(s) - check if project has tasks in any workspace
+            // Reuse existing canRemoveProjectFromWorkspace RPC per workspace
+            const workspaces = await rpc.workspace.getProjectWorkspaces(projectId);
+            let totalTaskCount = 0;
+            for (const ws of workspaces) {
+              const { taskCount } = await rpc.workspace.canRemoveProjectFromWorkspace(
+                ws.id,
+                projectId
+              );
+              totalTaskCount += taskCount;
+            }
+            if (totalTaskCount > 0) {
+              showAlertWarning({
+                title: 'Cannot remove project',
+                message: `"${project.name ?? 'This project'}" has ${totalTaskCount} task(s) in ${workspaces.length} workspace(s) and cannot be removed.`,
+                details: 'Archive or delete the tasks first, then try again.',
+              });
+              return;
+            }
             const projectLabel = project.name ?? 'this project';
             showConfirmDeleteProject({
-              title: 'Delete project',
-              description: `"${projectLabel}" will be deleted. The project folder and worktrees will stay on the filesystem.`,
-              confirmLabel: 'Delete',
-              onSuccess: () => {
-                void getProjectManagerStore().deleteProject(projectId);
-                if (isProjectActive) navigate('home');
+              title: 'Remove from workspace',
+              description: `"${projectLabel}" will be removed from all workspaces. The project folder and worktrees will stay on the filesystem.`,
+              confirmLabel: 'Remove',
+              onSuccess: async () => {
+                // Remove from each workspace individually
+                for (const ws of workspaces) {
+                  await rpc.workspace.removeProjectFromWorkspace(ws.id, projectId);
+                }
+                // Refresh workspace stores
+                await workspaceManagerStore.load();
               },
             });
           }}
         >
           <Trash2 className="size-4" />
-          Remove Project
+          Remove from Workspace
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

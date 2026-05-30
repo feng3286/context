@@ -83,6 +83,7 @@ export const ProjectDetailTitlebar = observer(function ProjectDetailTitlebar() {
   const kind = projectViewKind(store);
   const displayName = projectDisplayName(store);
   const showConfirmDeleteProject = useShowModal('confirmActionModal');
+  const showAlertWarning = useShowModal('alertWarningDialog');
   const projectManagerStore = getProjectManagerStore();
 
   const repo = getRepositoryStore(projectId);
@@ -95,7 +96,17 @@ export const ProjectDetailTitlebar = observer(function ProjectDetailTitlebar() {
     ? repositoryUrl.replace(/^https?:\/\/(www\.)?github\.com\//, '')
     : remoteUrl?.replace(/^https?:\/\//, '');
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    // Scene 2: Delete project entirely - check for associations
+    const { workspaceCount, taskCount } = await rpc.projects.canDeleteProject(projectId);
+    if (workspaceCount > 0 || taskCount > 0) {
+      showAlertWarning({
+        title: 'Cannot delete project',
+        message: `"${displayName}" cannot be deleted because it is still associated with other resources.`,
+        details: `It is linked to ${workspaceCount} workspace(s) and ${taskCount} task(s). Remove these associations first before deleting the project.`,
+      });
+      return;
+    }
     showConfirmDeleteProject({
       title: 'Delete project',
       description: `"${displayName}" will be deleted. The project folder and worktrees will stay on the filesystem.`,

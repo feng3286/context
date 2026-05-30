@@ -1,8 +1,7 @@
-import { ChevronDown, Ellipsis, ExternalLink, GithubIcon, Globe, Trash2 } from 'lucide-react';
+import { ExternalLink, GithubIcon, Globe } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import {
   asMounted,
-  getProjectManagerStore,
   getProjectStore,
   getRepositoryStore,
   projectDisplayName,
@@ -11,14 +10,7 @@ import {
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { rpc } from '@renderer/lib/ipc';
 import { useNavigate, useParams } from '@renderer/lib/layout/navigation-provider';
-import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Button } from '@renderer/lib/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@renderer/lib/ui/dropdown-menu';
 import { Separator } from '@renderer/lib/ui/separator';
 
 const MountedProjectTitlebarLeft = observer(function ProjectTitlebarLeft({
@@ -26,10 +18,8 @@ const MountedProjectTitlebarLeft = observer(function ProjectTitlebarLeft({
 }: {
   projectId: string;
 }) {
-  const { navigate } = useNavigate();
   const store = getProjectStore(projectId);
   const displayName = projectDisplayName(store);
-  const showConfirmDeleteProject = useShowModal('confirmActionModal');
 
   const repo = getRepositoryStore(projectId);
   const configuredRemote = repo?.configuredRemote;
@@ -43,37 +33,7 @@ const MountedProjectTitlebarLeft = observer(function ProjectTitlebarLeft({
 
   return (
     <div className="flex items-center px-2 gap-2 h-full">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <button className="flex items-center gap-1.5 text-foreground-muted text-sm hover:text-foreground group">
-              <span className="text-sm">{displayName}</span>
-              <ChevronDown className="size-3.5" />
-            </button>
-          }
-        >
-          <Ellipsis className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="min-w-40">
-          <DropdownMenuItem
-            className="flex items-center gap-2 text-foreground-destructive"
-            onClick={() => {
-              showConfirmDeleteProject({
-                title: 'Delete project',
-                description: `"${displayName}" will be deleted. The project folder and worktrees will stay on the filesystem.`,
-                confirmLabel: 'Delete',
-                onSuccess: () => {
-                  void getProjectManagerStore().deleteProject(projectId);
-                  navigate('home');
-                },
-              });
-            }}
-          >
-            <Trash2 className="size-4 " />
-            Remove Project
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <span className="text-sm">{displayName}</span>
       {remoteUrl && (
         <>
           <Separator

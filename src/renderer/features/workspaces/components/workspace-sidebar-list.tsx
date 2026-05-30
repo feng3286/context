@@ -17,6 +17,7 @@ import {
   SidebarItemMiniButton,
   SidebarMenuRow,
 } from '@renderer/features/sidebar/sidebar-primitives';
+import { rpc } from '@renderer/lib/ipc';
 import {
   useNavigate,
   useParams,
@@ -166,6 +167,8 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
   const showCreateTaskModal = useShowModal('taskModal');
   const showSelectProjectModal = useShowModal('selectProjectModal');
 
+  const showAlertWarning = useShowModal('alertWarningDialog');
+
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -210,6 +213,16 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
   };
 
   const handleRemoveProject = async (workspaceId: string, projectId: string) => {
+    // Scene 1: Remove project from workspace - check if project has tasks in this workspace
+    const { taskCount } = await rpc.workspace.canRemoveProjectFromWorkspace(workspaceId, projectId);
+    if (taskCount > 0) {
+      showAlertWarning({
+        title: 'Cannot remove project',
+        message: `This project has ${taskCount} task(s) in this workspace and cannot be removed.`,
+        details: 'Archive or delete the tasks first, then try again.',
+      });
+      return;
+    }
     const store = workspaceManagerStore.getWorkspace(workspaceId);
     if (store) {
       await (store as WorkspaceStoreClass).removeProject(projectId);

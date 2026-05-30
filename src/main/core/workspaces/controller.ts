@@ -1,11 +1,16 @@
 import { createRPCController } from '@shared/ipc/rpc';
 import { addProjectToWorkspace } from './operations/addProjectToWorkspace';
+import { canRemoveProjectFromWorkspace } from './operations/canRemoveProjectFromWorkspace';
 import { createWorkspace } from './operations/createWorkspace';
 import { deleteWorkspace } from './operations/deleteWorkspace';
 import { getProjectWorkspaces } from './operations/getProjectWorkspaces';
 import { getWorkspace } from './operations/getWorkspace';
 import { getWorkspaceProjects } from './operations/getWorkspaceProjects';
 import { listWorkspaces } from './operations/listWorkspaces';
+import {
+  canRemoveProjectFromAllWorkspaces,
+  removeProjectFromAllWorkspaces,
+} from './operations/removeProjectFromAllWorkspaces';
 import { removeProjectFromWorkspace } from './operations/removeProjectFromWorkspace';
 import { updateWorkspace } from './operations/updateWorkspace';
 
@@ -19,4 +24,7 @@ export const workspaceController = createRPCController({
   getProjectWorkspaces,
   addProjectToWorkspace,
   removeProjectFromWorkspace,
+  canRemoveProjectFromWorkspace,
+  canRemoveProjectFromAllWorkspaces,
+  removeProjectFromAllWorkspaces,
 });

@@ -14,6 +14,7 @@ import type { Project } from '@shared/projects';
 import type { Task, TaskLifecycleStatus } from '@shared/tasks';
 import { SidebarItemMiniButton } from '@renderer/features/sidebar/sidebar-primitives';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
+import { rpc } from '@renderer/lib/ipc';
 import { useNavigate, useParams } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Badge } from '@renderer/lib/ui/badge';
@@ -26,7 +27,6 @@ import {
 } from '@renderer/lib/ui/dropdown-menu';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { RelativeTime } from '@renderer/lib/ui/relative-time';
-import { debugLog } from '@renderer/utils/debug-logger';
 import { cn } from '@renderer/utils/utils';
 import { workspaceManagerStore } from './stores/workspace-manager';
 import { getWorkspaceStore } from './stores/workspace-selectors';
@@ -94,7 +94,7 @@ function ProjectCard({
             e.stopPropagation();
             onRemove();
           }}
-          title="Remove project"
+          title="Remove from workspace"
           className="opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -179,34 +179,25 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
   const { navigate } = useNavigate();
   const showSelectProjectModal = useShowModal('selectProjectModal');
   const showCreateTaskModal = useShowModal('taskModal');
+  const showAlertWarning = useShowModal('alertWarningDialog');
   const {
     params: { workspaceId },
   } = useParams('workspace');
 
   // Ensure the workspace exists in the manager store
   useEffect(() => {
-    debugLog('workspace-detail', 'WorkspaceDetailMainPanel mounted, loading workspaceManager');
     void workspaceManagerStore.load();
   }, []);
 
   const store = getWorkspaceStore(workspaceId);
 
-  debugLog('workspace-detail', 'render', {
-    workspaceId,
-    hasStore: !!store,
-    status: store?.status,
-    projectCount: store?.projects.length,
-  });
-
   useEffect(() => {
     if (store && store.status === 'unloaded') {
-      debugLog('workspace-detail', 'loading specific workspace (unloaded)');
       store.load();
     }
   }, [store]);
 
   if (!store) {
-    debugLog('workspace-detail', 'EARLY RETURN: workspace not found', { workspaceId });
     return <div className="p-6">Workspace not found</div>;
   }
 
@@ -215,17 +206,11 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
   }
 
   if (store.status === 'error') {
-    debugLog('workspace-detail', 'EARLY RETURN: error', { error: store.error });
     return <div className="p-6 text-red-500">Error: {store.error}</div>;
   }
 
   const projects = store.status === 'ready' ? store.projects : [];
   const tasks = store.status === 'ready' ? store.tasks : [];
-
-  debugLog('workspace-detail', 'rendering main content', {
-    projectCount: projects.length,
-    taskCount: tasks.length,
-  });
   const activeTasks = tasks.filter((t) => !t.archivedAt);
 
   const handleDeleteWorkspace = async () => {
@@ -236,7 +221,19 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
   };
 
   const handleRemoveProject = async (projectId: string) => {
-    await (store as WorkspaceStoreClass).removeProject(projectId);
+    const projectName = projects.find((p) => p.id === projectId)?.name ?? 'This project';
+    const result = await rpc.workspace.canRemoveProjectFromWorkspace(workspaceId, projectId);
+    const { taskCount } = result;
+    if (taskCount > 0) {
+      showAlertWarning({
+        title: 'Cannot remove project',
+        message: `"${projectName}" cannot be removed from this workspace because it has ${taskCount} task(s) associated with it.`,
+        details: 'Archive or delete the tasks in this workspace first, then try again.',
+      });
+      return;
+    }
+    await rpc.workspace.removeProjectFromWorkspace(workspaceId, projectId);
+    await (store as WorkspaceStoreClass).load();
   };
 
   const handleTaskClick = async (task: Task) => {

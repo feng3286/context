@@ -246,7 +246,9 @@ describe('portLegacyAuthState', () => {
       .prepare('INSERT INTO app_secrets (key, secret) VALUES (?, ?)')
       .run('ssh:ssh-app-1:password', Buffer.from('enc:existing_pwd', 'utf8').toString('base64'));
 
-    const secretMap = new Map<string, string>([['context-ssh:legacy-ssh-1:password', 'legacy_pwd']]);
+    const secretMap = new Map<string, string>([
+      ['context-ssh:legacy-ssh-1:password', 'legacy_pwd'],
+    ]);
 
     const summary = await portLegacyAuthState(userDataDir, {
       appDb,

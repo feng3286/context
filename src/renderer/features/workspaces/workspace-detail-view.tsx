@@ -1,4 +1,13 @@
-import { FolderPlus, GitBranch, Layers, ListTodo, MoreVertical, Pin, Plus, Trash2 } from 'lucide-react';
+import {
+  FolderPlus,
+  GitBranch,
+  Layers,
+  ListTodo,
+  MoreVertical,
+  Pin,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, type ReactNode } from 'react';
 import type { Project } from '@shared/projects';
@@ -130,11 +139,12 @@ function TaskRowCompact({ task, onClick }: { task: Task; onClick: () => void }) 
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
         {/* Row 1: name + status */}
         <div className="flex items-center gap-2 min-w-0">
-          {task.isPinned && (
-            <Pin className="h-3 w-3 text-foreground-passive shrink-0 rotate-45" />
-          )}
+          {task.isPinned && <Pin className="h-3 w-3 text-foreground-passive shrink-0 rotate-45" />}
           <span className="text-sm truncate flex-1">{task.name}</span>
-          <Badge variant={badgeVariant} className={cn('text-[10px] px-1 h-4 shrink-0 font-normal', statusColor)}>
+          <Badge
+            variant={badgeVariant}
+            className={cn('text-[10px] px-1 h-4 shrink-0 font-normal', statusColor)}
+          >
             {task.status === 'in_progress' ? 'in progress' : task.status}
           </Badge>
         </div>
@@ -148,7 +158,9 @@ function TaskRowCompact({ task, onClick }: { task: Task; onClick: () => void }) 
             </span>
           )}
           {prCount > 0 && (
-            <span className="shrink-0">{prCount} PR{prCount > 1 ? 's' : ''}</span>
+            <span className="shrink-0">
+              {prCount} PR{prCount > 1 ? 's' : ''}
+            </span>
           )}
           <span className="shrink-0 ml-auto font-mono">
             <RelativeTime

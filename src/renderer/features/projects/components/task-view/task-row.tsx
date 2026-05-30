@@ -1,7 +1,7 @@
-import { GitBranch } from 'lucide-react';
+import { GitBranch, ListTodo, Pin } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { selectCurrentPr } from '@shared/pull-requests';
-import { type Task } from '@shared/tasks';
+import { type Task, type TaskLifecycleStatus } from '@shared/tasks';
 import { getProjectStore } from '@renderer/features/projects/stores/project-selectors';
 import { AgentStatusIndicator } from '@renderer/features/tasks/components/agent-status-indicator';
 import { TaskContextMenu } from '@renderer/features/tasks/components/task-context-menu';
@@ -15,12 +15,29 @@ import AgentLogo from '@renderer/lib/components/agent-logo';
 import { PrBadge } from '@renderer/lib/components/pr-badge';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
+import { Badge } from '@renderer/lib/ui/badge';
 import { Checkbox } from '@renderer/lib/ui/checkbox';
 import { RelativeTime } from '@renderer/lib/ui/relative-time';
 import { agentConfig } from '@renderer/utils/agentConfig';
 import { cn } from '@renderer/utils/utils';
 
 export type ReadyTask = TaskStore & { data: Task };
+
+const STATUS_COLORS: Record<TaskLifecycleStatus, string> = {
+  todo: 'text-foreground-passive',
+  in_progress: 'text-blue-500',
+  review: 'text-amber-500',
+  done: 'text-green-500',
+  cancelled: 'text-red-500',
+};
+
+const STATUS_BADGE_VARIANT: Record<TaskLifecycleStatus, 'outline' | 'secondary'> = {
+  todo: 'outline',
+  in_progress: 'secondary',
+  review: 'secondary',
+  done: 'secondary',
+  cancelled: 'outline',
+};
 
 export const TaskRow = observer(function TaskRow({
   task,
@@ -36,10 +53,7 @@ export const TaskRow = observer(function TaskRow({
   const { navigate } = useNavigate();
   const showRename = useShowModal('renameTaskModal');
   const taskManager = getTaskManagerStore(projectId);
-  const projectStore = getProjectStore(projectId);
 
-  // Get project name and current branch
-  const projectName = projectStore?.data?.name ?? '';
   const currentBranch = task.data.taskBranch;
 
   const handleArchive = () => void taskManager?.archiveTask(task.data.id);
@@ -56,6 +70,10 @@ export const TaskRow = observer(function TaskRow({
   const canPin = task.state !== 'unregistered';
   const agentAttention = taskAgentStatus(task);
   const currentPr = task.data.prs ? selectCurrentPr(task.data.prs) : undefined;
+  const prCount = task.data.prs?.length ?? 0;
+
+  const statusColor = STATUS_COLORS[task.data.status] ?? 'text-foreground-muted';
+  const badgeVariant = STATUS_BADGE_VARIANT[task.data.status] ?? 'outline';
 
   return (
     <TaskContextMenu
@@ -74,76 +92,52 @@ export const TaskRow = observer(function TaskRow({
           handleProvision();
           navigate('task', { projectId, taskId: task.data.id });
         }}
-        className="group flex items-center gap-2 rounded-lg p-3  hover:bg-background-1 transition-colors w-full"
+        className="group flex gap-2.5 w-full px-3 py-2.5 rounded-lg border border-border bg-background hover:bg-background-1 transition-colors text-left min-w-0 cursor-pointer"
       >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className={cn(
-            'transition-opacity',
-            isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-          )}
-        >
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={onToggleSelect}
-            aria-label="Select task"
-          />
+        {/* Left icon */}
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background-2 group-hover:bg-background-2/60 transition-colors mt-0.5">
+          <ListTodo className="h-4 w-4 text-foreground-muted" />
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="min-w-0 text-left text-sm truncate">{task.data.name}</span>
-            <span className="text-xs text-foreground-passive shrink-0">{projectName}</span>
+
+        {/* Content */}
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+          {/* Row 1: name + status */}
+          <div className="flex items-center gap-2 min-w-0">
+            {task.data.isPinned && (
+              <Pin className="h-3 w-3 text-foreground-passive shrink-0 rotate-45" />
+            )}
+            <span className="text-sm truncate flex-1">{task.data.name}</span>
+            <Badge
+              variant={badgeVariant}
+              className={cn('text-[10px] px-1 h-4 shrink-0 font-normal', statusColor)}
+            >
+              {task.data.status === 'in_progress' ? 'in progress' : task.data.status}
+            </Badge>
+          </div>
+
+          {/* Row 2: branch + PR + time */}
+          <div className="flex items-center gap-2 text-xs text-foreground-passive min-w-0">
             {currentBranch && (
-              <span className="flex items-center gap-1 text-xs text-foreground-passive shrink-0">
-                <GitBranch className="size-3" />
+              <span className="flex items-center gap-1 shrink-0 truncate max-w-[80px]">
+                <GitBranch className="h-3 w-3" />
                 <span className="truncate">{currentBranch}</span>
+              </span>
+            )}
+            {prCount > 0 && (
+              <span className="shrink-0">
+                {prCount} PR{prCount > 1 ? 's' : ''}
               </span>
             )}
             <TaskGitDiffStats task={task} className="text-xs shrink-0" />
             {currentPr && <PrBadge pr={currentPr} />}
+            <span className="shrink-0 ml-auto font-mono">
+              <RelativeTime
+                value={task.data.lastInteractedAt ?? task.data.createdAt}
+                className="text-[10px]"
+                compact
+              />
+            </span>
           </div>
-        </div>
-        <div className="flex items-center shrink-0 [&>span]:ring-2 [&>span]:ring-background [&>span:not(:first-child)]:-ml-1.5">
-          {Object.entries(task.conversationStats).map(([providerId, count]) => {
-            const config = agentConfig[providerId as keyof typeof agentConfig];
-            if (!config) return null;
-            return (
-              <span
-                key={providerId}
-                className="relative flex items-center justify-center h-5 w-5 rounded-sm bg-background-2 overflow-hidden"
-                title={`${config.name}: ${String(count)}`}
-              >
-                <AgentLogo
-                  logo={config.logo}
-                  alt={config.alt}
-                  isSvg={config.isSvg}
-                  invertInDark={config.invertInDark}
-                  className="h-3.5 w-3.5"
-                />
-                {count > 1 && (
-                  <span className="absolute -bottom-px -right-px text-[8px] leading-none font-semibold bg-background text-foreground-passive px-px rounded-tl">
-                    {count}
-                  </span>
-                )}
-              </span>
-            );
-          })}
-        </div>
-        <div
-          className={cn(
-            'flex min-w-8 shrink-0 items-center justify-end',
-            agentAttention ? 'justify-end' : 'justify-middle'
-          )}
-        >
-          {agentAttention ? (
-            <AgentStatusIndicator status={agentAttention} />
-          ) : (
-            <RelativeTime
-              value={task.data.createdAt}
-              className="text-xs text-foreground-passive font-mono pr-1"
-              compact
-            />
-          )}
         </div>
       </button>
     </TaskContextMenu>

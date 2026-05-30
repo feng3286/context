@@ -15,8 +15,8 @@ import { appSettingsService } from '@main/core/settings/settings-service';
 import { getWorkspace } from '@main/core/workspaces/operations/getWorkspace';
 import { db } from '@main/db/client';
 import { taskProjects, tasks } from '@main/db/schema';
-import { capture } from '@main/lib/telemetry';
 import { log } from '@main/lib/logger';
+import { capture } from '@main/lib/telemetry';
 import { mapTaskRowToTask } from './core';
 import { resolveTaskBranchName } from './resolveTaskBranchName';
 
@@ -126,84 +126,63 @@ export async function createMultiProjectTask(
     conversations: {},
   };
 
-  // Phase 1: Create branches and worktrees for each project (all async, outside DB transaction)
+  // Phase 1: Create branches for all projects in parallel (async, outside DB transaction)
+  const phase1Results: Awaited<ReturnType<typeof phase1ForProject>>[] = [];
   try {
-    for (const source of projectBranchSources) {
-      const project = projectManager.getProject(source.projectId);
-      if (!project) continue;
+    phase1Results.push(
+      ...(await Promise.all(
+        projectBranchSources.map((source) =>
+          phase1ForProject(source, resolvedTaskBranch, pushBranch)
+        )
+      ))
+    );
+  } catch (error) {
+    // Phase 1 failure: no branches were created yet, nothing to rollback
+    return err({
+      type: 'provision-failed',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 
-      const projectInfo = await getProjectById(source.projectId);
-      const projectName = projectInfo?.name ?? source.projectId;
+  // Collect provisioned projects from Phase 1 successes (for rollback)
+  for (const r of phase1Results) {
+    if (r.type === 'error') continue;
+    provisioned.push({ projectId: r.projectId, branchName: resolvedTaskBranch });
+    if (r.type === 'warning') {
+      warning ??= r.warning;
+    }
+  }
 
-      // Check for unborn repo
-      const repoInfo = await project.repository.getRepositoryInfo();
-      if (repoInfo.isUnborn) {
-        await rollbackProjects(provisioned);
-        return err({
-          type: 'initial-commit-required',
-          branch: source.sourceBranch,
-        });
-      }
-
-      // Create branch
-      const createResult = await project.repository.createBranch(
-        resolvedTaskBranch,
-        source.sourceBranch,
-        false
-      );
-      if (!createResult.success) {
-        await rollbackProjects(provisioned);
-        return err({
-          type: 'branch-create-failed',
-          branch: resolvedTaskBranch,
-          error: createResult.error,
-        });
-      }
-
-      provisioned.push({ projectId: source.projectId, branchName: resolvedTaskBranch });
-
-      // Push branch to remote if requested (non-fatal: records warning instead of failing)
-      if (pushBranch && !warning) {
-        const [, configuredRemote] = await Promise.all([
-          project.repository.getRemotes(),
-          project.repository.getConfiguredRemote(),
-        ]);
-        const publishResult = await project.repository.publishBranch(
+  // Phase 2: Provision worktrees + terminals for all Phase 1 successes in parallel
+  try {
+    const phase1Success = phase1Results.filter(
+      (r): r is Extract<Phase1Result, { type: 'success' | 'warning' }> => r.type !== 'error'
+    );
+    const phase2Results = await Promise.all(
+      phase1Success.map((r) =>
+        phase2ForProject(
+          r.projectId,
+          r.projectName,
           resolvedTaskBranch,
-          configuredRemote
-        );
-        if (!publishResult.success) {
-          warning = {
-            type: 'branch-publish-failed',
-            branch: resolvedTaskBranch,
-            remote: configuredRemote,
-            error: publishResult.error,
-          };
-        }
-      }
+          temporaryTask,
+          taskBaseDir,
+          projectBranchSources.length
+        )
+      )
+    );
 
-      // Create worktree
-      const projectWorkDir = path.join(taskBaseDir, projectName);
-      const provisionResult = await project.provisionTask(
-        temporaryTask,
-        [],
-        [],
-        projectWorkDir,
-        taskBaseDir,
-        projectBranchSources.length
-      );
-      if (!provisionResult.success) {
+    for (const r of phase2Results) {
+      if (!r.success) {
         await rollbackProjects(provisioned);
-        return err(mapProvisionError(provisionResult.error.type));
+        return err(mapProvisionError(r.error));
       }
-
-      // Record the worktree path for potential rollback
-      const worktreePath = await project.getWorktreeForBranch(resolvedTaskBranch);
-      provisioned[provisioned.length - 1].worktreePath = worktreePath;
+      // Attach worktree path to the matching provisioned entry for rollback
+      const lastP = provisioned.find((p) => p.projectId === r.projectId && !p.worktreePath);
+      if (lastP) lastP.worktreePath = r.worktreePath;
     }
   } catch (error) {
     await rollbackProjects(provisioned);
-    log.error('createMultiProjectTask: unexpected error during git/worktree setup', { error });
+    log.error('createMultiProjectTask: unexpected error during worktree setup', { error });
     return err({
       type: 'provision-failed',
       message: error instanceof Error ? error.message : String(error),
@@ -277,4 +256,111 @@ export async function createMultiProjectTask(
 
   const task = mapTaskRowToTask(taskRow!, []);
   return ok({ task, warning });
+}
+
+// --- Phase 1 helpers: run per project in parallel ---
+
+type Phase1Result =
+  | { type: 'success'; projectId: string; projectName: string }
+  | { type: 'warning'; projectId: string; projectName: string; warning: CreateTaskWarning }
+  | { type: 'error'; error: CreateTaskError };
+
+async function phase1ForProject(
+  source: { projectId: string; sourceBranch: string },
+  taskBranch: string,
+  pushBranch: boolean | undefined
+): Promise<Phase1Result> {
+  const project = projectManager.getProject(source.projectId);
+  if (!project) return { type: 'error', error: { type: 'project-not-found' } };
+
+  const projectInfo = await getProjectById(source.projectId);
+  const projectName = projectInfo?.name ?? source.projectId;
+
+  const repoInfo = await project.repository.getRepositoryInfo();
+  if (repoInfo.isUnborn) {
+    return {
+      type: 'error',
+      error: { type: 'initial-commit-required', branch: source.sourceBranch },
+    };
+  }
+
+  const createResult = await project.repository.createBranch(
+    taskBranch,
+    source.sourceBranch,
+    false
+  );
+  if (!createResult.success) {
+    return {
+      type: 'error',
+      error: { type: 'branch-create-failed', branch: taskBranch, error: createResult.error },
+    };
+  }
+
+  let warning: CreateTaskWarning | undefined;
+  if (pushBranch) {
+    const [, configuredRemote] = await Promise.all([
+      project.repository.getRemotes(),
+      project.repository.getConfiguredRemote(),
+    ]);
+    const publishResult = await project.repository.publishBranch(
+      taskBranch,
+      configuredRemote ?? ''
+    );
+    if (!publishResult.success) {
+      warning = {
+        type: 'branch-publish-failed',
+        branch: taskBranch,
+        remote: configuredRemote ?? '',
+        error: publishResult.error,
+      };
+    }
+  }
+
+  if (warning) {
+    const result: Extract<Phase1Result, { type: 'warning' }> = {
+      type: 'warning',
+      projectId: source.projectId,
+      projectName,
+      warning,
+    };
+    return result;
+  }
+  const result: Extract<Phase1Result, { type: 'success' }> = {
+    type: 'success',
+    projectId: source.projectId,
+    projectName,
+  };
+  return result;
+}
+
+type Phase2Result =
+  | { success: true; projectId: string; worktreePath?: string }
+  | { success: false; error: string; projectId: string };
+
+async function phase2ForProject(
+  projectId: string,
+  projectName: string,
+  taskBranch: string,
+  temporaryTask: Task,
+  taskBaseDir: string,
+  projectCount: number
+): Promise<Phase2Result> {
+  const project = projectManager.getProject(projectId);
+  if (!project) return { success: false, error: 'Project not found', projectId };
+
+  const projectWorkDir = path.join(taskBaseDir, projectName);
+  const provisionResult = await project.provisionTask(
+    temporaryTask,
+    [],
+    [],
+    projectWorkDir,
+    taskBaseDir,
+    projectCount
+  );
+  if (!provisionResult.success) {
+    return { success: false, error: provisionResult.error.type, projectId };
+  }
+
+  const worktreePath = await project.getWorktreeForBranch(taskBranch);
+  return { success: true, projectId, worktreePath };
 }

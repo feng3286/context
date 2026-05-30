@@ -4,10 +4,15 @@ import { getProjectSettingsStore } from '@renderer/features/projects/stores/proj
 import { useParams } from '@renderer/lib/layout/navigation-provider';
 import { Spinner } from '@renderer/lib/ui/spinner';
 
-export const SettingsPanel = observer(function SettingsPanel() {
+export const SettingsPanel = observer(function SettingsPanel({
+  projectId: explicitProjectId,
+}: {
+  projectId?: string;
+} = {}) {
   const {
-    params: { projectId },
+    params: { projectId: paramsProjectId },
   } = useParams('project');
+  const projectId = explicitProjectId ?? paramsProjectId;
   const store = getProjectSettingsStore(projectId);
   const settings = store?.settings;
 

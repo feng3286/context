@@ -12,7 +12,6 @@ import {
   RefreshCcw,
   Terminal,
 } from 'lucide-react';
-import { useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   asMounted,
@@ -181,20 +180,17 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
       : provisionedTask.path;
 
   // Build project options for multi-project tasks
-  const projectOptions = useMemo<OpenInProjectOption[] | undefined>(() => {
-    const opts = (() => {
-      if (!provisionedTask.isMultiProject || !provisionedTask.projectContexts) return undefined;
-      return Array.from(provisionedTask.projectContexts.projects.values())
-        .filter((ctx) => ctx.worktreePath)
-        .map((ctx) => ({
-          projectId: ctx.projectId,
-          projectName: ctx.projectName,
-          worktreePath: ctx.worktreePath!,
-        }));
-    })();
-    console.log('[task-titlebar] projectOptions:', opts?.map(p => p.projectName), 'isMultiProject:', provisionedTask.isMultiProject, 'projectContexts:', !!provisionedTask.projectContexts);
-    return opts;
-  }, [provisionedTask.isMultiProject, provisionedTask.projectContexts]);
+  // Computed directly (not useMemo) so MobX can track changes to projectContexts.projects
+  const projectOptions: OpenInProjectOption[] | undefined = (() => {
+    if (!provisionedTask.isMultiProject || !provisionedTask.projectContexts) return undefined;
+    return Array.from(provisionedTask.projectContexts.projects.values())
+      .filter((ctx) => ctx.worktreePath)
+      .map((ctx) => ({
+        projectId: ctx.projectId,
+        projectName: ctx.projectName,
+        worktreePath: ctx.worktreePath!,
+      }));
+  })();
 
   return (
     <Titlebar
@@ -343,13 +339,15 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                   </span>
                   {(() => {
                     const ctx = provisionedTask.projectContexts?.projects.get(projectId);
-                    return ctx?.sourceBranch && (
-                      <span className="flex items-center gap-2 text-foreground-passive">
-                        Created from
-                        <span className="flex items-center gap-1 text-foreground-muted">
-                          <GitBranch className="size-3.5" /> {ctx.sourceBranch}
+                    return (
+                      ctx?.sourceBranch && (
+                        <span className="flex items-center gap-2 text-foreground-passive">
+                          Created from
+                          <span className="flex items-center gap-1 text-foreground-muted">
+                            <GitBranch className="size-3.5" /> {ctx.sourceBranch}
+                          </span>
                         </span>
-                      </span>
+                      )
                     );
                   })()}
                   <div className="flex items-center gap-1 w-full">

@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import { Conversation } from '@shared/conversations';
@@ -12,8 +11,6 @@ import { getTaskEnvVars } from '@shared/task/envVars';
 import { Task, type TaskBootstrapStatus } from '@shared/tasks';
 import { type Terminal } from '@shared/terminals';
 import { workspaceKey } from '@shared/workspace-key';
-import { db } from '@main/db/client';
-import { taskProjects } from '@main/db/schema';
 import { LocalConversationProvider } from '@main/core/conversations/impl/local-conversation';
 import { LocalFileSystem } from '@main/core/fs/impl/local-fs';
 import type { FileSystemProvider } from '@main/core/fs/types';
@@ -30,6 +27,8 @@ import { getGitLocalExec, getLocalExec } from '@main/core/utils/exec';
 import type { Workspace } from '@main/core/workspaces/workspace';
 import { WorkspaceLifecycleService } from '@main/core/workspaces/workspace-lifecycle-service';
 import { WorkspaceRegistry } from '@main/core/workspaces/workspace-registry';
+import { db } from '@main/db/client';
+import { taskProjects } from '@main/db/schema';
 import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
 import {
@@ -74,8 +73,6 @@ export async function createLocalProvider(
     rootFs
   );
   const worktreePoolPath = path.join(await settings.getWorktreeDirectory(), project.name);
-
-  await fs.promises.mkdir(worktreePoolPath, { recursive: true });
 
   return new LocalProjectProvider(project, rootFs, { settings, worktreePoolPath });
 }

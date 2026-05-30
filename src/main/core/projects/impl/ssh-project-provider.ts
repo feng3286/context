@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { SFTPWrapper } from 'ssh2';
 import { eq } from 'drizzle-orm';
+import type { SFTPWrapper } from 'ssh2';
 import { Conversation } from '@shared/conversations';
 import type { FetchError } from '@shared/git';
 import { bareRefName } from '@shared/git-utils';
@@ -12,8 +12,6 @@ import { getTaskEnvVars } from '@shared/task/envVars';
 import { Task, type TaskBootstrapStatus } from '@shared/tasks';
 import { Terminal } from '@shared/terminals';
 import { workspaceKey } from '@shared/workspace-key';
-import { db } from '@main/db/client';
-import { taskProjects } from '@main/db/schema';
 import { SshConversationProvider } from '@main/core/conversations/impl/ssh-conversation';
 import { SshFileSystem } from '@main/core/fs/impl/ssh-fs';
 import type { FileSystemProvider } from '@main/core/fs/types';
@@ -31,6 +29,8 @@ import { getGitSshExec, getSshExec } from '@main/core/utils/exec';
 import type { Workspace } from '@main/core/workspaces/workspace';
 import { WorkspaceLifecycleService } from '@main/core/workspaces/workspace-lifecycle-service';
 import { WorkspaceRegistry } from '@main/core/workspaces/workspace-registry';
+import { db } from '@main/db/client';
+import { taskProjects } from '@main/db/schema';
 import { log } from '@main/lib/logger';
 import {
   type ProjectProvider,
@@ -81,7 +81,6 @@ export async function createSshProvider(
       exec
     );
     const worktreePoolPath = path.posix.join(await settings.getWorktreeDirectory(), project.name);
-    await rootFs.mkdir(worktreePoolPath, { recursive: true });
 
     return new SshProjectProvider(project, rootFs, proxy, {
       fs: projectFs,

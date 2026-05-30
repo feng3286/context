@@ -1,6 +1,8 @@
 import { IntegrationSetupModal } from '@renderer/features/integrations/integration-setup-modal';
 import { McpModal } from '@renderer/features/mcp/components/McpModal';
 import { AddProjectModal } from '@renderer/features/projects/components/add-project-modal/add-project-modal';
+import { ProjectSettingsModal } from '@renderer/features/projects/components/project-settings-modal';
+import { PullRequestsModal } from '@renderer/features/projects/components/pull-requests-modal';
 import { CreateSkillModal } from '@renderer/features/skills/components/CreateSkillModal';
 import { AddRemoteModal } from '@renderer/features/tasks/add-remote-modal';
 import { CreateConversationModal } from '@renderer/features/tasks/conversations/create-conversation-modal';
@@ -50,4 +52,6 @@ export const modalRegistry = {
   addRemoteModal: createModal(AddRemoteModal),
   createWorkspaceModal: createModal(CreateWorkspaceModal),
   selectProjectModal: createModal(SelectProjectModal),
+  pullRequestsModal: createModal(PullRequestsModal, { size: 'lg' }),
+  projectSettingsModal: createModal(ProjectSettingsModal, { size: 'lg' }),
 } satisfies Record<string, ModalRegistryEntry>;

@@ -149,7 +149,7 @@ export class WorktreeService {
     branchName: string,
     customWorkDir?: string
   ): Promise<Result<string, ServeWorktreeError>> {
-    await this.ensureWorktreePoolDirExists();
+    if (!customWorkDir) await this.ensureWorktreePoolDirExists();
     return this.enqueueGitOp(() =>
       this.doCheckoutBranchWorktree(sourceBranch, branchName, customWorkDir)
     );
@@ -221,10 +221,8 @@ export class WorktreeService {
     branchName: string,
     customWorkDir?: string
   ): Promise<Result<string, ServeWorktreeError>> {
-    await this.ensureWorktreePoolDirExists();
-    return this.enqueueGitOp(() =>
-      this.doCheckoutExistingBranch(branchName, customWorkDir)
-    );
+    if (!customWorkDir) await this.ensureWorktreePoolDirExists();
+    return this.enqueueGitOp(() => this.doCheckoutExistingBranch(branchName, customWorkDir));
   }
 
   private async doCheckoutExistingBranch(

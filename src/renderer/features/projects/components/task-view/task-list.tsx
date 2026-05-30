@@ -117,10 +117,17 @@ function SelectionBar({
   );
 }
 
-export const TaskList = observer(function TaskList({ workspaceId }: { workspaceId?: string }) {
+export const TaskList = observer(function TaskList({
+  workspaceId,
+  projectId: explicitProjectId,
+}: {
+  workspaceId?: string;
+  projectId?: string;
+}) {
   const {
-    params: { projectId },
+    params: { projectId: paramsProjectId },
   } = useParams('project');
+  const projectId = explicitProjectId ?? paramsProjectId;
   const store = asMounted(getProjectStore(projectId));
   const taskManager = getTaskManagerStore(projectId);
 

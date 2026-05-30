@@ -60,11 +60,7 @@ export const CreatePrModal = observer(function CreatePrModal({
   const hasGitHubRemote = Boolean(repositoryUrl);
   const selectedBase =
     selectedBaseOverride ??
-    resolveInitialBaseBranch(
-      repo?.remoteBranches ?? [],
-      sourceBranchName,
-      defaultBranch
-    );
+    resolveInitialBaseBranch(repo?.remoteBranches ?? [], sourceBranchName, defaultBranch);
 
   const doCreate = async (push: boolean) => {
     if (!title.trim() || !repositoryUrl || !selectedBase?.branch) return;

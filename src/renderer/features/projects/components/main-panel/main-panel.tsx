@@ -47,7 +47,7 @@ export const ProjectMainPanel = observer(function ProjectMainPanel() {
   return <ActiveProject />;
 });
 
-function ProjectBootstrappingPanel() {
+export function ProjectBootstrappingPanel() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3">
       <Loader2 className="h-5 w-5 animate-spin text-foreground-passive" />
@@ -56,7 +56,7 @@ function ProjectBootstrappingPanel() {
   );
 }
 
-function ProjectBootstrapErrorPanel({ message }: { message: string }) {
+export function ProjectBootstrapErrorPanel({ message }: { message: string }) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center p-8">
       <div className="flex max-w-xs flex-col items-center text-center gap-2">
@@ -69,7 +69,7 @@ function ProjectBootstrapErrorPanel({ message }: { message: string }) {
   );
 }
 
-function ProjectSshDisconnectedPanel({
+export function ProjectSshDisconnectedPanel({
   connectionId,
   projectId,
 }: {
@@ -103,7 +103,7 @@ function ProjectSshDisconnectedPanel({
   );
 }
 
-function ProjectPathNotFoundPanel({ path, projectId }: { path: string; projectId: string }) {
+export function ProjectPathNotFoundPanel({ path, projectId }: { path: string; projectId: string }) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center p-8">
       <div className="flex max-w-sm flex-col items-center text-center gap-3">

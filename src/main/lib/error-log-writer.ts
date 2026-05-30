@@ -29,7 +29,7 @@ export function formatErrorLine(
   _level: string,
   args: unknown[],
   source: 'main' | 'renderer' = 'main',
-  context?: Record<string, unknown>,
+  context?: Record<string, unknown>
 ): string {
   const ts = new Date().toISOString();
   const parts: string[] = [`[${ts}]`, `[error]`, `[${source}]`];

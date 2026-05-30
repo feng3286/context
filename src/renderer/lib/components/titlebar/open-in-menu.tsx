@@ -10,7 +10,13 @@ import {
 } from '@renderer/lib/hooks/useKeyboardShortcuts';
 import { useOpenInApps } from '@renderer/lib/hooks/useOpenInApps';
 import { rpc } from '@renderer/lib/ipc';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/lib/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/lib/ui/select';
 import { ShortcutHint } from '@renderer/lib/ui/shortcut-hint';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/lib/ui/tooltip';
 import { cn } from '@renderer/utils/utils';
@@ -103,7 +109,16 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         });
       }
     },
-    [labels, effectivePath, filePath, lineNumber, isRemote, sshConnectionId, effectiveProjectId, toast]
+    [
+      labels,
+      effectivePath,
+      filePath,
+      lineNumber,
+      isRemote,
+      sshConnectionId,
+      effectiveProjectId,
+      toast,
+    ]
   );
 
   const sortedApps = useMemo(() => {

@@ -26,7 +26,7 @@ async function main() {
   const sourceBuffer = readFileSync(SOURCE);
   const source = await Jimp.read(sourceBuffer);
 
-  // Make white background transparent
+  // Make white background transparent, then auto-crop to logo bounds
   const srcData = source.bitmap.data;
   for (let i = 0; i < srcData.length; i += 4) {
     if (srcData[i] > 240 && srcData[i + 1] > 240 && srcData[i + 2] > 240) {
@@ -34,13 +34,31 @@ async function main() {
     }
   }
 
-  const srcW = source.width;
-  const srcH = source.height;
+  // Find bounding box of non-transparent pixels
+  const w = source.width;
+  const h = source.height;
+  let minX = w,
+    minY = h,
+    maxX = 0,
+    maxY = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      if (srcData[idx + 3] > 0) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  const cropped = source.clone().crop({ x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 });
 
   function makeIcon(size: number, bgColor: typeof DARK_BG) {
-    const padding = size * 0.05;
+    const padding = size * 0.02;
     const fitSize = size - padding * 2;
-    const logo = source.clone().scaleToFit({ w: Math.round(fitSize), h: Math.round(fitSize) });
+    const logo = cropped.clone().scaleToFit({ w: Math.round(fitSize), h: Math.round(fitSize) });
     const canvas = new Jimp({ width: size, height: size });
     fillColor(canvas, bgColor);
     const ox = Math.round((size - logo.width) / 2);

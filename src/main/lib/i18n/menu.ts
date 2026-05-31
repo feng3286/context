@@ -61,3 +61,7 @@ export async function loadMenuLanguage(): Promise<void> {
     currentLanguage = 'zh';
   }
 }
+
+export function setMenuLanguage(lang: SupportedLanguage): void {
+  currentLanguage = lang;
+}

@@ -1,5 +1,7 @@
 import { createRPCController } from '@/shared/ipc/rpc';
 import { applyNativeTheme, updateApplicationMenu } from '@main/app/menu';
+import { setMenuLanguage } from '@main/lib/i18n/menu';
+import type { SupportedLanguage } from '@renderer/i18n/config';
 import { appSettingsService, type AppSettings, type AppSettingsKey } from './settings-service';
 
 export const appSettingsController = createRPCController({
@@ -20,6 +22,7 @@ export const appSettingsController = createRPCController({
 
     // Rebuild menu when language changes
     if (key === 'language') {
+      setMenuLanguage(value as SupportedLanguage);
       updateApplicationMenu();
     }
 
@@ -33,6 +36,8 @@ export const appSettingsController = createRPCController({
     await appSettingsService.reset(key);
 
     if (key === 'language') {
+      const defaults = await appSettingsService.get('language');
+      setMenuLanguage(defaults as SupportedLanguage);
       updateApplicationMenu();
     }
     if (key === 'theme') {

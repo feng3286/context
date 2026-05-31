@@ -549,5 +549,69 @@
     "pushBranch": "Push branch to remote",
     "creating": "Creating...",
     "create": "Create"
+  },
+  "project": {
+    "delete": {
+      "error": {
+        "title": "Cannot delete project",
+        "message": "\"{{name}}\" cannot be deleted because it is still associated with other resources.",
+        "details": "It is linked to {{workspaceCount}} workspace(s) and {{taskCount}} task(s). Remove these associations first before deleting the project."
+      }
+    }
+  },
+  "toast": {
+    "git": {
+      "commitFailed": "Failed to commit changes: {{type}}",
+      "fetchRemoteFailed": "Failed to fetch remote changes: {{type}}",
+      "pushFailed": "Failed to push: {{detail}}",
+      "publishBranchFailed": "Failed to publish branch: {{detail}}",
+      "pullFailed": "Failed to pull changes: {{type}}"
+    },
+    "mcp": {
+      "saveFailed": "Failed to save server",
+      "removeFailed": "Failed to remove server",
+      "refreshFailed": "Failed to refresh MCP data"
+    },
+    "skills": {
+      "installFailed": "Install failed",
+      "installed": "Skill installed",
+      "installedDesc": "{{skillId}} is now available across your agents",
+      "uninstallFailed": "Uninstall failed",
+      "removed": "Skill removed",
+      "removedDesc": "Skill has been uninstalled"
+    },
+    "agent": {
+      "installFailed": "Install failed",
+      "installed": "Agent installed",
+      "installedDesc": "{{name}} is ready."
+    },
+    "github": {
+      "connected": "Connected to GitHub",
+      "signedInAs": "Signed in as {{user}}",
+      "authFailed": "Authentication Failed",
+      "connectionFailed": "Connection Failed",
+      "connectFailed": "Failed to connect to GitHub. Please try again.",
+      "unsuccessful": "GitHub connection unsuccessful",
+      "canceled": "{{flowLabel}} was canceled",
+      "codeCopied": "✓ Code copied",
+      "codeCopiedDesc": "Paste it in GitHub to authorize",
+      "copyFailed": "Copy failed",
+      "copyFailedDesc": "Please copy the code manually",
+      "authFailedDesc": "An error occurred"
+    },
+    "feedback": {
+      "sent": "Feedback sent",
+      "sentDesc": "Thanks for your feedback!",
+      "sendFailed": "Failed to send feedback",
+      "sendFailedDesc": "Please try again."
+    },
+    "update": {
+      "available": "Update Available",
+      "availableDesc": "Version {{version}} is ready. Go to Settings to upgrade."
+    },
+    "openIn": {
+      "failed": "Open in {{label}} failed"
+    },
+    "commandPalette": "CMDK coming soon"
   }
 }

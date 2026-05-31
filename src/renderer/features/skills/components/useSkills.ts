@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { CatalogIndex, CatalogSkill } from '@shared/skills/types';
 import { useToast } from '@renderer/lib/hooks/use-toast';
 import { rpc } from '@renderer/lib/ipc';
@@ -10,6 +11,7 @@ const CATALOG_QUERY_KEY = ['skills', 'catalog'] as const;
 
 export function useSkills() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export function useSkills() {
     },
     onError: (error) => {
       toast({
-        title: 'Install failed',
+        title: t('toast:skills.installFailed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -60,8 +62,8 @@ export function useSkills() {
 
       captureTelemetry('skill_installed', { source: skill?.source });
       toast({
-        title: 'Skill installed',
-        description: `${skillId} is now available across your agents`,
+        title: t('toast:skills.installed'),
+        description: t('toast:skills.installedDesc', { skillId }),
       });
       queryClient.invalidateQueries({ queryKey: CATALOG_QUERY_KEY });
     },
@@ -87,7 +89,7 @@ export function useSkills() {
     },
     onError: (error) => {
       toast({
-        title: 'Uninstall failed',
+        title: t('toast:skills.uninstallFailed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -95,7 +97,7 @@ export function useSkills() {
     onSuccess: () => {
       captureTelemetry('skill_uninstalled');
 
-      toast({ title: 'Skill removed', description: 'Skill has been uninstalled' });
+      toast({ title: t('toast:skills.removed'), description: t('toast:skills.removedDesc') });
       queryClient.invalidateQueries({ queryKey: CATALOG_QUERY_KEY });
     },
   });

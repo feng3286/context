@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { McpCatalogEntry, McpProvidersResponse, McpServer } from '@shared/mcp/types';
 import { useToast } from '@renderer/lib/hooks/use-toast';
 import { rpc } from '@renderer/lib/ipc';
@@ -10,6 +11,7 @@ const PROVIDERS_QUERY_KEY = ['mcp', 'providers'] as const;
 
 export function useMcps() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   // ── Queries ──────────────────────────────────────────────────────────
@@ -54,7 +56,7 @@ export function useMcps() {
     },
     onError: (error) => {
       toast({
-        title: 'Failed to save server',
+        title: t('toast:mcp.saveFailed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -79,7 +81,7 @@ export function useMcps() {
     },
     onError: (error) => {
       toast({
-        title: 'Failed to remove server',
+        title: t('toast:mcp.removeFailed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -104,7 +106,7 @@ export function useMcps() {
       queryClient.invalidateQueries({ queryKey: MCP_QUERY_KEY });
     },
     onError: () => {
-      toast({ title: 'Failed to refresh MCP data', variant: 'destructive' });
+      toast({ title: t('toast:mcp.refreshFailed'), variant: 'destructive' });
     },
   });
 

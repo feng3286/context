@@ -549,5 +549,69 @@
     "pushBranch": "推送分支到远程",
     "creating": "创建中...",
     "create": "创建"
+  },
+  "project": {
+    "delete": {
+      "error": {
+        "title": "无法删除项目",
+        "message": "无法删除\"{{name}}\"，因为它仍与其他资源关联。",
+        "details": "它与 {{workspaceCount}} 个工作区和 {{taskCount}} 个任务关联。请先移除这些关联，然后再删除项目。"
+      }
+    }
+  },
+  "toast": {
+    "git": {
+      "commitFailed": "提交更改失败：{{type}}",
+      "fetchRemoteFailed": "获取远程更改失败：{{type}}",
+      "pushFailed": "推送失败：{{detail}}",
+      "publishBranchFailed": "发布分支失败：{{detail}}",
+      "pullFailed": "拉取更改失败：{{type}}"
+    },
+    "mcp": {
+      "saveFailed": "保存服务器失败",
+      "removeFailed": "移除服务器失败",
+      "refreshFailed": "刷新 MCP 数据失败"
+    },
+    "skills": {
+      "installFailed": "安装失败",
+      "installed": "技能已安装",
+      "installedDesc": "{{skillId}} 现在可在所有智能体中使用",
+      "uninstallFailed": "卸载失败",
+      "removed": "技能已移除",
+      "removedDesc": "技能已卸载"
+    },
+    "agent": {
+      "installFailed": "安装失败",
+      "installed": "智能体已安装",
+      "installedDesc": "{{name}} 已就绪。"
+    },
+    "github": {
+      "connected": "已连接到 GitHub",
+      "signedInAs": "已登录为 {{user}}",
+      "authFailed": "认证失败",
+      "connectionFailed": "连接失败",
+      "connectFailed": "连接到 GitHub 失败。请重试。",
+      "unsuccessful": "GitHub 连接未成功",
+      "canceled": "{{flowLabel}} 已取消",
+      "codeCopied": "✓ 代码已复制",
+      "codeCopiedDesc": "粘贴到 GitHub 以授权",
+      "copyFailed": "复制失败",
+      "copyFailedDesc": "请手动复制代码",
+      "authFailedDesc": "发生错误"
+    },
+    "feedback": {
+      "sent": "反馈已发送",
+      "sentDesc": "感谢你的反馈！",
+      "sendFailed": "发送反馈失败",
+      "sendFailedDesc": "请重试。"
+    },
+    "update": {
+      "available": "有可用更新",
+      "availableDesc": "版本 {{version}} 已就绪。前往设置升级。"
+    },
+    "openIn": {
+      "failed": "在 {{label}} 中打开失败"
+    },
+    "commandPalette": "CMDK 即将推出"
   }
 }

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '@renderer/lib/hooks/use-toast';
 import { log } from '@renderer/utils/logger';
 
@@ -62,6 +63,7 @@ export function buildFeedbackContent({
 }
 
 export function useFeedbackSubmit({ githubUser, appVersion, onSuccess }: FeedbackSubmitOptions) {
+  const { t } = useTranslation();
   const [feedbackDetails, setFeedbackDetails] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -119,20 +121,20 @@ export function useFeedbackSubmit({ githubUser, appVersion, onSuccess }: Feedbac
         }
 
         onSuccess();
-        toast({ title: 'Feedback sent', description: 'Thanks for your feedback!' });
+        toast({ title: t('toast:feedback.sent'), description: t('toast:feedback.sentDesc') });
       } catch (error) {
         log.error('Failed to submit feedback:', error);
         setErrorMessage('Unable to send feedback. Please try again.');
         toast({
-          title: 'Failed to send feedback',
-          description: 'Please try again.',
+          title: t('toast:feedback.sendFailed'),
+          description: t('toast:feedback.sendFailedDesc'),
           variant: 'destructive',
         });
       } finally {
         setSubmitting(false);
       }
     },
-    [appVersion, contactEmail, feedbackDetails, githubUser, onSuccess, toast]
+    [appVersion, contactEmail, feedbackDetails, githubUser, onSuccess, toast, t]
   );
 
   return {

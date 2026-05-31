@@ -38,7 +38,7 @@ async function main() {
   const srcH = source.height;
 
   function makeIcon(size: number, bgColor: typeof DARK_BG) {
-    const padding = size * 0.12;
+    const padding = size * 0.05;
     const fitSize = size - padding * 2;
     const logo = source.clone().scaleToFit({ w: Math.round(fitSize), h: Math.round(fitSize) });
     const canvas = new Jimp({ width: size, height: size });

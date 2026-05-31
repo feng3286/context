@@ -11,6 +11,7 @@ import {
   updateNotAvailableEvent,
   updateProgressEvent,
 } from '@shared/events/updateEvents';
+import { i18n } from '@renderer/i18n/config';
 import { events, rpc } from '@renderer/lib/ipc';
 
 const LAST_NOTIFIED_KEY = 'context:update:lastNotified';
@@ -220,8 +221,8 @@ export class UpdateStore {
 
   private _maybeToastAvailable(version: string): void {
     if (!this._shouldNotify(version)) return;
-    toast('Update Available', {
-      description: `Version ${version} is ready. Go to Settings to upgrade.`,
+    toast(i18n.t('toast:update.available'), {
+      description: i18n.t('toast:update.availableDesc', { version }),
     });
     this._rememberNotified(version);
   }

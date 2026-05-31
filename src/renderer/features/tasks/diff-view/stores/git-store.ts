@@ -5,6 +5,7 @@ import { gitWorkspaceChangedChannel } from '@shared/events/gitEvents';
 import type { FullGitStatus, GitChange } from '@shared/git';
 import { err, ok } from '@shared/result';
 import type { RepositoryStore } from '@renderer/features/projects/stores/repository-store';
+import { i18n } from '@renderer/i18n/config';
 import { events, rpc } from '@renderer/lib/ipc';
 import { Resource } from '@renderer/lib/stores/resource';
 
@@ -319,7 +320,7 @@ export class GitStore {
       this.repositoryStore.refreshLocal(); // new commit → local branch ahead count changes
       return ok();
     } else {
-      toast.error(`Failed to commit changes: ${result.error.type} `);
+      toast.error(i18n.t('toast:git.commitFailed', { type: result.error.type }));
       return err(result.error);
     }
   }
@@ -330,7 +331,7 @@ export class GitStore {
       this.repositoryStore.refreshRemote(); // fetch updates remote-tracking refs
       return ok();
     } else {
-      toast.error(`Failed to fetch remote changes: ${result.error.type} `);
+      toast.error(i18n.t('toast:git.fetchRemoteFailed', { type: result.error.type }));
       return err(result.error);
     }
   }
@@ -345,7 +346,7 @@ export class GitStore {
     } else {
       const detail =
         'message' in result.error ? (result.error.message ?? result.error.type) : result.error.type;
-      toast.error(`Failed to push: ${detail}`);
+      toast.error(i18n.t('toast:git.pushFailed', { detail }));
       return err(result.error);
     }
   }
@@ -366,7 +367,7 @@ export class GitStore {
     } else {
       const detail =
         'message' in result.error ? (result.error.message ?? result.error.type) : result.error.type;
-      toast.error(`Failed to publish branch: ${detail}`);
+      toast.error(i18n.t('toast:git.publishBranchFailed', { detail }));
       return err(result.error);
     }
   }
@@ -378,7 +379,7 @@ export class GitStore {
       this.repositoryStore.refreshLocal(); // local branch updated with pulled commits
       return ok();
     } else {
-      toast.error(`Failed to pull changes: ${result.error.type} `);
+      toast.error(i18n.t('toast:git.pullFailed', { type: result.error.type }));
       return err(result.error);
     }
   }

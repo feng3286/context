@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Task, TaskLifecycleStatus } from '@shared/tasks';
 import type { Workspace } from '@shared/workspaces';
 import {
@@ -79,6 +80,7 @@ export const ProjectDetailTitlebar = observer(function ProjectDetailTitlebar() {
     params: { projectId },
   } = useParams('projectDetail');
   const { navigate } = useNavigate();
+  const { t } = useTranslation();
   const store = getProjectStore(projectId);
   const kind = projectViewKind(store);
   const displayName = projectDisplayName(store);
@@ -101,9 +103,13 @@ export const ProjectDetailTitlebar = observer(function ProjectDetailTitlebar() {
     const { workspaceCount, taskCount } = await rpc.projects.canDeleteProject(projectId);
     if (workspaceCount > 0 || taskCount > 0) {
       showAlertWarning({
-        title: 'Cannot delete project',
-        message: `"${displayName}" cannot be deleted because it is still associated with other resources.`,
-        details: `It is linked to ${workspaceCount} workspace(s) and ${taskCount} task(s). Remove these associations first before deleting the project.`,
+        title: t('project:delete.error.title'),
+        message: t('project:delete.error.message', { name: displayName }),
+        details: t('project:delete.error.details', {
+          name: displayName,
+          workspaceCount,
+          taskCount,
+        }),
       });
       return;
     }

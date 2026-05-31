@@ -1,6 +1,7 @@
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { ChevronDown } from 'lucide-react';
 import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getAppById, isValidOpenInAppId, type OpenInAppId } from '@shared/openInApps';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useToast } from '@renderer/lib/hooks/use-toast';
@@ -51,6 +52,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
   projectOptions,
 }) => {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const { icons, labels, installedApps, availability, loading } = useOpenInApps();
   const { value: openIn, update } = useAppSettingsKey('openIn');
   const { value: keyboard } = useAppSettingsKey('keyboard');
@@ -96,14 +98,14 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
         });
         if (!res?.success) {
           toast({
-            title: `Open in ${label} failed`,
-            description: res?.error || 'Application not available.',
+            title: t('toast:openIn.failed', { label }),
+            description: res?.error || t('common:serverUnavailable', { productName: 'Context' }),
             variant: 'destructive',
           });
         }
       } catch (e: unknown) {
         toast({
-          title: `Open in ${label} failed`,
+          title: t('toast:openIn.failed', { label }),
           description: e instanceof Error ? e.message : String(e),
           variant: 'destructive',
         });
@@ -118,6 +120,7 @@ export const OpenInMenu: React.FC<OpenInMenuProps> = ({
       sshConnectionId,
       effectiveProjectId,
       toast,
+      t,
     ]
   );
 

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   githubAuthErrorChannel,
   githubAuthSuccessChannel,
@@ -39,6 +40,7 @@ const ISSUE_CONNECTION_STATUS_QUERY_KEY = ['issues:connection-status'] as const;
 const GithubContext = createContext<GithubContextValue | null>(null);
 
 export function GithubContextProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { showModal } = useModalContext();
@@ -114,22 +116,24 @@ export function GithubContextProvider({ children }: { children: React.ReactNode 
       setTimeout(() => void checkStatus(), 500);
       void queryClient.invalidateQueries({ queryKey: ISSUE_CONNECTION_STATUS_QUERY_KEY });
       toast({
-        title: 'Connected to GitHub',
-        description: `Signed in as ${flowUser?.login || flowUser?.name || 'user'}`,
+        title: t('toast:github.connected'),
+        description: t('toast:github.signedInAs', {
+          user: flowUser?.login || flowUser?.name || 'user',
+        }),
       });
     },
-    [checkStatus, queryClient, toast]
+    [checkStatus, queryClient, toast, t]
   );
 
   const handleDeviceFlowError = useCallback(
     (error: string) => {
       toast({
-        title: 'Authentication Failed',
+        title: t('toast:github.authFailed'),
         description: error,
         variant: 'destructive',
       });
     },
-    [toast]
+    [toast, t]
   );
 
   // Subscribe to GitHub auth IPC events from the main process
@@ -179,8 +183,10 @@ export function GithubContextProvider({ children }: { children: React.ReactNode 
           void queryClient.invalidateQueries({ queryKey: ISSUE_CONNECTION_STATUS_QUERY_KEY });
           if (oauthResult.user) {
             toast({
-              title: 'Connected to GitHub',
-              description: `Signed in as ${oauthResult.user.login || oauthResult.user.name || 'user'}`,
+              title: t('toast:github.connected'),
+              description: t('toast:github.signedInAs', {
+                user: oauthResult.user.login || oauthResult.user.name || 'user',
+              }),
             });
           }
           setGithubLoading(false);
@@ -201,8 +207,8 @@ export function GithubContextProvider({ children }: { children: React.ReactNode 
       setGithubLoading(false);
       setGithubStatusMessage(undefined);
       toast({
-        title: 'Connection Failed',
-        description: 'Failed to connect to GitHub. Please try again.',
+        title: t('toast:github.connectionFailed'),
+        description: t('toast:github.connectFailed'),
         variant: 'destructive',
       });
     }
@@ -215,6 +221,7 @@ export function GithubContextProvider({ children }: { children: React.ReactNode 
     hasAccount,
     fetchAccountHealth,
     queryClient,
+    t,
   ]);
 
   const cancelGithubConnect = useCallback(() => {
@@ -223,10 +230,10 @@ export function GithubContextProvider({ children }: { children: React.ReactNode 
     setGithubStatusMessage(undefined);
     rpc.github.authCancel();
     toast({
-      title: 'GitHub connection unsuccessful',
-      description: `${flowLabel} was canceled`,
+      title: t('toast:github.unsuccessful'),
+      description: t('toast:github.canceled', { flowLabel }),
     });
-  }, [githubStatusMessage, toast]);
+  }, [githubStatusMessage, toast, t]);
 
   const value: GithubContextValue = {
     authenticated,

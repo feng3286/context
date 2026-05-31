@@ -1,5 +1,6 @@
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { toast } from '@renderer/lib/hooks/use-toast';
@@ -22,6 +23,7 @@ import { useShowModal } from '@renderer/lib/modal/modal-provider';
  * Must be mounted inside all relevant providers (ModalProvider, WorkspaceLayoutContext, etc.).
  */
 export function AppKeyboardShortcuts() {
+  const { t } = useTranslation();
   const { value: keyboard } = useAppSettingsKey('keyboard');
   const showNewProject = useShowModal('addProjectModal');
   const showCreateTask = useShowModal('taskModal');
@@ -54,7 +56,7 @@ export function AppKeyboardShortcuts() {
 
   useHotkey(
     getHotkeyRegistration('commandPalette', keyboard),
-    () => toast({ title: 'CMDK coming soon' }),
+    () => toast({ title: t('toast:commandPalette') }),
     { enabled: commandPaletteHotkey !== null }
   );
 

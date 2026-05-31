@@ -1,5 +1,6 @@
 import { AlertCircle, Check, Copy, ExternalLink } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import emdashLogo from '@/assets/images/emdash/emdash_logo_white.svg';
 import {
   githubAuthDeviceCodeChannel,
@@ -40,6 +41,7 @@ export function GithubDeviceFlowModalOverlay({
 }
 
 export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModalProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { cancelGithubConnect } = useGithubContext();
 
@@ -121,8 +123,8 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
 
         if (!isAutomatic) {
           toast({
-            title: '✓ Code copied',
-            description: 'Paste it in GitHub to authorize',
+            title: t('toast:github.codeCopied'),
+            description: t('toast:github.codeCopiedDesc'),
           });
         }
 
@@ -131,14 +133,14 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
         log.error('Failed to copy:', err);
         if (!isAutomatic) {
           toast({
-            title: 'Copy failed',
-            description: 'Please copy the code manually',
+            title: t('toast:github.copyFailed'),
+            description: t('toast:github.copyFailedDesc'),
             variant: 'destructive',
           });
         }
       }
     },
-    [toast]
+    [toast, t]
   );
 
   const openGitHub = useCallback(() => {
@@ -202,8 +204,8 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
       }
 
       toast({
-        title: 'Authentication Failed',
-        description: data.message || 'An error occurred',
+        title: t('toast:github.authFailed'),
+        description: data.message || t('toast:github.authFailedDesc'),
         variant: 'destructive',
       });
     });
@@ -214,7 +216,7 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
       cleanupSuccess();
       cleanupError();
     };
-  }, [copyToClipboard, onError, onClose, toast]);
+  }, [copyToClipboard, onError, onClose, toast, t]);
 
   const handleClose = () => {
     onClose();

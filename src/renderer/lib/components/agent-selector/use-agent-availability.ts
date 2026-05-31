@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AgentProviderId } from '@shared/agent-provider-registry';
 import { useToast } from '@renderer/lib/hooks/use-toast';
 import { appState } from '@renderer/lib/stores/app-state';
@@ -18,6 +19,7 @@ export function useAgentAvailability({
     : appState.dependencies.local;
   const dependencyData = dependencyResource.data;
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const installedAgents = useMemo(
     () =>
@@ -47,20 +49,26 @@ export function useAgentAvailability({
     }
   }
 
-  async function installAgent(agentId: AgentProviderId): Promise<void> {
-    if (appState.dependencies.isInstalling(agentId, connectionId)) return;
-    const result = await appState.dependencies.install(agentId, connectionId);
-    if (!result.success) {
-      toast({
-        title: 'Install failed',
-        description: getAgentInstallErrorMessage(result.error),
-        variant: 'destructive',
-      });
-      return;
-    }
+  const installAgent = useCallback(
+    async (agentId: AgentProviderId): Promise<void> => {
+      if (appState.dependencies.isInstalling(agentId, connectionId)) return;
+      const result = await appState.dependencies.install(agentId, connectionId);
+      if (!result.success) {
+        toast({
+          title: t('toast:agent.installFailed'),
+          description: getAgentInstallErrorMessage(result.error),
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    toast({ title: 'Agent installed', description: `${agentConfig[agentId].name} is ready.` });
-  }
+      toast({
+        title: t('toast:agent.installed'),
+        description: t('toast:agent.installedDesc', { name: agentConfig[agentId].name }),
+      });
+    },
+    [t, toast, connectionId]
+  );
 
   return {
     groups,

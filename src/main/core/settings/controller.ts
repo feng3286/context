@@ -1,4 +1,5 @@
 import { createRPCController } from '@/shared/ipc/rpc';
+import { applyNativeTheme, updateApplicationMenu } from '@main/app/menu';
 import { appSettingsService, type AppSettings, type AppSettingsKey } from './settings-service';
 
 export const appSettingsController = createRPCController({
@@ -14,10 +15,30 @@ export const appSettingsController = createRPCController({
     overrides: Partial<AppSettings[T]>;
   }> => appSettingsService.getWithMeta(key),
 
-  update: <T extends AppSettingsKey>(key: T, value: AppSettings[T]): Promise<void> =>
-    appSettingsService.update(key, value),
+  update: async <T extends AppSettingsKey>(key: T, value: AppSettings[T]): Promise<void> => {
+    await appSettingsService.update(key, value);
 
-  reset: <T extends AppSettingsKey>(key: T): Promise<void> => appSettingsService.reset(key),
+    // Rebuild menu when language changes
+    if (key === 'language') {
+      updateApplicationMenu();
+    }
+
+    // Update native theme when theme changes
+    if (key === 'theme') {
+      applyNativeTheme();
+    }
+  },
+
+  reset: async <T extends AppSettingsKey>(key: T): Promise<void> => {
+    await appSettingsService.reset(key);
+
+    if (key === 'language') {
+      updateApplicationMenu();
+    }
+    if (key === 'theme') {
+      applyNativeTheme();
+    }
+  },
 
   resetField: <T extends AppSettingsKey>(key: T, field: string): Promise<void> =>
     appSettingsService.resetField(key, field as keyof AppSettings[T]),

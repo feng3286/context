@@ -1,4 +1,4 @@
-import { app, Menu, shell } from 'electron';
+import { app, Menu, nativeTheme, shell } from 'electron';
 import {
   menuCheckForUpdatesChannel,
   menuCloseTabChannel,
@@ -156,4 +156,26 @@ export function setupApplicationMenu(): void {
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+}
+
+export function updateApplicationMenu(): void {
+  setupApplicationMenu();
+}
+
+// Apply nativeTheme based on app settings
+export async function applyNativeTheme(): Promise<void> {
+  try {
+    const theme = await import('@main/core/settings/settings-service')
+      .then((m) => m.appSettingsService)
+      .then((s) => s.get('theme'));
+    if (theme === 'emlight') {
+      nativeTheme.themeSource = 'light';
+    } else if (theme === 'emdark') {
+      nativeTheme.themeSource = 'dark';
+    } else {
+      nativeTheme.themeSource = 'system';
+    }
+  } catch {
+    // settings not available yet, skip
+  }
 }

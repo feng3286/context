@@ -4,7 +4,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import dockIcon from '@/assets/images/emdash/icon-dock.png?asset';
 import { PRODUCT_NAME } from '@shared/app-identity';
 import { registerRPCRouter } from '@shared/ipc/rpc';
-import { setupApplicationMenu } from './app/menu';
+import { applyNativeTheme, setupApplicationMenu } from './app/menu';
 import { registerAppScheme, setupAppProtocol } from './app/protocol';
 import { createMainWindow } from './app/window';
 import { providerTokenRegistry } from './core/account/provider-token-registry';
@@ -123,6 +123,7 @@ app.whenReady().then(async () => {
   setupAppProtocol(join(app.getAppPath(), 'out', 'renderer'));
   await loadMenuLanguage();
   setupApplicationMenu();
+  await applyNativeTheme();
   createMainWindow();
 
   try {

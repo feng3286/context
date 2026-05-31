@@ -1,11 +1,5 @@
 import type { Configuration } from 'electron-builder';
-import {
-  APP_ID,
-  ARTIFACT_PREFIX,
-  PRODUCT_NAME,
-  R2_BASE_URL,
-  UPDATE_CHANNEL,
-} from './src/shared/app-identity';
+import { APP_ID, ARTIFACT_PREFIX, PRODUCT_NAME } from './src/shared/app-identity';
 
 const config: Configuration = {
   appId: APP_ID,
@@ -14,9 +8,10 @@ const config: Configuration = {
   artifactName: `${ARTIFACT_PREFIX}-\${arch}.\${ext}`,
   publish: [
     {
-      provider: 'generic',
-      url: R2_BASE_URL,
-      channel: UPDATE_CHANNEL,
+      provider: 'github',
+      owner: 'feng3286',
+      repo: 'context',
+      channel: 'latest',
     },
   ],
   generateUpdatesFilesForAllChannels: false,

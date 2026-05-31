@@ -1,5 +1,6 @@
 import { Paperclip } from 'lucide-react';
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAttachments } from '@renderer/lib/hooks/use-attachments';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
 import { useGithubContext } from '@renderer/lib/providers/github-context-provider';
@@ -25,6 +26,7 @@ type FeedbackModalArgs = {
 type Props = BaseModalProps<void> & FeedbackModalArgs;
 
 export function FeedbackModal({ onSuccess, blurb }: Props) {
+  const { t } = useTranslation();
   const { user: githubUser } = useGithubContext();
   const appVersion = appState.update.currentVersion;
   const {
@@ -70,7 +72,7 @@ export function FeedbackModal({ onSuccess, blurb }: Props) {
     <>
       <DialogHeader>
         <div className="flex flex-col gap-0.5">
-          <DialogTitle>Feedback</DialogTitle>
+          <DialogTitle>{t('feedback:title')}</DialogTitle>
           {blurb ? <DialogDescription className="text-xs">{blurb}</DialogDescription> : null}
         </div>
       </DialogHeader>
@@ -84,13 +86,13 @@ export function FeedbackModal({ onSuccess, blurb }: Props) {
         >
           <div className="space-y-1.5">
             <label htmlFor="feedback-details" className="sr-only">
-              Feedback details
+              {t('feedback:detailsLabel')}
             </label>
             <Textarea
               id="feedback-details"
               autoFocus
               rows={5}
-              placeholder="What do you like? How can we improve?"
+              placeholder={t('feedback:detailsPlaceholder')}
               className="resize-none"
               value={feedbackDetails}
               onChange={(event) => {
@@ -103,12 +105,12 @@ export function FeedbackModal({ onSuccess, blurb }: Props) {
 
           <div className="space-y-1.5">
             <label htmlFor="feedback-contact" className="sr-only">
-              Contact email
+              {t('feedback:contactLabel')}
             </label>
             <Input
               id="feedback-contact"
               type="text"
-              placeholder="productive@example.com (optional)"
+              placeholder={t('feedback:contactPlaceholder')}
               value={contactEmail}
               onChange={(event) => {
                 setContactEmail(event.target.value);
@@ -143,7 +145,7 @@ export function FeedbackModal({ onSuccess, blurb }: Props) {
                       disabled={submitting}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                      Remove
+                      {t('feedback:remove')}
                     </Button>
                   </li>
                 ))}
@@ -167,7 +169,7 @@ export function FeedbackModal({ onSuccess, blurb }: Props) {
           disabled={submitting}
         >
           <Paperclip className="h-4 w-4" aria-hidden="true" />
-          <span>Attach image</span>
+          <span>{t('feedback:attachImage')}</span>
         </Button>
         <ConfirmButton
           type="submit"
@@ -179,10 +181,10 @@ export function FeedbackModal({ onSuccess, blurb }: Props) {
           {submitting ? (
             <>
               <Spinner size="sm" />
-              <span>Sending...</span>
+              <span>{t('feedback:sending')}</span>
             </>
           ) : (
-            <span>Send Feedback</span>
+            <span>{t('feedback:sendFeedback')}</span>
           )}
         </ConfirmButton>
       </DialogFooter>

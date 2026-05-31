@@ -1,6 +1,7 @@
 import { ChevronDown, CircleAlert, GitBranch } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Branch } from '@shared/git';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
@@ -41,6 +42,7 @@ export const CreatePrModal = observer(function CreatePrModal({
   workspaceId,
   onSuccess,
 }: Props) {
+  const { t } = useTranslation();
   const { projectId, taskId } = useTaskViewContext();
   const provisionedTask = useProvisionedTask();
   const [title, setTitle] = useState(branchName);
@@ -76,7 +78,8 @@ export const CreatePrModal = observer(function CreatePrModal({
         if (!pushResult.success) {
           log.error('Failed to push branch:', pushResult.error);
           setError(
-            ('message' in pushResult.error && pushResult.error.message) || 'Failed to push branch'
+            ('message' in pushResult.error && pushResult.error.message) ||
+              t('createPr:failedToPush')
           );
           return;
         }
@@ -104,17 +107,15 @@ export const CreatePrModal = observer(function CreatePrModal({
   return (
     <div className="flex flex-col overflow-hidden max-h-[70vh]">
       <DialogHeader>
-        <DialogTitle>{draft ? 'Create Draft PR' : 'Create Pull Request'}</DialogTitle>
+        <DialogTitle>{draft ? t('createPr:draftTitle') : t('createPr:prTitle')}</DialogTitle>
       </DialogHeader>
       <DialogContentArea className="space-y-4">
         {!hasGitHubRemote && (
-          <p className="text-sm text-muted-foreground">
-            No GitHub remote detected. Configure a GitHub remote to create pull requests.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('createPr:noRemoteWarning')}</p>
         )}
         <div className="flex items-center gap-2 flex-col">
           <BranchDisplay
-            label="Head Branch"
+            label={t('createPr:headBranch')}
             branchName={branchName}
             className="border border-border rounded-md"
           />
@@ -126,14 +127,16 @@ export const CreatePrModal = observer(function CreatePrModal({
             trigger={
               <ComboboxTrigger className="flex w-full items-center gap-2 justify-between border border-border rounded-md p-2 text-left outline-none">
                 <div className="flex flex-col text-left text-sm gap-0.5">
-                  <span className="text-foreground-passive text-xs">Base Branch</span>
+                  <span className="text-foreground-passive text-xs">
+                    {t('createPr:baseBranch')}
+                  </span>
                   <span className="flex items-center gap-1">
                     <GitBranch
                       absoluteStrokeWidth
                       strokeWidth={2}
                       className="size-3.5 shrink-0 text-foreground-muted"
                     />
-                    <ComboboxValue placeholder="Select a base branch" />
+                    <ComboboxValue placeholder={t('createPr:selectBaseBranch')} />
                   </span>
                 </div>
                 <ChevronDown className="size-4 shrink-0 text-foreground-muted" />
@@ -144,9 +147,9 @@ export const CreatePrModal = observer(function CreatePrModal({
         <Separator />
         <FieldGroup>
           <Field>
-            <FieldLabel>Title</FieldLabel>
+            <FieldLabel>{t('createPr:titleField')}</FieldLabel>
             <Input
-              placeholder="PR title"
+              placeholder={t('createPr:titlePlaceholder')}
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -154,7 +157,7 @@ export const CreatePrModal = observer(function CreatePrModal({
             />
           </Field>
           <Field>
-            <FieldLabel>Description</FieldLabel>
+            <FieldLabel>{t('createPr:description')}</FieldLabel>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -166,7 +169,7 @@ export const CreatePrModal = observer(function CreatePrModal({
         {error && (
           <Alert variant="destructive">
             <CircleAlert />
-            <AlertTitle>Failed to create pull request</AlertTitle>
+            <AlertTitle>{t('createPr:failedToCreate')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -176,18 +179,18 @@ export const CreatePrModal = observer(function CreatePrModal({
           <SplitButton
             size="sm"
             loading={isCreating}
-            loadingLabel="Creating..."
+            loadingLabel={t('createPr:creating')}
             disabled={!hasGitHubRemote || !selectedBase?.branch || !title.trim()}
             actions={[
               {
                 value: 'push-and-create',
-                label: draft ? 'Push & Create Draft' : 'Push & Create PR',
+                label: draft ? t('createPr:pushAndCreateDraft') : t('createPr:pushAndCreatePR'),
                 action: () => void doCreate(true),
               },
               {
                 value: 'create-only',
-                label: draft ? 'Create Draft' : 'Create PR',
-                description: 'Skip push and open a PR from the current remote state',
+                label: draft ? t('createPr:createDraft') : t('createPr:createPR'),
+                description: t('createPr:skipPushDesc'),
                 action: () => void doCreate(false),
               },
             ]}
@@ -198,7 +201,11 @@ export const CreatePrModal = observer(function CreatePrModal({
             onClick={() => void doCreate(false)}
             disabled={!hasGitHubRemote || !selectedBase?.branch || !title.trim() || isCreating}
           >
-            {isCreating ? 'Creating...' : draft ? 'Create Draft' : 'Create PR'}
+            {isCreating
+              ? t('createPr:creating')
+              : draft
+                ? t('createPr:createDraft')
+                : t('createPr:createPR')}
           </ConfirmButton>
         )}
       </DialogFooter>

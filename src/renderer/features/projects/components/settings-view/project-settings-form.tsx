@@ -1,6 +1,7 @@
 import { Check, Loader2, Undo2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Branch } from '@shared/git';
 import type { UpdateProjectSettingsError } from '@shared/projects';
 import { err, type Result } from '@shared/result';
@@ -117,6 +118,7 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
   onSuccess,
   save,
 }: ProjectSettingsFormProps) {
+  const { t } = useTranslation();
   const repo = getRepositoryStore(projectId);
   const remotes = repo?.remotes ?? EMPTY_REMOTES;
   const configuredRemote = repo?.configuredRemote.name ?? 'origin';
@@ -161,7 +163,7 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
     }
 
     if (result.error.type === 'invalid-worktree-directory') {
-      setWorktreeDirectoryError('Invalid worktree directory');
+      setWorktreeDirectoryError(t('projectSettings:worktreeDir.invalidDirError'));
       setSaveStatus('idle');
       return;
     }
@@ -172,18 +174,15 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
 
   return (
     <div className="flex flex-col max-w-3xl mx-auto w-full h-full overflow-hidden px-10">
-      <h1 className="text-lg font-medium pt-10 pb-5">Project Settings</h1>
+      <h1 className="text-lg font-medium pt-10 pb-5">{t('projectSettings:title')}</h1>
       <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'none' }}>
         <FieldGroup>
           <Field>
-            <FieldTitle>Preserve patterns</FieldTitle>
-            <FieldDescription>
-              Gitignored files matching these glob patterns are copied from the main repo into each
-              worktree. One pattern per line.
-            </FieldDescription>
+            <FieldTitle>{t('projectSettings:preservePatterns.title')}</FieldTitle>
+            <FieldDescription>{t('projectSettings:preservePatterns.description')}</FieldDescription>
             <Textarea
               rows={5}
-              placeholder={'.env\n.env.local\n.envrc'}
+              placeholder={t('projectSettings:preservePatterns.placeholder')}
               value={form.preservePatterns}
               onChange={(e) => update('preservePatterns', e.target.value)}
             />
@@ -192,22 +191,19 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
           <Separator />
 
           <Field>
-            <FieldTitle>Worktree directory</FieldTitle>
-            <FieldDescription>
-              Override where worktrees are created. Defaults to the app-level worktree directory
-              setting.
-            </FieldDescription>
+            <FieldTitle>{t('projectSettings:worktreeDir.title')}</FieldTitle>
+            <FieldDescription>{t('projectSettings:worktreeDir.description')}</FieldDescription>
             <div className="relative">
               <Input
                 aria-invalid={worktreeDirectoryError ? true : undefined}
                 className={cn(worktreeDirectoryError ? 'pr-44' : undefined)}
-                placeholder="Leave blank to use the default"
+                placeholder={t('projectSettings:worktreeDir.placeholder')}
                 value={form.worktreeDirectory}
                 onChange={(e) => update('worktreeDirectory', e.target.value)}
               />
               {worktreeDirectoryError ? (
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-red-500">
-                  {worktreeDirectoryError}
+                  {t('projectSettings:worktreeDir.invalidDirError')}
                 </span>
               ) : null}
             </div>
@@ -216,11 +212,8 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
           <Separator />
 
           <Field>
-            <FieldTitle>Default branch</FieldTitle>
-            <FieldDescription>
-              The branch new tasks are created from by default. Overrides the branch detected at
-              project creation time.
-            </FieldDescription>
+            <FieldTitle>{t('projectSettings:defaultBranch.title')}</FieldTitle>
+            <FieldDescription>{t('projectSettings:defaultBranch.description')}</FieldDescription>
             <ProjectBranchSelector
               projectId={projectId}
               value={form.defaultBranch ?? undefined}
@@ -231,17 +224,14 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
           <Separator />
 
           <Field>
-            <FieldTitle>Remote</FieldTitle>
-            <FieldDescription>
-              The git remote used for fetching and syncing worktrees. Defaults to{' '}
-              <code className="font-mono text-xs">origin</code>.
-            </FieldDescription>
+            <FieldTitle>{t('projectSettings:remote.title')}</FieldTitle>
+            <FieldDescription>{t('projectSettings:remote.description')}</FieldDescription>
             <Select
               value={form.remote || 'origin'}
               onValueChange={(value) => update('remote', value ?? '')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a remote" />
+                <SelectValue placeholder={t('projectSettings:remote.selectPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {remotes.length > 0 ? (
@@ -261,14 +251,11 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
           <Separator />
 
           <Field>
-            <FieldTitle>Shell setup</FieldTitle>
-            <FieldDescription>
-              Shell commands run before the agent starts in each worktree session (e.g.{' '}
-              <code className="font-mono text-xs">nvm use</code>).
-            </FieldDescription>
+            <FieldTitle>{t('projectSettings:shellSetup.title')}</FieldTitle>
+            <FieldDescription>{t('projectSettings:shellSetup.description')}</FieldDescription>
             <Textarea
               rows={3}
-              placeholder={'nvm use\nsource .envrc'}
+              placeholder={t('projectSettings:shellSetup.placeholder')}
               value={form.shellSetup}
               onChange={(e) => update('shellSetup', e.target.value)}
             />
@@ -278,8 +265,8 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
 
           <Field orientation="horizontal">
             <div className="flex flex-1 flex-col gap-1">
-              <FieldTitle>Enable tmux</FieldTitle>
-              <FieldDescription>Run the agent session inside a tmux session.</FieldDescription>
+              <FieldTitle>{t('projectSettings:tmux.title')}</FieldTitle>
+              <FieldDescription>{t('projectSettings:tmux.description')}</FieldDescription>
             </div>
             <Switch checked={form.tmux} onCheckedChange={(checked) => update('tmux', checked)} />
           </Field>
@@ -288,10 +275,10 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
 
           <div className="flex flex-col gap-4">
             <div>
-              <FieldTitle>Lifecycle scripts</FieldTitle>
+              <FieldTitle>{t('projectSettings:lifecycle.title')}</FieldTitle>
               <FieldDescription className="mt-1">
-                Shell commands run at each stage of the worktree lifecycle. One command per line.
-                <span> See </span>
+                {t('projectSettings:lifecycle.description')}
+                <span> </span>
                 <Button
                   type="button"
                   variant="link"
@@ -300,31 +287,35 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
                   onClick={() => rpc.app.openExternal('https://github.com/feng3286/context#readme')}
                 >
                   <span className="font-mono text-xs transition-colors group-hover:text-foreground">
-                    docs
+                    {t('projectSettings:lifecycle.docsLink')}
                   </span>
                   <span className="text-sm text-muted-foreground transition-colors group-hover:text-foreground">
                     ↗
                   </span>
                 </Button>
-                <span> for the full project config reference.</span>
+                <span> {t('projectSettings:lifecycle.docsSuffix')}</span>
               </FieldDescription>
             </div>
 
             <Field>
-              <FieldTitle className="text-xs font-normal text-muted-foreground">Setup</FieldTitle>
+              <FieldTitle className="text-xs font-normal text-muted-foreground">
+                {t('projectSettings:lifecycle.setup')}
+              </FieldTitle>
               <Textarea
                 rows={3}
-                placeholder={'npm install\ncp .env.example .env'}
+                placeholder={t('projectSettings:lifecycle.setupPlaceholder')}
                 value={form.scriptSetup}
                 onChange={(e) => update('scriptSetup', e.target.value)}
               />
             </Field>
 
             <Field>
-              <FieldTitle className="text-xs font-normal text-muted-foreground">Run</FieldTitle>
+              <FieldTitle className="text-xs font-normal text-muted-foreground">
+                {t('projectSettings:lifecycle.run')}
+              </FieldTitle>
               <Textarea
                 rows={3}
-                placeholder="npm run dev"
+                placeholder={t('projectSettings:lifecycle.runPlaceholder')}
                 value={form.scriptRun}
                 onChange={(e) => update('scriptRun', e.target.value)}
               />
@@ -332,11 +323,11 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
 
             <Field>
               <FieldTitle className="text-xs font-normal text-muted-foreground">
-                Teardown
+                {t('projectSettings:lifecycle.teardown')}
               </FieldTitle>
               <Textarea
                 rows={3}
-                placeholder="docker compose down"
+                placeholder={t('projectSettings:lifecycle.teardownPlaceholder')}
                 value={form.scriptTeardown}
                 onChange={(e) => update('scriptTeardown', e.target.value)}
               />
@@ -360,7 +351,11 @@ export const ProjectSettingsForm = observer(function ProjectSettingsForm({
           <span className="inline-flex min-w-22 items-center justify-center gap-1.5">
             {saving && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
             {!saving && saved && <Check className="size-4" aria-hidden="true" />}
-            {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
+            {saving
+              ? t('projectSettings:saving')
+              : saved
+                ? t('projectSettings:saved')
+                : t('projectSettings:save')}
           </span>
         </ConfirmButton>
       </div>

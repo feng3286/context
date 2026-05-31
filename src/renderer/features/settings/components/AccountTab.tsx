@@ -1,5 +1,7 @@
 import { LogIn, LogOut, User } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { PRODUCT_NAME } from '@shared/app-identity';
 import { useToast } from '@renderer/lib/hooks/use-toast';
 import {
   useAccountHealth,
@@ -11,6 +13,7 @@ import { Button } from '@renderer/lib/ui/button';
 import { ServerUnavailableMessage } from './ServerUnavailableMessage';
 
 export function AccountTab() {
+  const { t } = useTranslation();
   const { data: session, isLoading } = useAccountSession();
   const { data: serverAvailable } = useAccountHealth();
   const signInMutation = useAccountSignIn();
@@ -28,24 +31,24 @@ export function AccountTab() {
     try {
       const result = await signInMutation.mutateAsync(undefined);
       if (!result.success) {
-        const message = result.error || 'Sign in failed';
+        const message = result.error || t('settings:account.signInFailed');
         setError(message);
         toast({
-          title: 'Sign in failed',
+          title: t('settings:account.signInFailed'),
           description: message,
           variant: 'destructive',
         });
         return;
       }
       toast({
-        title: 'Signed in to Context',
+        title: t('settings:account.signedIn'),
         description: result.user ? `Connected as @${result.user.username}` : 'Signed in',
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign in failed';
+      const message = err instanceof Error ? err.message : t('settings:account.signInFailed');
       setError(message);
       toast({
-        title: 'Sign in failed',
+        title: t('settings:account.signInFailed'),
         description: message,
         variant: 'destructive',
       });
@@ -59,7 +62,7 @@ export function AccountTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-        Loading account...
+        {t('settings:account.loadingAccount')}
       </div>
     );
   }
@@ -81,7 +84,8 @@ export function AccountTab() {
           )}
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground">
-              Connected as <span className="font-semibold">@{user.username}</span>
+              {t('settings:account.connectedAs')}{' '}
+              <span className="font-semibold">@{user.username}</span>
             </p>
             {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
           </div>
@@ -92,7 +96,7 @@ export function AccountTab() {
             disabled={signOutMutation.isPending}
           >
             <LogOut className="h-3.5 w-3.5" />
-            Sign Out
+            {t('settings:account.signOut')}
           </Button>
         </div>
       </div>
@@ -104,10 +108,10 @@ export function AccountTab() {
       <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
         <div className="flex flex-col gap-3">
           <div>
-            <p className="text-sm font-medium text-foreground">Session expired</p>
-            <p className="text-xs text-muted-foreground">
-              Sign in again to reconnect your Context account.
+            <p className="text-sm font-medium text-foreground">
+              {t('settings:account.sessionExpired')}
             </p>
+            <p className="text-xs text-muted-foreground">{t('settings:account.reconnectDesc')}</p>
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
           {serverAvailable === false ? (
@@ -120,7 +124,9 @@ export function AccountTab() {
               disabled={signInMutation.isPending}
             >
               <LogIn className="h-3.5 w-3.5" />
-              {signInMutation.isPending ? 'Signing in...' : 'Sign In'}
+              {signInMutation.isPending
+                ? t('settings:account.signingIn')
+                : t('settings:account.signIn')}
             </Button>
           )}
         </div>
@@ -132,10 +138,10 @@ export function AccountTab() {
     <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
       <div className="flex flex-col gap-3">
         <div>
-          <p className="text-sm font-medium text-foreground">Context Account</p>
-          <p className="text-xs text-muted-foreground">
-            Create a Context account to automatically connect GitHub using OAuth2.
+          <p className="text-sm font-medium text-foreground">
+            {t('settings:account.contextAccount')}
           </p>
+          <p className="text-xs text-muted-foreground">{t('settings:account.createAccountDesc')}</p>
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
         {serverAvailable === false ? (
@@ -148,7 +154,9 @@ export function AccountTab() {
             disabled={signInMutation.isPending}
           >
             <LogIn className="h-3.5 w-3.5" />
-            {signInMutation.isPending ? 'Creating account...' : 'Create Account'}
+            {signInMutation.isPending
+              ? t('settings:account.creatingAccount')
+              : t('settings:account.createAccount')}
           </Button>
         )}
       </div>

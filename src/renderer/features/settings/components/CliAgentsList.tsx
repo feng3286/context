@@ -1,6 +1,7 @@
 import { Settings2, Sparkles } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AGENT_PROVIDERS,
   isValidProviderId,
@@ -59,7 +60,11 @@ type AgentRowActions = {
   onSettingsClick: (id: string) => void;
 };
 
-const renderAgentRow = (agent: CliAgentStatus, actions: AgentRowActions) => {
+const renderAgentRow = (
+  agent: CliAgentStatus,
+  actions: AgentRowActions,
+  t: ReturnType<typeof useTranslation>['t']
+) => {
   const logo = agentMeta[agent.id as keyof typeof agentMeta]?.icon;
   const providerId = isValidProviderId(agent.id) ? agent.id : null;
 
@@ -75,7 +80,7 @@ const renderAgentRow = (agent: CliAgentStatus, actions: AgentRowActions) => {
 
   const isDetected = agent.status === 'connected';
   const indicatorClass = isDetected ? 'bg-emerald-500' : 'bg-muted-foreground/50';
-  const statusLabel = isDetected ? 'Detected' : 'Not detected';
+  const statusLabel = isDetected ? t('common:detected') : t('common:notDetected');
 
   return (
     <IntegrationRow
@@ -107,13 +112,13 @@ const renderAgentRow = (agent: CliAgentStatus, actions: AgentRowActions) => {
                   type="button"
                   onClick={() => actions.onSettingsClick(agent.id)}
                   className={ICON_BUTTON}
-                  aria-label={`${agent.name} execution settings`}
+                  aria-label={t('common:settingsFor', { name: agent.name })}
                 >
                   <Settings2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
-                Execution settings
+                {t('common:executionSettings')}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -133,6 +138,7 @@ const renderAgentRow = (agent: CliAgentStatus, actions: AgentRowActions) => {
 };
 
 export const CliAgentsList: React.FC = observer(() => {
+  const { t } = useTranslation();
   const [customModalAgentId, setCustomModalAgentId] = useState<string | null>(null);
   const { toast } = useToast();
   const agentStatuses = appState.dependencies.agentStatuses;
@@ -155,14 +161,14 @@ export const CliAgentsList: React.FC = observer(() => {
 
       if (result.success) {
         toast({
-          title: 'Agent installed',
-          description: `${agent.name} is ready.`,
+          title: t('common:agentInstalled'),
+          description: t('common:agentReady', { name: agent.name }),
         });
         return;
       }
 
       toast({
-        title: 'Install failed',
+        title: t('common:installFailed'),
         description: getAgentInstallErrorMessage(result.error),
         variant: 'destructive',
       });
@@ -184,7 +190,7 @@ export const CliAgentsList: React.FC = observer(() => {
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        {sortedAgents.map((agent) => renderAgentRow(agent, rowActions))}
+        {sortedAgents.map((agent) => renderAgentRow(agent, rowActions, t))}
       </div>
 
       <CustomCommandModal

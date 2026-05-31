@@ -1,6 +1,7 @@
 import { useForm } from '@tanstack/react-form';
 import { Trash2 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { McpCatalogEntry, McpProvidersResponse, McpServer } from '@shared/mcp/types';
 import { Button } from '@renderer/lib/ui/button';
 import { ConfirmButton } from '@renderer/lib/ui/confirm-button';
@@ -42,6 +43,7 @@ export const McpModal: React.FC<McpModalProps> = ({
   onRemove,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const isEdit = mode.type === 'edit';
   const isCatalog = mode.type === 'add-catalog';
   const credentialKeys = isCatalog
@@ -107,10 +109,10 @@ export const McpModal: React.FC<McpModalProps> = ({
       <DialogHeader>
         <DialogTitle>
           {isEdit
-            ? 'Edit MCP Server'
+            ? t('mcp:editServer')
             : isCatalog
-              ? `Add ${form.state.values.name}`
-              : 'Add Custom MCP Server'}
+              ? t('mcp:addCatalog', { name: form.state.values.name })
+              : t('mcp:addCustom')}
         </DialogTitle>
       </DialogHeader>
 
@@ -123,12 +125,12 @@ export const McpModal: React.FC<McpModalProps> = ({
           <form.Field name="name">
             {(field) => (
               <Field>
-                <FieldLabel>Server Name</FieldLabel>
+                <FieldLabel>{t('mcp:serverName')}</FieldLabel>
                 <Input
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   disabled={isCatalog || isEdit}
-                  placeholder="my-server"
+                  placeholder={t('mcp:namePlaceholder')}
                 />
               </Field>
             )}
@@ -139,7 +141,7 @@ export const McpModal: React.FC<McpModalProps> = ({
             <form.Field name="transport">
               {(field) => (
                 <Field>
-                  <FieldLabel>Transport</FieldLabel>
+                  <FieldLabel>{t('mcp:transport')}</FieldLabel>
                   <Select
                     value={field.state.value}
                     onValueChange={(v) => {
@@ -159,8 +161,8 @@ export const McpModal: React.FC<McpModalProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="stdio">stdio</SelectItem>
-                      <SelectItem value="http">http</SelectItem>
+                      <SelectItem value="stdio">{t('mcp:stdio')}</SelectItem>
+                      <SelectItem value="http">{t('mcp:http')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -177,12 +179,12 @@ export const McpModal: React.FC<McpModalProps> = ({
                     <form.Field name="command">
                       {(field) => (
                         <Field>
-                          <FieldLabel>Command</FieldLabel>
+                          <FieldLabel>{t('mcp:command')}</FieldLabel>
                           <Input
                             value={field.state.value}
                             onChange={(e) => field.handleChange(e.target.value)}
                             disabled={isCatalog}
-                            placeholder="npx"
+                            placeholder={t('mcp:commandPlaceholder')}
                           />
                         </Field>
                       )}
@@ -190,7 +192,7 @@ export const McpModal: React.FC<McpModalProps> = ({
                     <form.Field name="args">
                       {(field) => (
                         <Field>
-                          <FieldLabel>Arguments (one per line)</FieldLabel>
+                          <FieldLabel>{t('mcp:args')}</FieldLabel>
                           <textarea
                             value={field.state.value}
                             onChange={(e) => field.handleChange(e.target.value)}
@@ -209,12 +211,12 @@ export const McpModal: React.FC<McpModalProps> = ({
                   <form.Field name="url">
                     {(field) => (
                       <Field>
-                        <FieldLabel>URL</FieldLabel>
+                        <FieldLabel>{t('mcp:url')}</FieldLabel>
                         <Input
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           disabled={isCatalog}
-                          placeholder="https://mcp.example.com"
+                          placeholder={t('mcp:urlPlaceholder')}
                         />
                       </Field>
                     )}
@@ -228,10 +230,10 @@ export const McpModal: React.FC<McpModalProps> = ({
           <form.Field name="envEntries">
             {(field) => (
               <KeyValueSection
-                label="Environment Variables"
+                label={t('mcp:envVars')}
                 entries={field.state.value}
                 onChange={(entries) => field.handleChange(entries)}
-                addLabel="+ Add env var"
+                addLabel={t('mcp:addEnvVar')}
                 makeId={makeId}
                 credentialKeys={credentialKeys}
               />
@@ -245,10 +247,10 @@ export const McpModal: React.FC<McpModalProps> = ({
                 <form.Field name="headerEntries">
                   {(field) => (
                     <KeyValueSection
-                      label="Headers"
+                      label={t('mcp:headers')}
                       entries={field.state.value}
                       onChange={(entries) => field.handleChange(entries)}
-                      addLabel="+ Add header"
+                      addLabel={t('mcp:addHeader')}
                       makeId={makeId}
                       credentialKeys={credentialKeys}
                     />
@@ -293,7 +295,7 @@ export const McpModal: React.FC<McpModalProps> = ({
             onClick={() => onRemove(form.state.values.name)}
           >
             <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-            Remove
+            {t('mcp:remove')}
           </Button>
         )}
         <form.Subscribe selector={(state) => state.values}>
@@ -310,7 +312,13 @@ export const McpModal: React.FC<McpModalProps> = ({
                 disabled={!canSave}
                 size="sm"
               >
-                {saving ? (isEdit ? 'Saving...' : 'Adding...') : isEdit ? 'Save' : 'Add'}
+                {saving
+                  ? isEdit
+                    ? t('mcp:saving')
+                    : t('mcp:adding')
+                  : isEdit
+                    ? t('mcp:save')
+                    : t('mcp:add')}
               </ConfirmButton>
             );
           }}

@@ -1,6 +1,7 @@
 import { formatForDisplay, useHotkeyRecorder, type Hotkey } from '@tanstack/react-hotkeys';
 import { RotateCcw, X } from 'lucide-react';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { toast } from '@renderer/lib/hooks/use-toast';
 import {
@@ -28,6 +29,7 @@ const SHORTCUTS_BY_CATEGORY = CONFIGURABLE_SHORTCUTS.reduce<
 }, {});
 
 const KeyboardSettingsCard: React.FC = () => {
+  const { t } = useTranslation();
   const {
     value: keyboard,
     update,
@@ -49,8 +51,8 @@ const KeyboardSettingsCard: React.FC = () => {
 
       if (conflict) {
         const [, def] = conflict;
-        const msg = `Conflicts with "${def.label}". Choose a different shortcut.`;
-        toast({ title: 'Shortcut conflict', description: msg, variant: 'destructive' });
+        const msg = t('common:shortcutConflictDesc', { label: def.label });
+        toast({ title: t('common:shortcutConflict'), description: msg, variant: 'destructive' });
         recorder.cancelRecording();
         setEditingKey(null);
         return;
@@ -58,8 +60,11 @@ const KeyboardSettingsCard: React.FC = () => {
 
       update({ [editingKey]: hotkey });
       toast({
-        title: 'Shortcut updated',
-        description: `${APP_SHORTCUTS[editingKey].label} is now ${formatForDisplay(hotkey)}`,
+        title: t('common:shortcutUpdated'),
+        description: t('common:shortcutUpdatedDesc', {
+          label: APP_SHORTCUTS[editingKey].label,
+          hotkey: formatForDisplay(hotkey),
+        }),
       });
       setEditingKey(null);
     },
@@ -74,16 +79,16 @@ const KeyboardSettingsCard: React.FC = () => {
   const handleReset = (key: ShortcutSettingsKey) => {
     resetField(key);
     toast({
-      title: 'Shortcut reset',
-      description: `${APP_SHORTCUTS[key].label} reset to default.`,
+      title: t('common:shortcutReset'),
+      description: t('common:shortcutResetDesc', { label: APP_SHORTCUTS[key].label }),
     });
   };
 
   const handleClear = (key: ShortcutSettingsKey) => {
     update({ [key]: null });
     toast({
-      title: 'Shortcut removed',
-      description: `${APP_SHORTCUTS[key].label} no longer has a key binding.`,
+      title: t('common:shortcutRemoved'),
+      description: t('common:shortcutRemovedDesc', { label: APP_SHORTCUTS[key].label }),
     });
   };
 
@@ -127,7 +132,7 @@ const KeyboardSettingsCard: React.FC = () => {
                             onClick={() => recorder.cancelRecording()}
                             disabled={saving}
                           >
-                            Press keys...
+                            {t('common:pressKeys')}
                           </Button>
                           <Button
                             type="button"
@@ -136,7 +141,7 @@ const KeyboardSettingsCard: React.FC = () => {
                             onClick={() => recorder.cancelRecording()}
                             disabled={saving}
                           >
-                            Cancel
+                            {t('common:cancel')}
                           </Button>
                         </>
                       ) : (
@@ -154,12 +159,14 @@ const KeyboardSettingsCard: React.FC = () => {
                                         className="text-muted-foreground hover:text-foreground"
                                         onClick={() => handleClear(key)}
                                         disabled={loading || saving}
-                                        aria-label="Remove shortcut"
+                                        aria-label={t('common:removeShortcutTooltip')}
                                       >
                                         <X className="h-3.5 w-3.5" />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">Remove shortcut</TooltipContent>
+                                    <TooltipContent side="top">
+                                      {t('common:removeShortcut')}
+                                    </TooltipContent>
                                   </Tooltip>
                                 )}
                                 {showReset && (
@@ -172,12 +179,14 @@ const KeyboardSettingsCard: React.FC = () => {
                                         className="text-muted-foreground hover:text-foreground"
                                         onClick={() => handleReset(key)}
                                         disabled={loading || saving}
-                                        aria-label="Reset to default"
+                                        aria-label={t('common:resetToDefaultShortcut')}
                                       >
                                         <RotateCcw className="h-3.5 w-3.5" />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">Reset to default</TooltipContent>
+                                    <TooltipContent side="top">
+                                      {t('common:resetToDefaultShortcut')}
+                                    </TooltipContent>
                                   </Tooltip>
                                 )}
                               </TooltipProvider>

@@ -2,6 +2,7 @@ import { CheckIcon, ChevronDownIcon, Github, RefreshCw, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { motion } from 'motion/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PrSortField } from '@shared/pull-requests';
 import {
   usePrViewState,
@@ -213,6 +214,7 @@ export const PullRequestView = observer(function PullRequestView({
   projectId?: string;
   compact?: boolean;
 } = {}) {
+  const { t } = useTranslation();
   const {
     params: { projectId: paramsProjectId },
   } = useParams('project');
@@ -260,8 +262,7 @@ export const PullRequestView = observer(function PullRequestView({
     return (
       <div className={wrapperClass}>
         <p className="text-sm text-muted-foreground text-center py-4">
-          Pull requests are currently available only for configured GitHub remotes. You can change
-          the remote in the project settings.
+          {t('git:pr.unavailableDescFull')}
         </p>
       </div>
     );
@@ -275,8 +276,7 @@ export const PullRequestView = observer(function PullRequestView({
             <Github className="size-4 text-foreground-muted" />
           </span>
           <p className="text-center text-sm font-normal text-foreground-muted">
-            GitHub is not connected. Create a user account and connect your GitHub account to view
-            pull requests.
+            {t('git:pr.githubNotConnected')}
           </p>
           <Button
             type="button"
@@ -288,7 +288,7 @@ export const PullRequestView = observer(function PullRequestView({
               })
             }
           >
-            Connect User Account
+            {t('git:pr.connectAccount')}
           </Button>
         </div>
       </div>
@@ -307,13 +307,13 @@ export const PullRequestView = observer(function PullRequestView({
               handleStatusChange(next as StatusFilter);
             }}
           >
-            <ToggleGroupItem value="open">Open</ToggleGroupItem>
-            <ToggleGroupItem value="not-open">Closed</ToggleGroupItem>
+            <ToggleGroupItem value="open">{t('git:pr.open')}</ToggleGroupItem>
+            <ToggleGroupItem value="not-open">{t('git:pr.closed')}</ToggleGroupItem>
           </ToggleGroup>
 
           <div className="flex items-center gap-2">
             <SearchInput
-              placeholder="Search by title, branch, or number..."
+              placeholder={t('git:pr.searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -331,7 +331,7 @@ export const PullRequestView = observer(function PullRequestView({
               <ContextMenuContent>
                 <ContextMenuItem onClick={handleForceFullSync} disabled={syncing}>
                   <RefreshCw className="size-4" />
-                  Force full sync
+                  {t('git:pr.forceFullSync')}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
@@ -342,7 +342,7 @@ export const PullRequestView = observer(function PullRequestView({
         <div className="flex gap-2 flex-wrap flex-col">
           <div className="flex items-center gap-2 flex-wrap justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-foreground-passive">Sort</span>
+              <span className="text-sm text-foreground-passive">{t('git:pr.sort')}</span>
               <Select value={sortFilter} onValueChange={handleSortChange}>
                 <SelectTrigger
                   size="sm"
@@ -361,9 +361,9 @@ export const PullRequestView = observer(function PullRequestView({
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-sm text-foreground-passive">Filter by</span>
+              <span className="text-sm text-foreground-passive">{t('git:pr.filterBy')}</span>
               <UserFilterPopover
-                label="Author"
+                label={t('git:pr.author')}
                 items={authorItems}
                 selected={selectedAuthorLogin}
                 onChange={setSelectedAuthorLogin}
@@ -374,7 +374,7 @@ export const PullRequestView = observer(function PullRequestView({
                 onChange={setSelectedLabelNames}
               />
               <UserFilterPopover
-                label="Assignee"
+                label={t('git:pr.assignee')}
                 items={assigneeItems}
                 selected={selectedAssigneeLogin}
                 onChange={setSelectedAssigneeLogin}

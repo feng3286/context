@@ -1,5 +1,6 @@
 import { Eye, FileCode, Pencil } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useTranslation } from 'react-i18next';
 import { FileTabs } from '@renderer/features/tasks/editor/file-tabs';
 import { EditorViewStore } from '@renderer/features/tasks/editor/stores/editor-view-store';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
@@ -14,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from '@renderer/lib/ui/toggle-group';
 import { useEditorContext } from './editor-provider';
 
 export const EditorMainPanel = observer(function EditorMainPanel() {
+  const { t } = useTranslation();
   const { setEditorHost } = useEditorContext();
 
   const editorView = useProvisionedTask().taskView.editorView;
@@ -32,8 +34,8 @@ export const EditorMainPanel = observer(function EditorMainPanel() {
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
         <FileCode className="h-10 w-10 opacity-20" />
         <div className="text-center">
-          <p className="text-sm font-medium opacity-50">No file open</p>
-          <p className="mt-1 text-xs opacity-35">Select a file from the tree to open it here</p>
+          <p className="text-sm font-medium opacity-50">{t('editor:noFileOpen')}</p>
+          <p className="mt-1 text-xs opacity-35">{t('editor:noFileOpenDesc')}</p>
         </div>
       </div>
     );
@@ -84,6 +86,7 @@ interface SourceToggleOverlayProps {
 }
 
 function SourceToggleOverlay({ filePath, kind, editorView }: SourceToggleOverlayProps) {
+  const { t } = useTranslation();
   const sourceKind = `${kind}-source` as 'markdown-source' | 'svg-source';
   return (
     <ToggleGroup
@@ -96,10 +99,13 @@ function SourceToggleOverlay({ filePath, kind, editorView }: SourceToggleOverlay
       size="sm"
       className="absolute right-3 top-3 z-10"
     >
-      <ToggleGroupItem value={kind} aria-label={kind === 'markdown' ? 'Preview' : 'View rendered'}>
+      <ToggleGroupItem
+        value={kind}
+        aria-label={kind === 'markdown' ? t('editor:viewRendered') : t('editor:viewRendered')}
+      >
         <Eye className="h-3.5 w-3.5" />
       </ToggleGroupItem>
-      <ToggleGroupItem value={sourceKind} aria-label="Edit source">
+      <ToggleGroupItem value={sourceKind} aria-label={t('editor:editSource')}>
         <Pencil className="h-3.5 w-3.5" />
       </ToggleGroupItem>
     </ToggleGroup>

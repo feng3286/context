@@ -1,6 +1,7 @@
 import { Loader2, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getProjectStore,
   projectDisplayName,
@@ -111,7 +112,8 @@ const FileTab: React.FC<FileTabProps> = observer(function FileTab({
   onDoubleClick,
   onClose,
 }) {
-  const fileName = tab.path.split('/').pop() || 'Untitled';
+  const { t } = useTranslation();
+  const fileName = tab.path.split('/').pop() || t('editor:untitled');
   const isMonacoFile = tab.kind === 'text' || tab.kind === 'markdown' || tab.kind === 'svg';
   const modelStatus = useModelStatus(tab.bufferUri);
   const showSpinner = useDelayedBoolean(isMonacoFile && modelStatus === 'loading', 200);
@@ -131,7 +133,7 @@ const FileTab: React.FC<FileTabProps> = observer(function FileTab({
         )}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
-        title={tab.isPreview ? `${tab.path} (preview — double-click to keep)` : tab.path}
+        title={tab.isPreview ? `${tab.path} (${t('editor:previewHint')})` : tab.path}
       >
         <div className="flex items-center pl-3 pr-2 h-full gap-1.5">
           <span className="shrink-0 [&>svg]:h-3 [&>svg]:w-3">
@@ -153,13 +155,13 @@ const FileTab: React.FC<FileTabProps> = observer(function FileTab({
             {tab.isDirty && (
               <div
                 className="size-2 rounded-full bg-foreground group-hover:opacity-0"
-                title="Unsaved changes"
+                title={t('editor:unsavedChanges')}
               />
             )}
             <button
               className="absolute inset-0 hover:bg-background-2 text-foreground-muted flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100"
               onClick={onClose}
-              aria-label={`Close ${fileName}`}
+              aria-label={t('editor:closeFile', { fileName })}
             >
               <X className="size-4" />
             </button>

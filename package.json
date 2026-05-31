@@ -1,6 +1,6 @@
 {
   "name": "context",
-  "version": "2.2.0",
+  "version": "2.2.2",
   "description": "A cross-platform Electron app that orchestrates multiple coding agents in parallel",
   "type": "module",
   "main": "./out/main/index.js",

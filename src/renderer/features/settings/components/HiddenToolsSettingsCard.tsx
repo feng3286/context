@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OPEN_IN_APPS, type OpenInAppId } from '@shared/openInApps';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useOpenInApps } from '@renderer/lib/hooks/useOpenInApps';
@@ -7,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@rende
 import IntegrationRow from './IntegrationRow';
 
 export default function HiddenToolsSettingsCard() {
+  const { t } = useTranslation();
   const { value: openIn, update, isLoading, isSaving } = useAppSettingsKey('openIn');
   const { icons, labels, availability } = useOpenInApps();
 
@@ -37,7 +39,7 @@ export default function HiddenToolsSettingsCard() {
           const label = labels[app.id] ?? app.label;
           const icon = icons[app.id];
           const indicatorClass = isDetected ? 'bg-emerald-500' : 'bg-muted-foreground/50';
-          const statusLabel = isDetected ? 'Detected' : 'Not detected';
+          const statusLabel = isDetected ? t('common:detected') : t('common:notDetected');
 
           return (
             <IntegrationRow
@@ -67,10 +69,10 @@ export default function HiddenToolsSettingsCard() {
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
                       {!isDetected
-                        ? 'Install this tool to show it in menu'
+                        ? t('common:installToMenu')
                         : isVisible
-                          ? 'Hide from menu'
-                          : 'Show in menu'}
+                          ? t('common:hideFromMenu')
+                          : t('common:showInMenu')}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

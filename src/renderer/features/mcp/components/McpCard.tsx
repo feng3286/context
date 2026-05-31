@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ExternalLink, Globe, Pencil, Plus, Terminal } from 'lucide-react';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AgentProviderId } from '@shared/agent-provider-registry';
 import type { McpCatalogEntry, McpServer } from '@shared/mcp/types';
 import AgentLogo from '@renderer/lib/components/agent-logo';
@@ -30,7 +31,8 @@ function getSyncedProviders(server?: McpServer) {
 }
 
 export const McpCard: React.FC<McpCardProps> = ({ server, catalogEntry, onEdit, onAdd }) => {
-  const name = server?.name ?? catalogEntry?.name ?? 'Unknown';
+  const { t } = useTranslation();
+  const name = server?.name ?? catalogEntry?.name ?? t('mcp:unknown');
   const description = catalogEntry?.description ?? (server ? `${server.transport} server` : '');
   const isInstalled = !!server;
   const transport = getTransport(server, catalogEntry);
@@ -70,7 +72,7 @@ export const McpCard: React.FC<McpCardProps> = ({ server, catalogEntry, onEdit, 
             ) : (
               <Terminal className="h-2.5 w-2.5" />
             )}
-            {transport}
+            {transport === 'http' ? t('mcp:http') : t('mcp:stdio')}
           </span>
         </div>
         {description && (

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Project } from '@shared/projects';
 import type { Task } from '@shared/tasks';
 import { getProjectManagerStore } from '@renderer/features/projects/stores/project-selectors';
@@ -44,6 +45,7 @@ function WorkspaceHeaderRow({
   onNavigate: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <SidebarMenuRow
       isActive={isActive}
@@ -74,7 +76,7 @@ function WorkspaceHeaderRow({
           e.stopPropagation();
           onDelete();
         }}
-        title="Delete workspace"
+        title={t('workspaces:deleteWorkspace')}
         className="opacity-0 group-hover/workspace:opacity-100 transition-opacity"
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -96,6 +98,7 @@ function ProjectSidebarRow({
   onNavigate: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <SidebarMenuRow
       isActive={isActive}
@@ -105,14 +108,14 @@ function ProjectSidebarRow({
       <FolderClosed className="h-3.5 w-3.5 shrink-0 text-foreground-tertiary-muted" />
       <span className="truncate flex-1">{project.name}</span>
       <Badge variant="outline" className="text-[10px] px-1 h-4 shrink-0">
-        {project.type === 'ssh' ? 'SSH' : 'Local'}
+        {project.type === 'ssh' ? t('workspaces:ssh') : t('workspaces:local')}
       </Badge>
       <SidebarItemMiniButton
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
         }}
-        title="Remove project"
+        title={t('workspaces:removeProject')}
         className="opacity-0 group-hover/project:opacity-100 transition-opacity"
       >
         <Trash2 className="h-3 w-3" />
@@ -132,6 +135,7 @@ function TaskSidebarRow({
   onClick: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <SidebarMenuRow
       isActive={isActive}
@@ -148,7 +152,7 @@ function TaskSidebarRow({
           e.stopPropagation();
           onDelete();
         }}
-        title="Delete task"
+        title={t('workspaces:deleteTask')}
         className="opacity-0 group-hover/task:opacity-100 transition-opacity"
       >
         <Trash2 className="h-3 w-3" />
@@ -158,6 +162,7 @@ function TaskSidebarRow({
 }
 
 export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
+  const { t } = useTranslation();
   const { navigate } = useNavigate();
   const { currentView } = useWorkspaceSlots();
   const { params } = useParams('workspace');
@@ -207,7 +212,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
   };
 
   const handleDeleteWorkspace = async (workspaceId: string) => {
-    if (confirm('Delete this workspace?')) {
+    if (confirm(t('workspaces:deleteWorkspaceConfirmShort'))) {
       await workspaceManagerStore.deleteWorkspace(workspaceId);
     }
   };
@@ -217,9 +222,9 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
     const { taskCount } = await rpc.workspace.canRemoveProjectFromWorkspace(workspaceId, projectId);
     if (taskCount > 0) {
       showAlertWarning({
-        title: 'Cannot remove project',
-        message: `This project has ${taskCount} task(s) in this workspace and cannot be removed.`,
-        details: 'Archive or delete the tasks first, then try again.',
+        title: t('workspaces:cannotRemoveProject'),
+        message: t('workspaces:cannotRemoveProjectMsgShort', { count: taskCount }),
+        details: t('workspaces:cannotRemoveProjectDetailsShort'),
       });
       return;
     }
@@ -255,7 +260,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
   };
 
   const handleDeleteTask = async (workspaceId: string, task: Task) => {
-    if (confirm(`Delete task "${task.name}"?`)) {
+    if (confirm(t('workspaces:deleteTaskConfirm', { name: task.name }))) {
       debugLog('workspace-sidebar', 'handleDeleteTask called', {
         workspaceId,
         taskId: task.id,
@@ -306,7 +311,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                           e.stopPropagation();
                           showSelectProjectModal({ workspaceId: store.data.id });
                         }}
-                        title="Link existing project"
+                        title={t('workspaces:linkExistingProject')}
                         className="opacity-0 group-hover/workspace:opacity-100 transition-opacity"
                       >
                         <Link2 className="h-3.5 w-3.5" />
@@ -316,7 +321,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                           e.stopPropagation();
                           showAddProjectModal({ workspaceId: store.data.id });
                         }}
-                        title="Create new project"
+                        title={t('workspaces:createNewProject')}
                         className="opacity-0 group-hover/workspace:opacity-100 transition-opacity"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -325,7 +330,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                   </div>
                   {projects.length === 0 ? (
                     <div className="text-xs text-foreground-tertiary-muted px-3 py-1 opacity-60">
-                      No projects
+                      {t('workspaces:noProjectsShort')}
                     </div>
                   ) : (
                     projects.map((project) => (
@@ -359,7 +364,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                         e.stopPropagation();
                         showCreateTaskModal({ workspaceId: store.data.id });
                       }}
-                      title="New task"
+                      title={t('workspaces:newTask')}
                       className="opacity-0 group-hover/workspace:opacity-100 transition-opacity"
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -367,7 +372,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
                   </div>
                   {tasks.length === 0 ? (
                     <div className="text-xs text-foreground-tertiary-muted px-3 py-1 opacity-60">
-                      No tasks
+                      {t('workspaces:noTasks')}
                     </div>
                   ) : (
                     tasks.map((task) => (
@@ -393,7 +398,7 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
       })}
       {workspaces.length === 0 && (
         <div className="text-xs text-foreground-tertiary-muted px-4 py-3 text-center opacity-60">
-          No workspaces yet. Create a workspace to organize your projects.
+          {t('workspaces:noWorkspaces')}
         </div>
       )}
     </div>

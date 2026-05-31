@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useTranslation } from 'react-i18next';
 import { getPrSyncStore } from '@renderer/features/projects/stores/project-selectors';
 import { rpc } from '@renderer/lib/ipc';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
@@ -18,6 +19,7 @@ export const PullRequestsSection = observer(function PullRequestsSection({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
+  const { t } = useTranslation();
   const { projectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
   const { pr } = provisioned.workspace;
@@ -48,7 +50,7 @@ export const PullRequestsSection = observer(function PullRequestsSection({
               <ChevronRight className="h-3.5 w-3.5" />
             )}
           </span>
-          <span className="text-sm text-foreground-muted">Pull Requests</span>
+          <span className="text-sm text-foreground-muted">{t('git:pr.title')}</span>
           <Badge variant="secondary">{pullRequests.length}</Badge>
         </div>
         <div className="flex items-center gap-1.5">
@@ -71,11 +73,11 @@ export const PullRequestsSection = observer(function PullRequestsSection({
                 disabled={hasOpenPr}
               >
                 <Plus className="size-3" />
-                Create PR
+                {t('git:pr.createPR')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {hasOpenPr ? 'A pull request is already open' : 'Create a pull request'}
+              {hasOpenPr ? t('git:pr.prAlreadyOpen') : t('git:pr.createPRTooltip')}
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -92,7 +94,7 @@ export const PullRequestsSection = observer(function PullRequestsSection({
                 <RefreshCw className={cn('size-3', isRefreshing && 'animate-spin')} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Refresh pull requests</TooltipContent>
+            <TooltipContent>{t('git:pr.refreshTooltip')}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -101,15 +103,9 @@ export const PullRequestsSection = observer(function PullRequestsSection({
       {!collapsed && (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {!repositoryUrl ? (
-            <EmptyState
-              label="Pull requests unavailable"
-              description="Pull requests are currently available only for configured GitHub remotes."
-            />
+            <EmptyState label={t('git:pr.unavailable')} description={t('git:pr.unavailableDesc')} />
           ) : pullRequests.length === 0 ? (
-            <EmptyState
-              label="No pull requests"
-              description="Push your branch and create a PR to start a review."
-            />
+            <EmptyState label={t('git:pr.noPRs')} description={t('git:pr.noPRsDesc')} />
           ) : null}
           {repositoryUrl && currentPr && <PullRequestEntry key={currentPr.url} pr={currentPr} />}
         </div>

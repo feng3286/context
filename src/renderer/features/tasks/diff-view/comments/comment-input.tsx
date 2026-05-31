@@ -1,5 +1,6 @@
 import { Check, X } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@renderer/lib/ui/button';
 import { Comment, useTextareaAutoFocus } from './comment-card';
 
@@ -16,6 +17,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   const [content, setContent] = useState(existingContent || '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -41,8 +43,10 @@ export const CommentInput: React.FC<CommentInputProps> = ({
     <Comment.Root>
       <Comment.Header>
         <Comment.Title>
-          {existingContent ? 'Edit comment' : 'Add comment'}
-          <Comment.Meta className="ml-2">(Line {lineNumber})</Comment.Meta>
+          {existingContent ? t('editor:comments.editComment') : t('editor:comments.addComment')}
+          <Comment.Meta className="ml-2">
+            ({t('editor:comments.line', { number: lineNumber })})
+          </Comment.Meta>
         </Comment.Title>
         <Comment.Actions>
           <Button
@@ -50,8 +54,8 @@ export const CommentInput: React.FC<CommentInputProps> = ({
             size="icon-sm"
             className="h-8 w-8"
             onClick={onCancel}
-            title="Cancel (Esc)"
-            aria-label="Cancel comment"
+            title={t('editor:comments.cancel')}
+            aria-label={t('editor:comments.cancelComment')}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -61,8 +65,8 @@ export const CommentInput: React.FC<CommentInputProps> = ({
             className="h-8 w-8"
             onClick={handleSubmit}
             disabled={!content.trim()}
-            title="Submit (Cmd/Ctrl+Enter)"
-            aria-label="Submit comment"
+            title={t('editor:comments.submit')}
+            aria-label={t('editor:comments.submitComment')}
           >
             <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           </Button>
@@ -75,7 +79,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Add a note about this line..."
+          placeholder={t('editor:comments.addPlaceholder')}
           autoFocus
         />
       </Comment.Body>

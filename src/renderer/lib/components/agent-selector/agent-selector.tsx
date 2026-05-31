@@ -1,5 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AgentProviderId } from '@shared/agent-provider-registry';
 import AgentLogo from '@renderer/lib/components/agent-logo';
 import {
@@ -36,6 +37,7 @@ interface AgentSelectorProps {
 
 export const AgentSelector: React.FC<AgentSelectorProps> = observer(
   ({ value, onChange, disabled = false, className = '', connectionId, installable = true }) => {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const { groups, installingAgents, installAgent } = useAgentAvailability({
       connectionId,
@@ -85,11 +87,13 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
                 <span className="flex-1 truncate text-left">{selectedConfig.name}</span>
               </>
             ) : (
-              <span className="flex-1 truncate text-foreground-muted">No agent installed</span>
+              <span className="flex-1 truncate text-foreground-muted">
+                {t('agentSelector:noAgentInstalled')}
+              </span>
             )}
           </ComboboxTrigger>
           <ComboboxContent className="min-w-(--anchor-width)">
-            <ComboboxInput showTrigger={false} placeholder="Search agents..." />
+            <ComboboxInput showTrigger={false} placeholder={t('agentSelector:searchAgents')} />
             <ComboboxList className="pb-0">
               {(group: AgentGroup) => (
                 <ComboboxGroup key={group.value} items={group.items} className="py-1">

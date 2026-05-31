@@ -1,5 +1,6 @@
 import { Folder } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { rpc } from '@renderer/lib/ipc';
 import { Button } from '@renderer/lib/ui/button';
@@ -10,6 +11,7 @@ import { ResetToDefaultButton } from './ResetToDefaultButton';
 import { SettingRow } from './SettingRow';
 
 const RepositorySettingsCard: React.FC = () => {
+  const { t } = useTranslation();
   const {
     value: localProject,
     update,
@@ -33,9 +35,11 @@ const RepositorySettingsCard: React.FC = () => {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="break-words text-sm text-foreground">Worktree directory</span>
+            <span className="break-words text-sm text-foreground">
+              {t('settings:repository.worktreeDir')}
+            </span>
             <span className="break-words text-xs text-foreground-passive">
-              The default directory where task worktrees are stored. Can be overridden per project.
+              {t('settings:repository.worktreeDirDesc')}
             </span>
           </div>
           <ResetToDefaultButton
@@ -49,8 +53,8 @@ const RepositorySettingsCard: React.FC = () => {
           className="h-9 border border-border rounded-md p-2 w-full flex items-center gap-2 hover:bg-background-quaternary-1 pr-1.5 transition-colors"
           onClick={async () => {
             const result = await rpc.app.openSelectDirectoryDialog({
-              title: 'Select Worktree Directory',
-              message: 'Choose where new task worktrees will be created by default.',
+              title: t('settings:repository.selectWorktreeTitle'),
+              message: t('settings:repository.selectWorktreeMessage'),
             });
             if (result) {
               update({ defaultWorktreeDirectory: result });
@@ -67,7 +71,7 @@ const RepositorySettingsCard: React.FC = () => {
             {defaultWorktreeDirectory || '~/context/worktrees'}
           </p>
           <Button variant="outline" size="xs" tabIndex={-1}>
-            Choose
+            {t('settings:repository.choose')}
           </Button>
         </button>
       </div>
@@ -82,8 +86,8 @@ const RepositorySettingsCard: React.FC = () => {
                 update({ branchPrefix: next });
               }
             }}
-            placeholder="Branch prefix"
-            aria-label="Branch prefix"
+            placeholder={t('settings:repository.branchPrefix')}
+            aria-label={t('settings:repository.branchPrefix')}
             disabled={loading}
             className="flex-1"
           />
@@ -99,8 +103,8 @@ const RepositorySettingsCard: React.FC = () => {
         </div>
       </div>
       <SettingRow
-        title="Auto-update .gitignore"
-        description="When Context writes CLI hook configs, also add their paths to .gitignore."
+        title={t('settings:repository.autoUpdateGitignore')}
+        description={t('settings:repository.autoUpdateGitignoreDesc')}
         control={
           <>
             <ResetToDefaultButton
@@ -113,7 +117,7 @@ const RepositorySettingsCard: React.FC = () => {
               checked={writeAgentConfigToGitIgnore}
               onCheckedChange={(checked) => update({ writeAgentConfigToGitIgnore: checked })}
               disabled={loading || saving}
-              aria-label="Enable .gitignore updates for CLI hook configs"
+              aria-label={t('settings:repository.autoUpdateGitignoreDesc')}
             />
           </>
         }

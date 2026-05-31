@@ -1,6 +1,7 @@
 import { Folder, FolderPlus, Layers, Plus, Wifi } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Project } from '@shared/projects';
 import { isUnmountedProject } from '@renderer/features/projects/stores/project';
 import { getProjectManagerStore } from '@renderer/features/projects/stores/project-selectors';
@@ -16,6 +17,7 @@ export const WorkspaceListTitlebar = observer(function WorkspaceListTitlebar() {
 });
 
 export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel() {
+  const { t } = useTranslation();
   const { navigate } = useNavigate();
   const showCreateWorkspaceModal = useShowModal('createWorkspaceModal');
   const showAddProjectModal = useShowModal('addProjectModal');
@@ -63,19 +65,18 @@ export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel()
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-background-2 mb-4">
           <Layers className="h-8 w-8 text-primary/50" />
         </div>
-        <h2 className="text-xl font-semibold mb-2">Get Started</h2>
+        <h2 className="text-xl font-semibold mb-2">{t('workspaces:getStarted')}</h2>
         <p className="text-sm text-muted-foreground mb-6 max-w-sm text-center">
-          Add a project to start working with AI-powered tasks, or create a workspace to organize
-          multiple projects.
+          {t('workspaces:getStartedDesc')}
         </p>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => showAddProjectModal({})}>
             <FolderPlus className="h-4 w-4" />
-            Add Project
+            {t('workspaces:addProject')}
           </Button>
           <Button onClick={handleCreateWorkspace}>
             <Plus className="h-4 w-4" />
-            Create Workspace
+            {t('workspaces:createWorkspace')}
           </Button>
         </div>
       </div>
@@ -87,20 +88,20 @@ export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel()
       <div className="border-b border-border px-6 py-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Home</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('workspaces:home')}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {workspaceStores.length} workspace{workspaceStores.length !== 1 ? 's' : ''},{' '}
-              {allProjects.length} project{allProjects.length !== 1 ? 's' : ''}
+              {t('workspaces:workspacesCount', { count: workspaceStores.length })},{' '}
+              {t('workspaces:projectsCount', { count: allProjects.length })}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => showAddProjectModal({})}>
               <FolderPlus className="size-3.5" />
-              Add Project
+              {t('workspaces:addProject')}
             </Button>
             <Button size="sm" onClick={handleCreateWorkspace}>
               <Plus className="h-4 w-4" />
-              New Workspace
+              {t('workspaces:newWorkspace')}
             </Button>
           </div>
         </div>
@@ -111,7 +112,7 @@ export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel()
         {allProjects.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-muted-foreground mb-3">
-              Projects ({allProjects.length})
+              {t('workspaces:projectsSection', { count: allProjects.length })}
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {allProjects.map((project) => (
@@ -128,7 +129,9 @@ export const WorkspaceListMainPanel = observer(function WorkspaceListMainPanel()
         {/* Workspaces section */}
         {workspaceStores.length > 0 && (
           <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-3">Workspaces</h2>
+            <h2 className="text-sm font-medium text-muted-foreground mb-3">
+              {t('workspaces:workspacesSection')}
+            </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {workspaceStores.map((store) => (
                 <WorkspaceCard
@@ -152,6 +155,7 @@ function WorkspaceCard({
   store: typeof workspaceManagerStore.workspaces extends Map<string, infer V> ? V : never;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const data = store.data;
   const isLoading = store.status === 'unloaded' || store.status === 'loading';
   const projects = store.status === 'ready' ? store.projects : [];
@@ -178,8 +182,11 @@ function WorkspaceCard({
         <div className="flex items-center gap-2 text-xs text-foreground-passive min-w-0">
           <span className="shrink-0">
             {isLoading
-              ? 'Loading...'
-              : `${projects.length} project${projects.length !== 1 ? 's' : ''}, ${tasks.length} task${tasks.length !== 1 ? 's' : ''}`}
+              ? t('workspaces:loading')
+              : t('workspaces:projectTaskCount', {
+                  projects: projects.length,
+                  tasks: tasks.length,
+                })}
           </span>
           <span className="shrink-0 ml-auto font-mono">
             <RelativeTime value={data.createdAt} compact />
@@ -191,6 +198,7 @@ function WorkspaceCard({
 }
 
 function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) {
+  const { t } = useTranslation();
   const isSsh = project.type === 'ssh';
 
   return (
@@ -213,7 +221,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm truncate flex-1">{project.name}</span>
           <span className="text-[10px] font-medium uppercase tracking-wider text-foreground-passive bg-background-2 px-1.5 py-0.5 rounded shrink-0">
-            {isSsh ? 'SSH' : 'Local'}
+            {isSsh ? t('workspaces:ssh') : t('workspaces:local')}
           </span>
         </div>
 

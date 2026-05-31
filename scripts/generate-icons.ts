@@ -66,6 +66,10 @@ async function main() {
   await makeIcon(1024, WHITE_BG).write(join(ASSETS, 'icon-dark.png'));
   console.log('  icon-dark.png ✓');
 
+  // 4b. emdash_logo.png (window icon, dev mode)
+  await makeIcon(256, WHITE_BG).write(join(ASSETS, 'emdash_logo.png'));
+  console.log('  emdash_logo.png ✓');
+
   // 5. iconset
   const iconsetDir = join(ASSETS, 'emdash-beta.iconset');
   if (!existsSync(iconsetDir)) mkdirSync(iconsetDir, { recursive: true });

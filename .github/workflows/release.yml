@@ -115,6 +115,16 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: node --experimental-strip-types scripts/release/upload-r2.ts
 
+      - name: Upload update manifests to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in release/latest*.yml; do
+            [ -f "$f" ] && gh release upload "$GITHUB_REF_NAME" "$f" --clobber
+          done
+
   release-win:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: windows-2022
@@ -231,6 +241,16 @@ jobs:
             release/latest*.yml
           if-no-files-found: error
 
+      - name: Upload update manifests to GitHub Release
+        if: ${{ steps.init.outputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in release/latest*.yml; do
+            [ -f "$f" ] && gh release upload "$GITHUB_REF_NAME" "$f" --clobber
+          done
+
   release-mac:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
@@ -327,3 +347,12 @@ jobs:
             release/*.blockmap
             release/latest*.yml
           if-no-files-found: error
+
+      - name: Upload update manifests to GitHub Release
+        if: ${{ steps.init.outputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in release/latest*.yml; do
+            [ -f "$f" ] && gh release upload "$GITHUB_REF_NAME" "$f" --clobber
+          done

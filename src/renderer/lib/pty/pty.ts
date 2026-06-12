@@ -147,6 +147,9 @@ export class FrontendPty {
     }
     mountTarget.appendChild(this.ownedContainer);
     // Force a Canvas2D repaint after reparenting in the DOM.
+    // refresh() must run after the terminal has been fully laid out in the real
+    // DOM so the canvas buffer dimensions match the actual container — otherwise
+    // mouse-wheel scrolling produces garbled text due to stale canvas offsets.
     const t = this.terminal;
     requestAnimationFrame(() => {
       try {

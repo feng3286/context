@@ -49,6 +49,7 @@ export const SETTINGS_DEFAULTS = {
     enabled: true,
   },
   language: 'zh' as const,
+  customAgents: [],
 } satisfies SettingsDefaultsMap;
 
 export function getDefaultForKey<K extends AppSettingsKey>(key: K): AppSettings[K] {

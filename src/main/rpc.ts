@@ -19,6 +19,7 @@ import { ptyController } from './core/pty/controller';
 import { pullRequestController } from './core/pull-requests/controller';
 import { repositoryController } from './core/repository/controller';
 import { appSettingsController } from './core/settings/controller';
+import { customAgentController } from './core/settings/custom-agent-controller';
 import { providerSettingsController } from './core/settings/provider-settings-controller';
 import { skillsController } from './core/skills/controller';
 import { sshController } from './core/ssh/controller';
@@ -36,6 +37,7 @@ export const rpcRouter = createRPCRouter({
   app: appController,
   appSettings: appSettingsController,
   providerSettings: providerSettingsController,
+  customAgents: customAgentController,
   repository: repositoryController,
   fs: filesController,
   update: updateController,

@@ -1,14 +1,17 @@
+import { Sparkles } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AGENT_PROVIDER_IDS,
   AgentProviderId,
   isValidProviderId,
 } from '@shared/agent-provider-registry';
+import type { CustomAgentEntry } from '@shared/custom-agent';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useAgentAutoApproveDefaults } from '@renderer/features/tasks/hooks/useAgentAutoApproveDefaults';
 import { asProvisioned, getTaskStore } from '@renderer/features/tasks/stores/task-selectors';
 import { AgentSelector } from '@renderer/lib/components/agent-selector/agent-selector';
+import { rpc } from '@renderer/lib/ipc';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
 import { getPaneContainer } from '@renderer/lib/pty/pane-sizing-context';
 import { measureDimensions } from '@renderer/lib/pty/pty-dimensions';
@@ -30,6 +33,11 @@ function getConversationsPaneSize() {
   return container ? (measureDimensions(container, 8, 16) ?? undefined) : undefined;
 }
 
+/** Check if a CLI command is available by running `{cli} --version` */
+async function detectCli(cli: string): Promise<boolean> {
+  return rpc.customAgents.checkCli(cli);
+}
+
 export const CreateConversationModal = observer(function CreateConversationModal({
   connectionId,
   onSuccess,
@@ -40,9 +48,11 @@ export const CreateConversationModal = observer(function CreateConversationModal
   projectId: string;
   taskId: string;
 }) {
-  const [providerOverride, setProviderOverride] = useState<AgentProviderId | null>(null);
+  const [providerOverride, setProviderOverride] = useState<string | null>(null);
   const { value: defaultAgentValue } = useAppSettingsKey('defaultAgent');
-  const defaultProviderId: AgentProviderId = isValidProviderId(defaultAgentValue)
+  const { value: rawCustomAgents } = useAppSettingsKey('customAgents');
+  const customAgents = Array.isArray(rawCustomAgents) ? rawCustomAgents : [];
+  const defaultProviderId: string = isValidProviderId(defaultAgentValue)
     ? defaultAgentValue
     : 'claude';
 
@@ -53,12 +63,67 @@ export const CreateConversationModal = observer(function CreateConversationModal
   const installedProviderIds = AGENT_PROVIDER_IDS.filter(
     (id) => dependencyResource.data?.[id]?.status === 'available'
   );
-  const { providerId, createDisabled } = resolveConversationProviderSelection({
+
+  // Track connection status of custom agents
+  const [customConnectedIds, setCustomConnectedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      const connected = new Set<string>();
+      for (const entry of customAgents) {
+        if (await detectCli(entry.cli)) {
+          connected.add(entry.id);
+        }
+      }
+      if (!cancelled) setCustomConnectedIds(connected);
+    };
+    void check();
+    return () => {
+      cancelled = true;
+    };
+  }, [customAgents]);
+
+  // Custom agents with connection status
+  const connectedCustomAgents = useMemo(
+    () => customAgents.filter((e) => customConnectedIds.has(e.id)),
+    [customAgents, customConnectedIds]
+  );
+
+  // Resolve provider selection including custom agents
+  const providerSelection = useMemo(() => {
+    // First try built-in resolution
+    const builtInResult = resolveConversationProviderSelection({
+      defaultProviderId: isValidProviderId(defaultProviderId)
+        ? (defaultProviderId as AgentProviderId)
+        : 'claude',
+      providerOverride: isValidProviderId(providerOverride)
+        ? (providerOverride as AgentProviderId)
+        : null,
+      installedProviderIds,
+      availabilityKnown,
+    });
+
+    if (builtInResult.providerId) return builtInResult;
+
+    // If no built-in provider is available, try custom agents
+    if (connectedCustomAgents.length > 0) {
+      return {
+        providerId: connectedCustomAgents[0].id,
+        createDisabled: false,
+      };
+    }
+
+    return builtInResult;
+  }, [
     defaultProviderId,
     providerOverride,
     installedProviderIds,
     availabilityKnown,
-  });
+    connectedCustomAgents,
+  ]);
+
+  const { providerId, createDisabled } = providerSelection;
+
   const taskStore = getTaskStore(projectId, taskId);
   const provisioned = taskStore ? asProvisioned(taskStore) : undefined;
   const conversationMgr = provisioned?.conversations;
@@ -97,6 +162,8 @@ export const CreateConversationModal = observer(function CreateConversationModal
               value={providerId}
               onChange={setProviderOverride}
               connectionId={connectionId}
+              customAgents={customAgents}
+              customAgentConnectedIds={customConnectedIds}
             />
           </Field>
           <Field>

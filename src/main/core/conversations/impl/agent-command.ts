@@ -1,5 +1,18 @@
-import { AgentProviderId, getProvider } from '@shared/agent-provider-registry';
+import {
+  getProvider,
+  type AgentProviderDefinition,
+  type AgentProviderId,
+} from '@shared/agent-provider-registry';
+import type { CustomAgentEntry } from '@shared/custom-agent';
+import { customAgentService } from '@main/core/settings/custom-agent-service';
 import { providerOverrideSettings } from '@main/core/settings/provider-settings-service';
+
+export interface AgentCommandResult {
+  command: string;
+  args: string[];
+  providerDef: AgentProviderDefinition;
+  customAgent?: CustomAgentEntry;
+}
 
 export async function buildAgentCommand({
   providerId,
@@ -8,33 +21,44 @@ export async function buildAgentCommand({
   sessionId,
   isResuming,
 }: {
-  providerId: AgentProviderId;
+  providerId: string;
   autoApprove?: boolean;
   initialPrompt?: string;
   sessionId: string;
   isResuming?: boolean;
-}) {
-  const providerConfig = await providerOverrideSettings.getItem(providerId);
-  const providerDef = getProvider(providerId);
+}): Promise<AgentCommandResult> {
+  const providerConfig = await providerOverrideSettings.getItem(providerId as AgentProviderId);
+  let providerDef = getProvider(providerId as AgentProviderId);
+  let customAgent: CustomAgentEntry | undefined;
 
-  const cli = providerConfig?.cli;
-  const args: string[] = [];
-
-  if (isResuming && providerConfig?.resumeFlag) {
-    args.push(...providerConfig.resumeFlag.split(' '));
-    if (providerConfig?.sessionIdFlag) {
-      args.push(sessionId);
+  // Fallback to custom agents when not found in built-in registry
+  if (!providerDef) {
+    customAgent = await customAgentService.getById(providerId);
+    if (customAgent) {
+      providerDef = customAgentService.toProviderDefinition(customAgent);
     }
-  } else if (providerConfig?.sessionIdFlag) {
-    args.push(providerConfig.sessionIdFlag, sessionId);
   }
 
-  if (autoApprove && providerConfig?.autoApproveFlag) {
-    args.push(providerConfig.autoApproveFlag);
+  const resolvedConfig = customAgent ?? providerConfig;
+  const cli = resolvedConfig?.cli ?? providerDef?.cli;
+
+  const args: string[] = [];
+
+  if (isResuming && resolvedConfig?.resumeFlag) {
+    args.push(...resolvedConfig.resumeFlag.split(' '));
+    if (resolvedConfig?.sessionIdFlag) {
+      args.push(resolvedConfig.sessionIdFlag);
+    }
+  } else if (resolvedConfig?.sessionIdFlag) {
+    args.push(resolvedConfig.sessionIdFlag, sessionId);
+  }
+
+  if (autoApprove && resolvedConfig?.autoApproveFlag) {
+    args.push(resolvedConfig.autoApproveFlag);
   }
 
   if (!isResuming && initialPrompt && !providerDef?.useKeystrokeInjection) {
-    const flag = providerConfig?.initialPromptFlag;
+    const flag = resolvedConfig?.initialPromptFlag;
     if (flag) {
       args.push(flag, initialPrompt);
     } else {
@@ -42,7 +66,12 @@ export async function buildAgentCommand({
     }
   }
 
-  args.push(...(providerConfig?.defaultArgs ?? []));
+  args.push(...(resolvedConfig?.defaultArgs ?? []));
 
-  return { command: cli!, args };
+  return {
+    command: cli ?? providerId,
+    args,
+    providerDef: providerDef ?? { id: providerId as AgentProviderId, name: providerId, cli },
+    customAgent,
+  };
 }

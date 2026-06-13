@@ -2,6 +2,8 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
+import type { ProjectChangesViewStore } from '@renderer/features/tasks/stores/project-changes-view-store';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { Input } from '@renderer/lib/ui/input';
 import { SplitButton, type SplitButtonAction } from '@renderer/lib/ui/split-button';
@@ -11,27 +13,51 @@ type CommitPhase = 'idle' | 'committing' | 'commit-only-done' | 'committed' | 'p
 
 interface CommitCardProps {
   autoStage?: boolean;
+  /** Use this GitStore instead of the workspace-level one (multi-project mode). */
+  gitOverride?: GitStore;
+  /** Use this changes view store instead of the workspace-level one (multi-project mode). */
+  changesViewOverride?: ProjectChangesViewStore;
 }
 
-export const CommitCard = observer(function CommitCard({ autoStage = false }: CommitCardProps) {
+export const CommitCard = observer(function CommitCard({
+  autoStage = false,
+  gitOverride,
+  changesViewOverride,
+}: CommitCardProps) {
   const { t } = useTranslation();
   const provisioned = useProvisionedTask();
-  const git = provisioned.workspace.git;
-  const changesView = provisioned.taskView.diffView.changesView;
-  const hasPRs = changesView.expandedPullRequests;
+  const isMultiProject = !!gitOverride;
+  const effectiveGit = gitOverride ?? provisioned.workspace.git;
+  const diffView = provisioned.taskView.diffView;
+  const effectiveChangesView = changesViewOverride ?? diffView.changesView;
+  const hasPRs = effectiveChangesView.expandedPullRequests;
   const [commitMessage, setCommitMessage] = useState('');
   const [description, setDescription] = useState('');
   const [phase, setPhase] = useState<CommitPhase>('idle');
+  const [localCommitAction, setLocalCommitAction] = useState<'commit' | 'commit-push' | null>(null);
   const fullMessage = description ? `${commitMessage}\n\n${description}` : commitMessage;
   const isInFlight = phase !== 'idle';
+
+  // Commit action preference: workspace-level in single-project, local state in multi-project
+  const effectiveCommitAction = isMultiProject
+    ? (localCommitAction ?? (effectiveGit.isBranchPublished ? 'commit-push' : 'commit'))
+    : diffView.effectiveCommitAction;
+
+  const handleCommitActionChange = (value: string) => {
+    if (isMultiProject) {
+      setLocalCommitAction(value as 'commit' | 'commit-push');
+    } else {
+      diffView.setCommitAction(value as 'commit' | 'commit-push');
+    }
+  };
 
   const doCommit = async () => {
     setPhase('committing');
     if (autoStage) {
-      changesView.suppressNextAutoExpand('staged');
-      await git.stageAllFiles();
+      effectiveChangesView.suppressNextAutoExpand('staged');
+      await effectiveGit.stageAllFiles();
     }
-    const result = await git.commit(fullMessage);
+    const result = await effectiveGit.commit(fullMessage);
     if (!result.success) {
       setPhase('idle');
       return;
@@ -39,7 +65,7 @@ export const CommitCard = observer(function CommitCard({ autoStage = false }: Co
     setCommitMessage('');
     setDescription('');
     if (!autoStage) {
-      changesView.setExpanded({ unstaged: true, staged: false, pullRequests: hasPRs });
+      effectiveChangesView.setExpanded({ unstaged: true, staged: false, pullRequests: hasPRs });
     }
     setPhase('commit-only-done');
     setTimeout(() => setPhase('idle'), 3000);
@@ -48,10 +74,10 @@ export const CommitCard = observer(function CommitCard({ autoStage = false }: Co
   const doCommitAndPush = async () => {
     setPhase('committing');
     if (autoStage) {
-      changesView.suppressNextAutoExpand('staged');
-      await git.stageAllFiles();
+      effectiveChangesView.suppressNextAutoExpand('staged');
+      await effectiveGit.stageAllFiles();
     }
-    const commitResult = await git.commit(fullMessage);
+    const commitResult = await effectiveGit.commit(fullMessage);
     if (!commitResult.success) {
       setPhase('idle');
       return;
@@ -59,12 +85,12 @@ export const CommitCard = observer(function CommitCard({ autoStage = false }: Co
     setCommitMessage('');
     setDescription('');
     if (!autoStage) {
-      changesView.setExpanded({ unstaged: true, staged: false, pullRequests: hasPRs });
+      effectiveChangesView.setExpanded({ unstaged: true, staged: false, pullRequests: hasPRs });
     }
     setPhase('committed');
     await new Promise((r) => setTimeout(r, 1000));
     setPhase('pushing');
-    const pushResult = await git.push();
+    const pushResult = await effectiveGit.push();
     if (!pushResult.success) {
       setPhase('idle');
       return;
@@ -77,8 +103,6 @@ export const CommitCard = observer(function CommitCard({ autoStage = false }: Co
     { value: 'commit', label: t('git:commit.commit'), action: doCommit },
     { value: 'commit-push', label: t('git:commit.commitAndPush'), action: doCommitAndPush },
   ];
-
-  const diffView = provisioned.taskView.diffView;
 
   return (
     <div className="shrink-0 mx-2 mb-2 flex flex-col gap-2 items-center justify-between rounded-xl border border-border bg-background-1 p-2">
@@ -103,8 +127,8 @@ export const CommitCard = observer(function CommitCard({ autoStage = false }: Co
           size="sm"
           className="w-full"
           disabled={!commitMessage.trim()}
-          defaultValue={diffView.effectiveCommitAction}
-          onValueChange={(value) => diffView.setCommitAction(value as 'commit' | 'commit-push')}
+          defaultValue={effectiveCommitAction}
+          onValueChange={handleCommitActionChange}
         />
       )}
       {phase === 'committing' && (

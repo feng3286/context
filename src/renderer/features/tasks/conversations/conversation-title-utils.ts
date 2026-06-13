@@ -1,15 +1,15 @@
 import { AgentProviderId } from '@shared/agent-provider-registry';
 
 type ConversationTitleInput = {
-  providerId: AgentProviderId;
+  providerId: string;
   title: string;
 };
 
-function capitalizeProviderId(providerId: AgentProviderId): string {
+function capitalizeProviderId(providerId: string): string {
   return `${providerId.charAt(0).toUpperCase()}${providerId.slice(1)}`;
 }
 
-function parseDefaultTitleIndex(title: string, providerId: AgentProviderId): number | null {
+function parseDefaultTitleIndex(title: string, providerId: string): number | null {
   const match = title.match(new RegExp(`^${providerId} \\(([1-9]\\d*)\\)$`, 'i'));
   if (!match) return null;
 
@@ -20,17 +20,14 @@ function parseDefaultTitleIndex(title: string, providerId: AgentProviderId): num
   return index;
 }
 
-export function formatConversationTitleForDisplay(
-  providerId: AgentProviderId,
-  title: string
-): string {
+export function formatConversationTitleForDisplay(providerId: string, title: string): string {
   const index = parseDefaultTitleIndex(title, providerId);
   if (index === null) return title;
   return `${capitalizeProviderId(providerId)} (${index})`;
 }
 
 export function nextDefaultConversationTitle(
-  providerId: AgentProviderId,
+  providerId: string,
   conversations: ConversationTitleInput[]
 ): string {
   const used = new Set<number>();

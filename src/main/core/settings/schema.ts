@@ -1,5 +1,6 @@
 import z from 'zod';
 import { AGENT_PROVIDER_IDS, AGENT_PROVIDERS } from '@shared/agent-provider-registry';
+import { customAgentEntrySchema } from '@shared/custom-agent';
 import { openInAppIdSchema } from '@shared/openInApps';
 import { DEFAULT_AGENT_ID, DEFAULT_REVIEW_PROMPT } from './settings-registry';
 
@@ -124,6 +125,7 @@ export const APP_SETTINGS_SCHEMA_MAP = {
   terminal: terminalSettingsSchema,
   browserPreview: browserPreviewSettingsSchema,
   language: languageSchema,
+  customAgents: z.array(customAgentEntrySchema).default([]),
 } as const;
 
 export const appSettingsSchema = z.object({
@@ -140,4 +142,5 @@ export const appSettingsSchema = z.object({
   terminal: terminalSettingsSchema,
   browserPreview: browserPreviewSettingsSchema,
   language: languageSchema,
+  customAgents: z.array(customAgentEntrySchema).default([]),
 });

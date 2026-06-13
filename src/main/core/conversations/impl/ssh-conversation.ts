@@ -78,7 +78,7 @@ export class SshConversationProvider implements ConversationProvider {
       remoteFs: new SshFileSystem(this.proxy, '/'),
     });
 
-    const { command, args } = await buildAgentCommand({
+    const { command, args, providerDef } = await buildAgentCommand({
       providerId: conversation.providerId,
       autoApprove: conversation.autoApprove,
       sessionId: conversation.id,
@@ -86,12 +86,13 @@ export class SshConversationProvider implements ConversationProvider {
       initialPrompt,
     });
 
+    const effectiveProviderId = providerDef.id;
     const tmuxSessionName = this.tmux ? makeTmuxSessionName(sessionId) : undefined;
 
     const cfg: AgentSessionConfig = {
       taskId: this.taskId,
       conversationId: conversation.id,
-      providerId: conversation.providerId,
+      providerId: effectiveProviderId,
       command,
       args,
       cwd: this.taskWorkDir,
@@ -123,7 +124,7 @@ export class SshConversationProvider implements ConversationProvider {
     // hooks not supported yet, rely on classifier for visual indicator
     wireAgentClassifier({
       pty,
-      providerId: conversation.providerId,
+      providerId: effectiveProviderId,
       taskId: conversation.taskId,
       conversationId: conversation.id,
     });
@@ -133,7 +134,7 @@ export class SshConversationProvider implements ConversationProvider {
       const shouldRespawn = this.sessions.has(sessionId);
       this.sessions.delete(sessionId);
       capture('agent_run_finished', {
-        provider: conversation.providerId,
+        provider: effectiveProviderId,
         exit_code: typeof exitCode === 'number' ? exitCode : -1,
         task_id: conversation.taskId,
         conversation_id: conversation.id,
@@ -173,7 +174,7 @@ export class SshConversationProvider implements ConversationProvider {
     ptySessionRegistry.register(sessionId, pty);
     this.sessions.set(sessionId, pty);
     capture('agent_run_started', {
-      provider: conversation.providerId,
+      provider: effectiveProviderId,
       task_id: conversation.taskId,
       conversation_id: conversation.id,
     });

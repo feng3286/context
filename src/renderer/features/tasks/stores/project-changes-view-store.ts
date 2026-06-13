@@ -1,12 +1,16 @@
-import { action, computed, makeAutoObservable, observable } from 'mobx';
+import { makeAutoObservable, observable } from 'mobx';
 
 export type SelectionState = 'all' | 'none' | 'partial';
+export type ExpandedSectionKey = 'unstaged' | 'staged' | 'pullRequests';
 
 export class ProjectChangesViewStore {
   unstagedSelection = observable.set<string>();
   stagedSelection = observable.set<string>();
   expandedUnstaged: boolean = true;
   expandedStaged: boolean = true;
+  expandedPullRequests: boolean = true;
+
+  private _suppressAutoExpand = new Set<ExpandedSectionKey>();
 
   constructor() {
     makeAutoObservable(this);
@@ -62,12 +66,24 @@ export class ProjectChangesViewStore {
     this.stagedSelection.clear();
   }
 
-  toggleExpanded(section: 'unstaged' | 'staged'): void {
+  toggleExpanded(section: ExpandedSectionKey): void {
     if (section === 'unstaged') {
       this.expandedUnstaged = !this.expandedUnstaged;
     } else if (section === 'staged') {
       this.expandedStaged = !this.expandedStaged;
+    } else if (section === 'pullRequests') {
+      this.expandedPullRequests = !this.expandedPullRequests;
     }
+  }
+
+  suppressNextAutoExpand(section: ExpandedSectionKey): void {
+    this._suppressAutoExpand.add(section);
+  }
+
+  setExpanded(next: { unstaged?: boolean; staged?: boolean; pullRequests?: boolean }): void {
+    if (next.unstaged !== undefined) this.expandedUnstaged = next.unstaged;
+    if (next.staged !== undefined) this.expandedStaged = next.staged;
+    if (next.pullRequests !== undefined) this.expandedPullRequests = next.pullRequests;
   }
 
   dispose(): void {

@@ -18,6 +18,7 @@ import { taskProjects, tasks } from '@main/db/schema';
 import { log } from '@main/lib/logger';
 import { capture } from '@main/lib/telemetry';
 import { mapTaskRowToTask } from './core';
+import { generateAgentsMd } from './generateAgentsMd';
 import { resolveTaskBranchName } from './resolveTaskBranchName';
 
 function generateBranchSuffix(): string {
@@ -189,7 +190,14 @@ export async function createMultiProjectTask(
     });
   }
 
-  // Phase 2: All git/worktree operations succeeded — insert into DB.
+  // Generate AGENTS.md at taskBaseDir root for multi-project tasks
+  if (projectBranchSources.length > 1) {
+    await generateAgentsMd(taskBaseDir, projectBranchSources).catch((e) => {
+      log.warn('createMultiProjectTask: failed to generate AGENTS.md', { error: String(e) });
+    });
+  }
+
+  // Phase 3: All git/worktree operations succeeded — insert into DB.
   // better-sqlite3 is single-threaded so no concurrent queries can interleave.
   // If the taskProjects insert fails, we clean up the orphan task row.
   let taskRow: typeof import('@main/db/schema').tasks.$inferSelect | undefined;

@@ -41,6 +41,6 @@ export function getAgentInstallActionState({
     render: canInstall && !isInstalled,
     disabled: isInstalling,
     installing: isInstalling,
-    label: `Install ${agentConfig[agentId].name}`,
+    label: `Install ${(agentConfig as Record<string, { name: string }>)[agentId]?.name ?? agentId}`,
   };
 }

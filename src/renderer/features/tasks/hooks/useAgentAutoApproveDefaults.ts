@@ -1,5 +1,4 @@
 import { getAgentAutoApproveDefault } from '@shared/agent-auto-approve-defaults';
-import type { AgentProviderId } from '@shared/agent-provider-registry';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 
 export function useAgentAutoApproveDefaults() {
@@ -10,8 +9,7 @@ export function useAgentAutoApproveDefaults() {
     defaults,
     loading: isLoading,
     saving: isSaving,
-    getDefault: (providerId: AgentProviderId) => getAgentAutoApproveDefault(defaults, providerId),
-    setDefault: (providerId: AgentProviderId, enabled: boolean) =>
-      update({ [providerId]: enabled }),
+    getDefault: (providerId: string) => getAgentAutoApproveDefault(defaults, providerId),
+    setDefault: (providerId: string, enabled: boolean) => update({ [providerId]: enabled }),
   };
 }

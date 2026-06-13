@@ -6,15 +6,15 @@ const CONV_SEP = '-conv-';
 const LEGACY_MAIN_SEP = '-main-';
 const LEGACY_CHAT_SEP = '-chat-';
 
-export function makePtyId(provider: AgentProviderId | 'shell', conversationId: string): string {
+export function makePtyId(provider: string, conversationId: string): string {
   return `${provider}${CONV_SEP}${conversationId}`;
 }
 
 export function parsePtyId(id: string): {
-  providerId: AgentProviderId | 'shell';
+  providerId: string;
   conversationId: string;
 } | null {
-  // Try 'shell' sentinel first, then all known provider IDs longest-first to avoid prefix collisions.
+  // Try known provider IDs first (longest-first to avoid prefix collisions).
   const candidates: Array<AgentProviderId | 'shell'> = [
     'shell',
     ...[...AGENT_PROVIDER_IDS].sort((a, b) => b.length - a.length),
@@ -24,6 +24,14 @@ export function parsePtyId(id: string): {
     if (id.startsWith(prefix)) {
       return { providerId: pid, conversationId: id.slice(prefix.length) };
     }
+  }
+  // Fallback: try splitting on the separator for custom provider IDs.
+  const sepIdx = id.indexOf(CONV_SEP);
+  if (sepIdx > 0) {
+    return {
+      providerId: id.slice(0, sepIdx),
+      conversationId: id.slice(sepIdx + CONV_SEP.length),
+    };
   }
   return null;
 }

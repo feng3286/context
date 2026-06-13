@@ -167,7 +167,9 @@ export const StagedSection = observer(function StagedSection({
               onPrefetch={(change) => prefetch(change.path)}
             />
           </div>
-          {hasChanges && !hideCommitCard && <CommitCard />}
+          {hasChanges && !hideCommitCard && (
+            <CommitCard gitOverride={gitOverride} changesViewOverride={changesViewOverride} />
+          )}
         </div>
       )}
     </div>

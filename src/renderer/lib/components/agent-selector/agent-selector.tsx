@@ -1,7 +1,9 @@
+import { Sparkles } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AgentProviderId } from '@shared/agent-provider-registry';
+import type { CustomAgentEntry } from '@shared/custom-agent';
 import AgentLogo from '@renderer/lib/components/agent-logo';
 import {
   Combobox,
@@ -27,25 +29,38 @@ import { AgentTooltipRow } from './agent-tooltip-row';
 import { useAgentAvailability } from './use-agent-availability';
 
 interface AgentSelectorProps {
-  value: AgentProviderId | null;
-  onChange: (agent: AgentProviderId) => void;
+  value: string | null;
+  onChange: (agent: string) => void;
   disabled?: boolean;
   className?: string;
   connectionId?: string;
   installable?: boolean;
+  customAgents?: CustomAgentEntry[];
+  customAgentConnectedIds?: Set<string>;
 }
 
 export const AgentSelector: React.FC<AgentSelectorProps> = observer(
-  ({ value, onChange, disabled = false, className = '', connectionId, installable = true }) => {
+  ({
+    value,
+    onChange,
+    disabled = false,
+    className = '',
+    connectionId,
+    installable = true,
+    customAgents,
+    customAgentConnectedIds,
+  }) => {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const { groups, installingAgents, installAgent } = useAgentAvailability({
       connectionId,
       value,
+      customAgents,
+      customAgentConnectedIds,
     });
     const allOptions = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
-    const selectedConfig = value ? agentConfig[value] : null;
+    const selectedConfig = value ? agentConfig[value as keyof typeof agentConfig] : null;
     const selectedOption = value ? allOptions.find((o) => o.value === value) : null;
 
     function handleValueChange(item: AgentOption | null) {
@@ -86,6 +101,11 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
                 />
                 <span className="flex-1 truncate text-left">{selectedConfig.name}</span>
               </>
+            ) : selectedOption?.isCustom ? (
+              <>
+                <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1 truncate text-left">{selectedOption.label}</span>
+              </>
             ) : (
               <span className="flex-1 truncate text-foreground-muted">
                 {t('agentSelector:noAgentInstalled')}
@@ -100,7 +120,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
                   <ComboboxLabel>{group.label}</ComboboxLabel>
                   <ComboboxCollection>
                     {(item: AgentOption) => {
-                      const config = agentConfig[item.agentId];
+                      const config = agentConfig[item.agentId as keyof typeof agentConfig];
                       const showInstall = canInstallAgentOption(item, installable);
                       return (
                         <AgentTooltipRow key={item.value} id={item.agentId}>
@@ -114,7 +134,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
                               showInstall && 'data-disabled:opacity-100'
                             )}
                           >
-                            {config && (
+                            {config ? (
                               <AgentLogo
                                 logo={config.logo}
                                 alt={config.alt}
@@ -125,7 +145,9 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
                                   showInstall && 'opacity-50'
                                 )}
                               />
-                            )}
+                            ) : item.isCustom ? (
+                              <Sparkles className="h-4 w-4 shrink-0 rounded-sm text-muted-foreground" />
+                            ) : null}
                             <span
                               className={cn(
                                 'min-w-0 flex-1 truncate',
@@ -135,17 +157,17 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
                               {item.label}
                             </span>
                             <AgentInstallButton
-                              agentId={item.agentId}
-                              canInstall={installable}
+                              agentId={item.agentId as AgentProviderId}
+                              canInstall={installable && !item.isCustom}
                               isInstalled={!item.disabled}
-                              isInstalling={installingAgents.has(item.agentId)}
+                              isInstalling={installingAgents.has(item.agentId as AgentProviderId)}
                               disabled={disabled}
                               className="size-6"
                               onInstall={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
                                 if (disabled) return;
-                                void installAgent(item.agentId);
+                                void installAgent(item.agentId as AgentProviderId);
                               }}
                             />
                           </ComboboxItem>

@@ -30,7 +30,7 @@ export class ClaudeTrustService {
     cwd,
     homedir,
   }: {
-    providerId: AgentProviderId;
+    providerId: string;
     cwd?: string;
     homedir: string;
   }): Promise<void> {
@@ -52,7 +52,7 @@ export class ClaudeTrustService {
     exec,
     remoteFs,
   }: {
-    providerId: AgentProviderId;
+    providerId: string;
     cwd?: string;
     exec: ExecFn;
     remoteFs: Pick<FileSystemProvider, 'realPath' | 'read' | 'write'>;
@@ -72,7 +72,7 @@ export class ClaudeTrustService {
     );
   }
 
-  private async shouldAutoTrust(providerId: AgentProviderId): Promise<boolean> {
+  private async shouldAutoTrust(providerId: string): Promise<boolean> {
     if (providerId !== CLAUDE_PROVIDER_ID) return false;
     const { autoTrustWorktrees } = await this.deps.getTaskSettings();
     return autoTrustWorktrees;

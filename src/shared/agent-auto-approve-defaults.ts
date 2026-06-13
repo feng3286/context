@@ -4,15 +4,15 @@ export type AgentAutoApproveDefaults = Partial<Record<AgentProviderId, boolean>>
 
 export function getAgentAutoApproveDefault(
   defaults: AgentAutoApproveDefaults | undefined,
-  providerId: AgentProviderId
+  providerId: string
 ): boolean {
-  return defaults?.[providerId] ?? false;
+  return defaults?.[providerId as AgentProviderId] ?? false;
 }
 
 export function resolveAgentAutoApprove(
   explicitAutoApprove: boolean | undefined,
   defaults: AgentAutoApproveDefaults | undefined,
-  providerId: AgentProviderId
+  providerId: string
 ): boolean {
   return explicitAutoApprove ?? getAgentAutoApproveDefault(defaults, providerId);
 }

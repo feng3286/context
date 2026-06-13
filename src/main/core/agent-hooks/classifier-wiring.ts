@@ -71,7 +71,7 @@ export function wireAgentClassifier({
   conversationId,
 }: {
   pty: Pty;
-  providerId: AgentProviderId;
+  providerId: string;
   taskId: string;
   conversationId: string;
 }): void {

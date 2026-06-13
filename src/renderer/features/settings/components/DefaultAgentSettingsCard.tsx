@@ -21,8 +21,10 @@ const DefaultAgentSettingsCard: React.FC = () => {
     ? (defaultAgentValue as AgentProviderId)
     : DEFAULT_AGENT;
 
-  const handleChange = (agent: AgentProviderId) => {
-    update(agent as AppSettings['defaultAgent']);
+  const handleChange = (agent: string) => {
+    if (isValidProviderId(agent)) {
+      update(agent as AppSettings['defaultAgent']);
+    }
   };
 
   return (

@@ -1,9 +1,7 @@
-import { AgentProviderId } from '@shared/agent-provider-registry';
-
 export type Conversation = {
   id: string;
   taskId: string;
-  providerId: AgentProviderId;
+  providerId: string;
   title: string;
   resume?: boolean;
   autoApprove?: boolean;
@@ -17,7 +15,7 @@ export type RenameConversationParams = {
 export type CreateConversationParams = {
   id: string;
   taskId: string;
-  provider: AgentProviderId;
+  provider: string;
   title: string;
   autoApprove?: boolean;
   initialSize?: { cols: number; rows: number };

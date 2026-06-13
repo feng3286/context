@@ -1,7 +1,6 @@
 import { ChevronDown, ChevronRight, Plus, Undo2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { commitRef, HEAD_REF } from '@shared/git';
-import type { ChangesViewStore } from '@renderer/features/tasks/diff-view/stores/changes-view-store';
 import type { GitStore } from '@renderer/features/tasks/diff-view/stores/git-store';
 import type { ProjectChangesViewStore } from '@renderer/features/tasks/stores/project-changes-view-store';
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
@@ -219,7 +218,13 @@ export const UnstagedSection = observer(function UnstagedSection({
               onPrefetch={(change) => prefetch(change.path)}
             />
           </div>
-          {hasChanges && !hasStagedChanges && !hideCommitCard && <CommitCard autoStage />}
+          {hasChanges && !hasStagedChanges && !hideCommitCard && (
+            <CommitCard
+              autoStage
+              gitOverride={gitOverride}
+              changesViewOverride={changesViewOverride}
+            />
+          )}
         </div>
       )}
     </div>

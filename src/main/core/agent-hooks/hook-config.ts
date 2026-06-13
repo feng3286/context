@@ -83,10 +83,7 @@ export class HookConfigWriter {
     return true;
   }
 
-  async writeForProvider(
-    providerId: AgentProviderId,
-    options: HookConfigWriteOptions = {}
-  ): Promise<void> {
+  async writeForProvider(providerId: string, options: HookConfigWriteOptions = {}): Promise<void> {
     const writeGitIgnoreEntries = options.writeGitIgnoreEntries ?? true;
 
     if (providerId === 'claude') {

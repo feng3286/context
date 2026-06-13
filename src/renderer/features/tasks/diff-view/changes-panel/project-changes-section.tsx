@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ProjectContext } from '@renderer/features/tasks/stores/project-context-store';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { cn } from '@renderer/utils/utils';
@@ -21,9 +21,7 @@ export const ProjectChangesSection = observer(function ProjectChangesSection({
   const provisioned = useProvisionedTask();
   const projectContexts = provisioned.projectContexts;
 
-  if (!projectContexts) return null;
-
-  const expanded = projectContexts.isExpanded(projectContext.projectId);
+  const expanded = projectContexts?.isExpanded(projectContext.projectId) ?? false;
   const git = projectContext.git;
   const changesView = projectContext.changesView;
 
@@ -31,18 +29,20 @@ export const ProjectChangesSection = observer(function ProjectChangesSection({
   const unstagedCount = git.unstagedFileChanges.length;
   const totalChanges = stagedCount + unstagedCount;
 
+  // Track the latest projectContexts reference so the effect can safely run
+  // even when the component returns early (React hooks rules).
+  const ctxRef = useRef(projectContexts);
+  ctxRef.current = projectContexts;
+
   // Auto-expand this project when a file in it is selected
   useEffect(() => {
     const activeFile = provisioned.taskView.diffView.activeFile;
     if (activeFile?.projectId === projectContext.projectId && !expanded) {
-      projectContexts.toggleSection(projectContext.projectId);
+      ctxRef.current?.toggleSection(projectContext.projectId);
     }
-  }, [
-    provisioned.taskView.diffView.activeFile?.projectId,
-    projectContext.projectId,
-    expanded,
-    projectContexts,
-  ]);
+  }, [provisioned.taskView.diffView.activeFile, projectContext.projectId, expanded]);
+
+  if (!projectContexts) return null;
 
   // Don't render empty project sections
   if (!git.hasData || totalChanges === 0) return null;
@@ -90,7 +90,6 @@ export const ProjectChangesSection = observer(function ProjectChangesSection({
               gitOverride={git}
               projectIdOverride={projectContext.projectId}
               changesViewOverride={changesView}
-              hideCommitCard
             />
           </div>
 
@@ -100,7 +99,6 @@ export const ProjectChangesSection = observer(function ProjectChangesSection({
               gitOverride={git}
               projectIdOverride={projectContext.projectId}
               changesViewOverride={changesView}
-              hideCommitCard
             />
           </div>
         </div>

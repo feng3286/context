@@ -12,6 +12,10 @@ function mergeValue<K extends AppSettingsKey>(
   current: AppSettings[K] | undefined,
   partial: Partial<AppSettings[K]>
 ): AppSettings[K] {
+  // Arrays should be fully replaced, not spread into objects
+  if (Array.isArray(partial)) {
+    return partial as AppSettings[K];
+  }
   if (
     typeof partial === 'object' &&
     partial !== null &&

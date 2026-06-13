@@ -1,18 +1,28 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AgentProviderId } from '@shared/agent-provider-registry';
+import type { CustomAgentEntry } from '@shared/custom-agent';
 import { useToast } from '@renderer/lib/hooks/use-toast';
 import { appState } from '@renderer/lib/stores/app-state';
 import { agentConfig } from '@renderer/utils/agentConfig';
 import { getAgentInstallErrorMessage } from './agent-install';
-import { buildAgentGroups, getAssumedInstalledAgents } from './agent-selector-options';
+import {
+  buildAgentGroups,
+  buildCustomAgentOptions,
+  getAssumedInstalledAgents,
+  mergeCustomAgentsIntoGroups,
+} from './agent-selector-options';
 
 export function useAgentAvailability({
   connectionId,
   value,
+  customAgents = [],
+  customAgentConnectedIds = new Set<string>(),
 }: {
   connectionId?: string;
-  value: AgentProviderId | null;
+  value: string | null;
+  customAgents?: CustomAgentEntry[];
+  customAgentConnectedIds?: Set<string>;
 }) {
   const dependencyResource = connectionId
     ? appState.dependencies.getRemote(connectionId)
@@ -36,15 +46,26 @@ export function useAgentAvailability({
     [value, dependencyData]
   );
 
-  const groups = useMemo(
+  const customOptions = useMemo(
+    () => buildCustomAgentOptions(customAgents, customAgentConnectedIds),
+    [customAgents, customAgentConnectedIds]
+  );
+
+  const builtInGroups = useMemo(
     () => buildAgentGroups(installedAgents, assumedInstalledAgents),
     [installedAgents, assumedInstalledAgents]
   );
+
+  const groups = useMemo(
+    () => mergeCustomAgentsIntoGroups(builtInGroups, customOptions),
+    [builtInGroups, customOptions]
+  );
+
   const installingAgents = new Set<AgentProviderId>();
   for (const group of groups) {
     for (const item of group.items) {
-      if (appState.dependencies.isInstalling(item.agentId, connectionId)) {
-        installingAgents.add(item.agentId);
+      if (appState.dependencies.isInstalling(item.agentId as AgentProviderId, connectionId)) {
+        installingAgents.add(item.agentId as AgentProviderId);
       }
     }
   }
@@ -64,7 +85,9 @@ export function useAgentAvailability({
 
       toast({
         title: t('toast:agent.installed'),
-        description: t('toast:agent.installedDesc', { name: agentConfig[agentId].name }),
+        description: t('toast:agent.installedDesc', {
+          name: (agentConfig as Record<string, { name: string }>)[agentId]?.name ?? agentId,
+        }),
       });
     },
     [t, toast, connectionId]

@@ -47,7 +47,7 @@ const classifierFactories: Partial<Record<AgentProviderId, () => ProviderClassif
   rovo: createRovoClassifier,
 };
 
-export function createClassifier(providerId: AgentProviderId): ProviderClassifier {
-  const factory = classifierFactories[providerId];
+export function createClassifier(providerId: string): ProviderClassifier {
+  const factory = classifierFactories[providerId as AgentProviderId];
   return factory ? factory() : createGenericClassifier();
 }

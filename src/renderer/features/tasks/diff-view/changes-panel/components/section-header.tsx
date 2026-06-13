@@ -1,4 +1,5 @@
 import { ChevronDown, Plus, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { SelectionState } from '@renderer/features/tasks/diff-view/stores/changes-view-store';
 import { Badge } from '@renderer/lib/ui/badge';
 import { Button } from '@renderer/lib/ui/button';
@@ -71,12 +72,13 @@ export function PullRequestSectionHeader({
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="shrink-0 flex items-center justify-between px-2.5 h-10">
       <div className="flex items-center gap-2 justify-between w-full min-w-0">
         <button onClick={onToggleCollapsed} className="min-w-0">
           <span className="text-sm text-foreground-muted flex items-center gap-2 min-w-0">
-            <span className="truncate">Pull Requests</span>{' '}
+            <span className="truncate">{t('git:pr.title')}</span>{' '}
             <Badge variant="secondary" className="shrink-0">
               {count}
             </Badge>

@@ -75,6 +75,15 @@
         "downloadingBtn": "下载中",
         "restart": "重启",
         "installingBtn": "安装中"
+      },
+      "updateDialog": {
+        "title": "新版本可用",
+        "description": "更新已就绪。",
+        "currentVersion": "当前版本",
+        "newVersion": "新版本",
+        "download": "下载",
+        "remindLater": "稍后提醒我",
+        "releaseNotes": "更新说明"
       }
     },
     "agents": {
@@ -116,7 +125,95 @@
       "customFont": "自定义：{{font}}"
     },
     "keyboard": {
-      "title": "键盘快捷键"
+      "title": "键盘快捷键",
+      "categories": {
+        "navigation": "导航",
+        "view": "视图",
+        "taskView": "任务视图",
+        "tabNavigation": "标签导航"
+      },
+      "shortcuts": {
+        "commandPalette": {
+          "label": "命令面板",
+          "description": "打开命令面板以快速搜索和导航"
+        },
+        "settings": {
+          "label": "设置",
+          "description": "打开应用设置"
+        },
+        "toggleLeftSidebar": {
+          "label": "切换左侧边栏",
+          "description": "显示或隐藏左侧边栏"
+        },
+        "toggleRightSidebar": {
+          "label": "切换右侧边栏",
+          "description": "显示或隐藏右侧边栏"
+        },
+        "toggleTheme": {
+          "label": "切换主题",
+          "description": "在浅色、深海军蓝和深黑色主题之间切换"
+        },
+        "closeModal": {
+          "label": "关闭弹窗",
+          "description": "关闭当前弹窗或对话框"
+        },
+        "nextProject": {
+          "label": "下一个任务",
+          "description": "切换到下一个任务"
+        },
+        "prevProject": {
+          "label": "上一个任务",
+          "description": "切换到上一个任务"
+        },
+        "newTask": {
+          "label": "新建任务",
+          "description": "创建一个新任务"
+        },
+        "newProject": {
+          "label": "新建项目",
+          "description": "创建一个新项目"
+        },
+        "openInEditor": {
+          "label": "在编辑器中打开",
+          "description": "在默认编辑器中打开项目"
+        },
+        "taskViewAgents": {
+          "label": "会话视图",
+          "description": "在任务面板中切换到会话视图"
+        },
+        "taskViewDiff": {
+          "label": "差异视图",
+          "description": "在任务面板中切换到差异视图"
+        },
+        "taskViewEditor": {
+          "label": "编辑器视图",
+          "description": "在任务面板中切换到编辑器视图"
+        },
+        "tabNext": {
+          "label": "下一个标签",
+          "description": "切换到下一个标签页"
+        },
+        "tabPrev": {
+          "label": "上一个标签",
+          "description": "切换到上一个标签页"
+        },
+        "tabClose": {
+          "label": "关闭标签",
+          "description": "关闭当前活动的标签页"
+        },
+        "newConversation": {
+          "label": "新建会话",
+          "description": "在当前任务中创建新会话"
+        },
+        "newTerminal": {
+          "label": "新建终端",
+          "description": "在当前任务中创建新终端"
+        },
+        "confirm": {
+          "label": "确认",
+          "description": "确认当前对话框操作"
+        }
+      }
     },
     "customCommand": {
       "cliCommand": "CLI 命令",
@@ -300,6 +397,28 @@
       "assignee": "受理人"
     }
   },
+  "addRemote": {
+    "title": "添加远程",
+    "createRepo": "创建仓库",
+    "linkExisting": "链接现有仓库",
+    "repoName": "仓库名称",
+    "owner": "所有者",
+    "visibility": "可见性",
+    "private": "私有",
+    "public": "公开",
+    "remoteUrl": "远程 URL",
+    "remoteUrlPlaceholder": "https://git.example.com/owner/repo.git",
+    "adding": "添加中...",
+    "createAndPublish": "创建并发布",
+    "linkAndPublish": "链接并发布",
+    "noOwner": "没有可用的仓库所有者",
+    "failedToCreateRepo": "创建仓库失败",
+    "failedToAddRemote": "添加远程失败",
+    "failedToFetch": "拉取远程失败",
+    "remoteHasCommits": "远程已有提交。链接成功，但需要手动整合历史。",
+    "failedToPublish": "发布分支失败",
+    "errorOccurred": "发生错误"
+  },
   "skills": {
     "title": "技能",
     "subtitle": "通过可复用的技能模块扩展你的智能体",
@@ -364,7 +483,7 @@
     "projectTaskCount": "{{projects}} 个项目，{{tasks}} 个任务",
     "newWorkspace": "新建工作区",
     "createWorkspace": "创建工作区",
-    "addProject": "添加项目",
+    "linkProject": "关联项目",
     "removeFromWorkspace": "从工作区移除",
     "inProgress": "进行中",
     "prCount": "{{count}} 个 PR",
@@ -380,6 +499,20 @@
     "noProjectsDesc": "向此工作区添加项目以开始工作。",
     "tasksSection": "任务 ({{count}})",
     "linkExistingProject": "关联现有项目",
+    "addProject": "添加项目",
+    "addProjectsToWorkspace": "添加项目到工作区",
+    "adding": "添加中...",
+    "addProjectsCount": "添加 {{count}} 个项目",
+    "selectProjects": "选择项目 ({{count}})",
+    "noAvailableProjects": "没有可添加的项目",
+    "noExistingProjects": "没有现有项目，请先添加项目。",
+    "workspaceName": "工作区名称",
+    "workspaceNamePlaceholder": "我的工作区",
+    "create": "创建",
+    "creating": "创建中...",
+    "nameRequired": "名称不能为空",
+    "workspaceNameExists": "已存在同名工作区",
+    "failedToCreateWorkspace": "创建工作区失败",
     "createNewProject": "创建新项目",
     "noProjectsShort": "没有项目",
     "newTask": "新建任务",
@@ -438,6 +571,12 @@
     "save": "保存",
     "saving": "保存中…",
     "saved": "已保存"
+  },
+  "terminals": {
+    "title": "终端",
+    "lifecycleScripts": "生命周期脚本",
+    "runScript": "运行脚本",
+    "stopScript": "停止脚本"
   },
   "onboarding": {
     "steps": {
@@ -499,7 +638,23 @@
     "ssh": "SSH",
     "sshConnection": "SSH 连接",
     "create": "创建",
-    "noProjectsInWorkspace": "此工作区中没有项目。请先添加项目。"
+    "noProjectsInWorkspace": "此工作区中没有项目。请先添加项目。",
+    "repoName": "仓库名称",
+    "repoNamePlaceholder": "输入仓库名称",
+    "owner": "所有者",
+    "privacy": "隐私",
+    "private": "私有",
+    "public": "公开",
+    "projectName": "项目名称",
+    "projectNamePlaceholder": "输入项目名称",
+    "localProjectDir": "项目目录",
+    "remoteProjectDir": "远程目录",
+    "selectLocalProjectTitle": "选择本地项目",
+    "selectLocalProjectMessage": "选择项目目录以打开",
+    "repoUrl": "仓库 URL",
+    "repoUrlPlaceholder": "输入仓库 URL",
+    "notGitRepo": "此目录不是 Git 仓库。",
+    "initGitRepo": "初始化 Git 仓库"
   },
   "editor": {
     "noFileOpen": "没有打开的文件",
@@ -528,6 +683,12 @@
       "deleteCommentAria": "删除评论",
       "updatePlaceholder": "更新注释...",
       "addPlaceholder": "为此行添加注释..."
+    },
+    "conflict": {
+      "title": "文件被外部修改",
+      "desc": "在您有未保存的编辑时被外部更改。您想怎么做？",
+      "keepMine": "保留我的",
+      "acceptIncoming": "接受外部更改"
     }
   },
   "feedback": {
@@ -545,14 +706,21 @@
     "noAgentInstalled": "未安装智能体",
     "searchAgents": "搜索智能体..."
   },
+  "conversation": {
+    "createTitle": "创建对话"
+  },
   "githubAuth": {
     "notConnected": "GitHub 未连接。连接你的账户以创建仓库。",
-    "openAccountSettings": "打开账户设置"
+    "openAccountSettings": "打开账户设置",
+    "authFailed": "认证失败",
+    "close": "关闭",
+    "clickAuthorize": "点击授权"
   },
   "ssh": {
     "addConnection": "添加连接",
     "editConnection": "编辑连接",
-    "selectOrAdd": "选择或添加连接"
+    "selectOrAdd": "选择或添加连接",
+    "connectionName": "连接名称"
   },
   "createPr": {
     "draftTitle": "创建草稿 PR",
@@ -593,6 +761,15 @@
         "message": "无法删除\"{{name}}\"，因为它仍与其他资源关联。",
         "details": "它与 {{workspaceCount}} 个工作区和 {{taskCount}} 个任务关联。请先移除这些关联，然后再删除项目。"
       }
+    },
+    "detail": {
+      "linkedWorkspaces": "关联工作区",
+      "noLinkedWorkspaces": "没有关联的工作区",
+      "noLinkedWorkspacesDesc": "此项目不属于任何工作区。",
+      "linkedTasks": "关联任务",
+      "noLinkedTasks": "没有关联的任务",
+      "noLinkedTasksDesc": "为此项目创建任务后，任务会显示在这里。",
+      "loading": "加载中..."
     }
   },
   "toast": {

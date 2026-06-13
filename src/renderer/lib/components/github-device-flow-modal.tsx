@@ -280,7 +280,7 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
               <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
             <div className="space-y-2 text-center">
-              <h2 className="text-xl font-semibold">Authentication Failed</h2>
+              <h2 className="text-xl font-semibold">{t('githubAuth:authFailed')}</h2>
               <p className="text-sm text-muted-foreground">{error}</p>
             </div>
             <Button onClick={handleClose} variant="outline" className="w-full">
@@ -341,7 +341,7 @@ export function GithubDeviceFlowModal({ onClose, onError }: GithubDeviceFlowModa
                 <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold">
                   2
                 </div>
-                <p className="text-muted-foreground">Click Authorize</p>
+                <p className="text-muted-foreground">{t('githubAuth:clickAuthorize')}</p>
               </div>
             </div>
 

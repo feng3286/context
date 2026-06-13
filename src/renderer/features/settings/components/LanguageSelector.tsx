@@ -39,7 +39,9 @@ export function LanguageSelector() {
             disabled={isLoading}
           >
             <SelectTrigger className="w-auto shrink-0 gap-2 [&>span]:line-clamp-none">
-              <SelectValue />
+              <SelectValue>
+                {(value: string | null) => LANGUAGE_NAMES[(value as SupportedLanguage) ?? 'en']}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="min-w-max">
               {(Object.keys(LANGUAGE_NAMES) as SupportedLanguage[]).map((lng) => (

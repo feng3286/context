@@ -1,6 +1,7 @@
 import { ListPlus } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   asMounted,
   getProjectManagerStore,
@@ -24,6 +25,7 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
   onSuccess,
   onClose,
 }: CreateWorkspaceModalProps) {
+  const { t } = useTranslation();
   const { navigate } = useNavigate();
   const [workspaceName, setWorkspaceName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,7 +55,7 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
 
   const handleSubmit = async () => {
     if (!workspaceName.trim()) {
-      setError('Name is required');
+      setError(t('workspaces:nameRequired'));
       return;
     }
 
@@ -72,9 +74,9 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
       onSuccess(void 0);
       navigate('workspace', { workspaceId });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create workspace';
+      const message = err instanceof Error ? err.message : t('workspaces:failedToCreateWorkspace');
       if (message.includes('UNIQUE constraint failed') || message.includes('SQLITE_CONSTRAINT')) {
-        setError('A workspace with this name already exists');
+        setError(t('workspaces:workspaceNameExists'));
       } else {
         setError(message);
       }
@@ -87,7 +89,7 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
     <ModalLayout
       header={
         <DialogHeader>
-          <DialogTitle>Create Workspace</DialogTitle>
+          <DialogTitle>{t('workspaces:createWorkspace')}</DialogTitle>
         </DialogHeader>
       }
       footer={
@@ -97,14 +99,14 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
             onClick={() => void handleSubmit()}
             disabled={!canCreateWorkspace || loading}
           >
-            {loading ? 'Creating...' : 'Create'}
+            {loading ? t('workspaces:creating') : t('workspaces:create')}
           </ConfirmButton>
         </DialogFooter>
       }
     >
       <DialogContentArea className="gap-4">
         <Field>
-          <FieldLabel>Workspace Name</FieldLabel>
+          <FieldLabel>{t('workspaces:workspaceName')}</FieldLabel>
           <input
             type="text"
             value={workspaceName}
@@ -113,7 +115,7 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
               setError(null);
             }}
             className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="My Workspace"
+            placeholder={t('workspaces:workspaceNamePlaceholder')}
             autoFocus
           />
         </Field>
@@ -121,12 +123,12 @@ export const CreateWorkspaceModal = observer(function CreateWorkspaceModal({
         <Field>
           <FieldLabel className="flex items-center gap-2">
             <ListPlus className="h-4 w-4" />
-            Select Projects ({selectedProjectIds.size})
+            {t('workspaces:selectProjects', { count: selectedProjectIds.size })}
           </FieldLabel>
           <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border bg-background">
             {projects.length === 0 ? (
               <div className="px-3 py-2 text-sm text-foreground-tertiary-muted">
-                No existing projects. Add projects first.
+                {t('workspaces:noExistingProjects')}
               </div>
             ) : (
               projects.map((project) => (

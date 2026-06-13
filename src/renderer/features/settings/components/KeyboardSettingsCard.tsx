@@ -12,6 +12,13 @@ import {
 import { Button } from '@renderer/lib/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/lib/ui/tooltip';
 
+const CATEGORY_I18N_MAP: Record<string, string> = {
+  Navigation: 'settings:keyboard.categories.navigation',
+  View: 'settings:keyboard.categories.view',
+  'Task View': 'settings:keyboard.categories.taskView',
+  'Tab Navigation': 'settings:keyboard.categories.tabNavigation',
+};
+
 const CONFIGURABLE_SHORTCUTS = (
   Object.entries(APP_SHORTCUTS) as [
     ShortcutSettingsKey,
@@ -50,8 +57,11 @@ const KeyboardSettingsCard: React.FC = () => {
       });
 
       if (conflict) {
-        const [, def] = conflict;
-        const msg = t('common:shortcutConflictDesc', { label: def.label });
+        const [conflictKey, def] = conflict;
+        const conflictLabel = t(`settings:keyboard.shortcuts.${conflictKey}.label`, {
+          defaultValue: def.label,
+        });
+        const msg = t('common:shortcutConflictDesc', { label: conflictLabel });
         toast({ title: t('common:shortcutConflict'), description: msg, variant: 'destructive' });
         recorder.cancelRecording();
         setEditingKey(null);
@@ -62,7 +72,7 @@ const KeyboardSettingsCard: React.FC = () => {
       toast({
         title: t('common:shortcutUpdated'),
         description: t('common:shortcutUpdatedDesc', {
-          label: APP_SHORTCUTS[editingKey].label,
+          label: t(`settings:keyboard.shortcuts.${editingKey}.label`),
           hotkey: formatForDisplay(hotkey),
         }),
       });
@@ -80,7 +90,9 @@ const KeyboardSettingsCard: React.FC = () => {
     resetField(key);
     toast({
       title: t('common:shortcutReset'),
-      description: t('common:shortcutResetDesc', { label: APP_SHORTCUTS[key].label }),
+      description: t('common:shortcutResetDesc', {
+        label: t(`settings:keyboard.shortcuts.${key}.label`),
+      }),
     });
   };
 
@@ -88,7 +100,9 @@ const KeyboardSettingsCard: React.FC = () => {
     update({ [key]: null });
     toast({
       title: t('common:shortcutRemoved'),
-      description: t('common:shortcutRemovedDesc', { label: APP_SHORTCUTS[key].label }),
+      description: t('common:shortcutRemovedDesc', {
+        label: t(`settings:keyboard.shortcuts.${key}.label`),
+      }),
     });
   };
 
@@ -98,7 +112,7 @@ const KeyboardSettingsCard: React.FC = () => {
         {Object.entries(SHORTCUTS_BY_CATEGORY).map(([category, shortcuts]) => (
           <div key={category}>
             <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {category}
+              {t(CATEGORY_I18N_MAP[category] ?? `settings:keyboard.categories.${category}`)}
             </div>
             <div className="space-y-3">
               {shortcuts.map(([key, def]) => {
@@ -116,9 +130,13 @@ const KeyboardSettingsCard: React.FC = () => {
                     className="group/shortcut flex min-w-0 flex-wrap items-start justify-between gap-x-2 gap-y-2"
                   >
                     <div className="min-w-0 flex-1 basis-64 space-y-1">
-                      <div className="break-words text-sm">{def.label}</div>
+                      <div className="break-words text-sm">
+                        {t(`settings:keyboard.shortcuts.${key}.label`, { defaultValue: def.label })}
+                      </div>
                       <div className="break-words text-xs text-muted-foreground">
-                        {def.description}
+                        {t(`settings:keyboard.shortcuts.${key}.description`, {
+                          defaultValue: def.description,
+                        })}
                       </div>
                     </div>
                     <div className="ml-auto flex shrink-0 items-center gap-2">

@@ -2,6 +2,7 @@ import { useHotkey } from '@tanstack/react-hotkeys';
 import { LayoutList, Pause, Play, Terminal } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { asMounted, getProjectStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { TabbedPtyPanel } from '@renderer/features/tasks/tabbed-pty-panel';
@@ -34,6 +35,7 @@ type PanelMode = 'terminals' | 'scripts';
 type AnyPtyEntity = { data: { id: string }; session: PtySession };
 
 export const TerminalsPanel = observer(function TerminalsPanel() {
+  const { t } = useTranslation();
   const { projectId, taskId } = useTaskViewContext();
   const provisionedTask = useProvisionedTask();
   const terminalMgr = provisionedTask.terminals;
@@ -111,7 +113,9 @@ export const TerminalsPanel = observer(function TerminalsPanel() {
         </button>
       </TooltipTrigger>
       <TooltipContent>
-        {lifecycleScriptsMgr?.activeTab?.isRunning ? 'Stop script' : 'Run script'}
+        {lifecycleScriptsMgr?.activeTab?.isRunning
+          ? t('terminals:stopScript')
+          : t('terminals:runScript')}
       </TooltipContent>
     </Tooltip>
   );
@@ -132,7 +136,7 @@ export const TerminalsPanel = observer(function TerminalsPanel() {
             <Terminal className="size-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Terminals</TooltipContent>
+        <TooltipContent>{t('terminals:title')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger>
@@ -148,7 +152,7 @@ export const TerminalsPanel = observer(function TerminalsPanel() {
             <LayoutList className="size-3.5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Lifecycle Scripts</TooltipContent>
+        <TooltipContent>{t('terminals:lifecycleScripts')}</TooltipContent>
       </Tooltip>
     </div>
   ) : null;

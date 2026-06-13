@@ -1,4 +1,5 @@
 import { ChevronsUpDownIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { GithubAuthDisclaimer } from '@renderer/features/integrations/components/github-auth-disclaimer';
 import { ComboboxTrigger, ComboboxValue } from '@renderer/lib/ui/combobox';
 import { ComboboxPopover } from '@renderer/lib/ui/combobox-popover';
@@ -24,16 +25,21 @@ export function PickExistingPanel({
   state: PickModeState;
   showInitializeGitPrompt: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <FieldGroup>
       <Field>
-        <FieldLabel>Directory</FieldLabel>
+        <FieldLabel>
+          {strategy === 'local'
+            ? t('addProject:localProjectDir')
+            : t('addProject:remoteProjectDir')}
+        </FieldLabel>
         {strategy === 'local' ? (
           <LocalDirectorySelector
             path={state.path}
             onPathChange={state.handlePathChange}
-            title="Select a local project"
-            message="Select a project directory to open"
+            title={t('addProject:selectLocalProjectTitle')}
+            message={t('addProject:selectLocalProjectMessage')}
           />
         ) : (
           <RemoteDirectorySelector
@@ -44,9 +50,9 @@ export function PickExistingPanel({
         )}
       </Field>
       <Field>
-        <FieldLabel>Name</FieldLabel>
+        <FieldLabel>{t('addProject:projectName')}</FieldLabel>
         <Input
-          placeholder="Enter a project name"
+          placeholder={t('addProject:projectNamePlaceholder')}
           value={state.name}
           onChange={(e) => state.handleNameChange(e.target.value)}
         />
@@ -54,7 +60,7 @@ export function PickExistingPanel({
       {showInitializeGitPrompt && (
         <div className="overflow-hidden rounded-md border border-border">
           <p className="border-b border-border bg-background-1 px-2 py-1 text-xs text-foreground-muted">
-            This directory is not a git repository.
+            {t('addProject:notGitRepo')}
           </p>
           <div className="p-2">
             <Field orientation="horizontal">
@@ -62,7 +68,7 @@ export function PickExistingPanel({
                 checked={state.initGitRepository}
                 onCheckedChange={state.setinitGitRepository}
               />
-              <FieldLabel>Initialize git repository</FieldLabel>
+              <FieldLabel>{t('addProject:initGitRepo')}</FieldLabel>
             </Field>
           </div>
         </div>
@@ -84,6 +90,7 @@ export function CreateNewPanel({
   showGithubAuthDisclaimer: boolean;
   onOpenAccountSettings: () => void;
 }) {
+  const { t } = useTranslation();
   if (showGithubAuthDisclaimer) {
     return <GithubAuthDisclaimer onOpenAccountSettings={onOpenAccountSettings} />;
   }
@@ -92,16 +99,16 @@ export function CreateNewPanel({
     <div className="flex flex-col gap-6">
       <FieldGroup>
         <Field>
-          <FieldLabel>Repository Name</FieldLabel>
+          <FieldLabel>{t('addProject:repoName')}</FieldLabel>
           <Input
             autoFocus
-            placeholder="Enter a repository name"
+            placeholder={t('addProject:repoNamePlaceholder')}
             value={state.repositoryName}
             onChange={(e) => state.handleRepositoryNameChange(e.target.value)}
           />
         </Field>
         <Field>
-          <FieldLabel>Owner</FieldLabel>
+          <FieldLabel>{t('addProject:owner')}</FieldLabel>
           <ComboboxPopover
             trigger={
               <ComboboxTrigger
@@ -120,18 +127,18 @@ export function CreateNewPanel({
           />
         </Field>
         <Field>
-          <FieldLabel>Privacy</FieldLabel>
+          <FieldLabel>{t('addProject:privacy')}</FieldLabel>
           <RadioGroup
             value={state.repositoryVisibility}
             onValueChange={(value) => state.setRepositoryVisibility(value as 'public' | 'private')}
           >
             <div className="flex items-center gap-3">
               <RadioGroupItem value="private" />
-              <Label className="cursor-pointer font-normal">Private</Label>
+              <Label className="cursor-pointer font-normal">{t('addProject:private')}</Label>
             </div>
             <div className="flex items-center gap-3">
               <RadioGroupItem value="public" />
-              <Label className="cursor-pointer font-normal">Public</Label>
+              <Label className="cursor-pointer font-normal">{t('addProject:public')}</Label>
             </div>
           </RadioGroup>
         </Field>
@@ -139,21 +146,25 @@ export function CreateNewPanel({
       <Separator className="w-full" />
       <FieldGroup>
         <Field>
-          <FieldLabel>Project Name</FieldLabel>
+          <FieldLabel>{t('addProject:projectName')}</FieldLabel>
           <Input
-            placeholder="Enter a project name"
+            placeholder={t('addProject:projectNamePlaceholder')}
             value={state.name}
             onChange={(e) => state.handleNameChange(e.target.value)}
           />
         </Field>
         <Field>
-          <FieldLabel>{strategy === 'local' ? 'Project Directory' : 'Remote Directory'}</FieldLabel>
+          <FieldLabel>
+            {strategy === 'local'
+              ? t('addProject:localProjectDir')
+              : t('addProject:remoteProjectDir')}
+          </FieldLabel>
           {strategy === 'local' ? (
             <LocalDirectorySelector
               path={state.path}
               onPathChange={state.setPath}
-              title="Select a local project"
-              message="Select a project directory to open"
+              title={t('addProject:selectLocalProjectTitle')}
+              message={t('addProject:selectLocalProjectMessage')}
             />
           ) : (
             <RemoteDirectorySelector
@@ -177,14 +188,15 @@ export function ClonePanel({
   connectionId?: string;
   state: CloneModeState;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-6">
       <FieldGroup>
         <Field>
-          <FieldLabel>Repository URL</FieldLabel>
+          <FieldLabel>{t('addProject:repoUrl')}</FieldLabel>
           <Input
             autoFocus
-            placeholder="Enter a repository URL"
+            placeholder={t('addProject:repoUrlPlaceholder')}
             value={state.repositoryUrl}
             onChange={(e) => state.handleRepositoryUrlChange(e.target.value)}
           />
@@ -193,21 +205,25 @@ export function ClonePanel({
       <Separator className="w-full" />
       <FieldGroup>
         <Field>
-          <FieldLabel>Project Name</FieldLabel>
+          <FieldLabel>{t('addProject:projectName')}</FieldLabel>
           <Input
-            placeholder="Enter a project name"
+            placeholder={t('addProject:projectNamePlaceholder')}
             value={state.name}
             onChange={(e) => state.handleNameChange(e.target.value)}
           />
         </Field>
         <Field>
-          <FieldLabel>{strategy === 'local' ? 'Project Directory' : 'Remote Directory'}</FieldLabel>
+          <FieldLabel>
+            {strategy === 'local'
+              ? t('addProject:localProjectDir')
+              : t('addProject:remoteProjectDir')}
+          </FieldLabel>
           {strategy === 'local' ? (
             <LocalDirectorySelector
               path={state.path}
               onPathChange={state.setPath}
-              title="Select a local project"
-              message="Select a project directory to open"
+              title={t('addProject:selectLocalProjectTitle')}
+              message={t('addProject:selectLocalProjectMessage')}
             />
           ) : (
             <RemoteDirectorySelector

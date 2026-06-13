@@ -321,6 +321,7 @@ function LinkedTaskCard({
 // ── Main Panel ──
 
 export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel() {
+  const { t } = useTranslation();
   const {
     params: { projectId },
   } = useParams('projectDetail');
@@ -445,13 +446,18 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
         {/* Linked Workspaces */}
         <section>
-          <h3 className="text-sm font-medium text-foreground-muted mb-3">Linked Workspaces</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <Layers className="size-4 text-foreground-muted" />
+            <h3 className="text-sm font-medium text-foreground-muted">
+              {t('project:detail.linkedWorkspaces')}
+            </h3>
+          </div>
           {loadingWorkspaces ? (
-            <div className="text-sm text-foreground-passive">Loading...</div>
+            <div className="text-sm text-foreground-passive">{t('project:detail.loading')}</div>
           ) : workspaces.length === 0 ? (
             <EmptyState
-              label="No linked workspaces"
-              description="This project is not part of any workspace."
+              label={t('project:detail.noLinkedWorkspaces')}
+              description={t('project:detail.noLinkedWorkspacesDesc')}
             />
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -470,11 +476,16 @@ export const ProjectDetailMainPanel = observer(function ProjectDetailMainPanel()
 
         {/* Linked Tasks */}
         <section>
-          <h3 className="text-sm font-medium text-foreground-muted mb-3">Linked Tasks</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <ListTodo className="size-4 text-foreground-muted" />
+            <h3 className="text-sm font-medium text-foreground-muted">
+              {t('project:detail.linkedTasks')}
+            </h3>
+          </div>
           {linkedTasks.length === 0 ? (
             <EmptyState
-              label="No linked tasks"
-              description="Tasks will appear here when they are created for this project."
+              label={t('project:detail.noLinkedTasks')}
+              description={t('project:detail.noLinkedTasksDesc')}
             />
           ) : (
             <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   asMounted,
   getProjectManagerStore,
@@ -28,6 +29,7 @@ export const SelectProjectModal = observer(function SelectProjectModal({
   onSuccess,
   onClose,
 }: SelectProjectModalProps) {
+  const { t } = useTranslation();
   const { navigate } = useNavigate();
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -81,7 +83,7 @@ export const SelectProjectModal = observer(function SelectProjectModal({
     <ModalLayout
       header={
         <DialogHeader>
-          <DialogTitle>Add Projects to Workspace</DialogTitle>
+          <DialogTitle>{t('workspaces:addProjectsToWorkspace')}</DialogTitle>
         </DialogHeader>
       }
       footer={
@@ -92,19 +94,19 @@ export const SelectProjectModal = observer(function SelectProjectModal({
             disabled={selectedProjectIds.size === 0 || loading}
           >
             {loading
-              ? 'Adding...'
-              : `Add ${selectedProjectIds.size} Project${selectedProjectIds.size > 1 ? 's' : ''}`}
+              ? t('workspaces:adding')
+              : t('workspaces:addProjectsCount', { count: selectedProjectIds.size })}
           </ConfirmButton>
         </DialogFooter>
       }
     >
       <DialogContentArea className="gap-4">
         <Field>
-          <FieldLabel>Select Projects</FieldLabel>
+          <FieldLabel>{t('workspaces:selectProjects')}</FieldLabel>
           <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border bg-background">
             {projects.length === 0 ? (
               <div className="px-3 py-2 text-sm text-foreground-tertiary-muted">
-                No available projects to add
+                {t('workspaces:noAvailableProjects')}
               </div>
             ) : (
               projects.map((project) => (

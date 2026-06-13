@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AGENT_PROVIDER_IDS,
   AgentProviderId,
@@ -48,6 +49,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
   projectId: string;
   taskId: string;
 }) {
+  const { t } = useTranslation();
   const [providerOverride, setProviderOverride] = useState<string | null>(null);
   const { value: defaultAgentValue } = useAppSettingsKey('defaultAgent');
   const { value: rawCustomAgents } = useAppSettingsKey('customAgents');
@@ -152,7 +154,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Create Conversation</DialogTitle>
+        <DialogTitle>{t('conversation:createTitle')}</DialogTitle>
       </DialogHeader>
       <DialogContentArea>
         <FieldGroup>

@@ -1,13 +1,4 @@
-import {
-  FolderPlus,
-  GitBranch,
-  Layers,
-  ListTodo,
-  MoreVertical,
-  Pin,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { GitBranch, Layers, Link, ListTodo, MoreVertical, Pin, Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -272,8 +263,8 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
               size="sm"
               onClick={() => showSelectProjectModal({ workspaceId })}
             >
-              <FolderPlus className="size-3.5" />
-              {t('workspaces:addProject')}
+              <Link className="size-3.5" />
+              {t('workspaces:linkProject')}
             </Button>
             <Button
               variant="default"

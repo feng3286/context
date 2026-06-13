@@ -4,6 +4,7 @@ import { WelcomeScreen } from './app/welcome';
 import { Workspace } from './app/workspace';
 import { IntegrationsProvider } from './features/integrations/integrations-provider';
 import { Onboarding } from './features/onboarding/onboarding';
+import { UpdateAvailableDialog } from './features/updates/update-available-dialog';
 import { useLanguageSync } from './i18n/use-language';
 import { useAccountSession } from './lib/hooks/useAccount';
 import { useLegacyPortStatus } from './lib/hooks/useLegacyPort';
@@ -91,6 +92,7 @@ function AppContent() {
             </GithubContextProvider>
           </TerminalPoolProvider>
         </WorkspaceLayoutContextProvider>
+        <UpdateAvailableDialog />
       </ModalProvider>
     </TooltipProvider>
   );

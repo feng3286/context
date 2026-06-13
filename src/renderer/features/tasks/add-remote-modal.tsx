@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { rpc } from '@renderer/lib/ipc';
 import { type BaseModalProps } from '@renderer/lib/modal/modal-provider';
@@ -43,6 +44,7 @@ export function AddRemoteModal({
   branchName,
   onSuccess,
 }: Props) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('create');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,13 +149,17 @@ export function AddRemoteModal({
     <ModalLayout
       header={
         <DialogHeader>
-          <DialogTitle>Add Remote</DialogTitle>
+          <DialogTitle>{t('addRemote:title')}</DialogTitle>
         </DialogHeader>
       }
       footer={
         <DialogFooter>
           <ConfirmButton onClick={() => void handleSubmit()} disabled={!isValid || isSubmitting}>
-            {isSubmitting ? 'Adding...' : tab === 'create' ? 'Create & Publish' : 'Link & Publish'}
+            {isSubmitting
+              ? t('addRemote:adding')
+              : tab === 'create'
+                ? t('addRemote:createAndPublish')
+                : t('addRemote:linkAndPublish')}
           </ConfirmButton>
         </DialogFooter>
       }
@@ -167,17 +173,17 @@ export function AddRemoteModal({
           }}
         >
           <ToggleGroupItem className="flex-1" value="create">
-            Create Repository
+            {t('addRemote:createRepo')}
           </ToggleGroupItem>
           <ToggleGroupItem className="flex-1" value="link">
-            Link Existing
+            {t('addRemote:linkExisting')}
           </ToggleGroupItem>
         </ToggleGroup>
 
         {tab === 'create' && (
           <FieldGroup>
             <Field>
-              <FieldLabel>Repository Name</FieldLabel>
+              <FieldLabel>{t('addRemote:repoName')}</FieldLabel>
               <Input
                 autoFocus
                 value={repositoryName}
@@ -185,7 +191,7 @@ export function AddRemoteModal({
               />
             </Field>
             <Field>
-              <FieldLabel>Owner</FieldLabel>
+              <FieldLabel>{t('addRemote:owner')}</FieldLabel>
               <ComboboxPopover
                 trigger={
                   <ComboboxTrigger
@@ -204,18 +210,18 @@ export function AddRemoteModal({
               />
             </Field>
             <Field>
-              <FieldLabel>Visibility</FieldLabel>
+              <FieldLabel>{t('addRemote:visibility')}</FieldLabel>
               <RadioGroup
                 value={visibility}
                 onValueChange={(v) => setVisibility(v as 'public' | 'private')}
               >
                 <div className="flex items-center gap-3">
                   <RadioGroupItem value="private" />
-                  <Label className="cursor-pointer font-normal">Private</Label>
+                  <Label className="cursor-pointer font-normal">{t('addRemote:private')}</Label>
                 </div>
                 <div className="flex items-center gap-3">
                   <RadioGroupItem value="public" />
-                  <Label className="cursor-pointer font-normal">Public</Label>
+                  <Label className="cursor-pointer font-normal">{t('addRemote:public')}</Label>
                 </div>
               </RadioGroup>
             </Field>
@@ -225,7 +231,7 @@ export function AddRemoteModal({
         {tab === 'link' && (
           <FieldGroup>
             <Field>
-              <FieldLabel>Remote URL</FieldLabel>
+              <FieldLabel>{t('addRemote:remoteUrl')}</FieldLabel>
               <Input
                 autoFocus
                 placeholder="https://git.example.com/owner/repo.git"

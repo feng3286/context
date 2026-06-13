@@ -75,6 +75,15 @@
         "downloadingBtn": "Downloading",
         "restart": "Restart",
         "installingBtn": "Installing"
+      },
+      "updateDialog": {
+        "title": "New version available",
+        "description": "An update is ready.",
+        "currentVersion": "Current",
+        "newVersion": "New",
+        "download": "Download",
+        "remindLater": "Remind me later",
+        "releaseNotes": "Release notes"
       }
     },
     "agents": {
@@ -116,7 +125,95 @@
       "customFont": "Custom: {{font}}"
     },
     "keyboard": {
-      "title": "Keyboard shortcuts"
+      "title": "Keyboard shortcuts",
+      "categories": {
+        "navigation": "Navigation",
+        "view": "View",
+        "taskView": "Task View",
+        "tabNavigation": "Tab Navigation"
+      },
+      "shortcuts": {
+        "commandPalette": {
+          "label": "Command Palette",
+          "description": "Open the command palette to quickly search and navigate"
+        },
+        "settings": {
+          "label": "Settings",
+          "description": "Open application settings"
+        },
+        "toggleLeftSidebar": {
+          "label": "Toggle Left Sidebar",
+          "description": "Show or hide the left sidebar"
+        },
+        "toggleRightSidebar": {
+          "label": "Toggle Right Sidebar",
+          "description": "Show or hide the right sidebar"
+        },
+        "toggleTheme": {
+          "label": "Toggle Theme",
+          "description": "Cycle through light, dark navy, and dark black themes"
+        },
+        "closeModal": {
+          "label": "Close Modal",
+          "description": "Close the current modal or dialog"
+        },
+        "nextProject": {
+          "label": "Next Task",
+          "description": "Switch to the next task"
+        },
+        "prevProject": {
+          "label": "Previous Task",
+          "description": "Switch to the previous task"
+        },
+        "newTask": {
+          "label": "New Task",
+          "description": "Create a new task"
+        },
+        "newProject": {
+          "label": "New Project",
+          "description": "Create a new project"
+        },
+        "openInEditor": {
+          "label": "Open in Editor",
+          "description": "Open the project in the default editor"
+        },
+        "taskViewAgents": {
+          "label": "Conversations view",
+          "description": "Switch to the conversations view in the task panel"
+        },
+        "taskViewDiff": {
+          "label": "Diff view",
+          "description": "Switch to the diff view in the task panel"
+        },
+        "taskViewEditor": {
+          "label": "Editor view",
+          "description": "Switch to the editor view in the task panel"
+        },
+        "tabNext": {
+          "label": "Next Tab",
+          "description": "Switch to the next tab"
+        },
+        "tabPrev": {
+          "label": "Previous Tab",
+          "description": "Switch to the previous tab"
+        },
+        "tabClose": {
+          "label": "Close Tab",
+          "description": "Close the active tab"
+        },
+        "newConversation": {
+          "label": "New Conversation",
+          "description": "Create a new conversation in the current task"
+        },
+        "newTerminal": {
+          "label": "New Terminal",
+          "description": "Create a new terminal in the current task"
+        },
+        "confirm": {
+          "label": "Confirm",
+          "description": "Confirm the current dialog action"
+        }
+      }
     },
     "customCommand": {
       "cliCommand": "CLI Command",
@@ -300,6 +397,28 @@
       "assignee": "Assignee"
     }
   },
+  "addRemote": {
+    "title": "Add Remote",
+    "createRepo": "Create Repository",
+    "linkExisting": "Link Existing",
+    "repoName": "Repository Name",
+    "owner": "Owner",
+    "visibility": "Visibility",
+    "private": "Private",
+    "public": "Public",
+    "remoteUrl": "Remote URL",
+    "remoteUrlPlaceholder": "https://git.example.com/owner/repo.git",
+    "adding": "Adding...",
+    "createAndPublish": "Create & Publish",
+    "linkAndPublish": "Link & Publish",
+    "noOwner": "No repository owner available",
+    "failedToCreateRepo": "Failed to create repository",
+    "failedToAddRemote": "Failed to add remote",
+    "failedToFetch": "Failed to fetch remote",
+    "remoteHasCommits": "Remote already has commits. Linking succeeded, but integrating histories must be resolved manually.",
+    "failedToPublish": "Failed to publish branch",
+    "errorOccurred": "An error occurred"
+  },
   "skills": {
     "title": "Skills",
     "subtitle": "Extend your agents with reusable skill modules",
@@ -364,7 +483,7 @@
     "projectTaskCount": "{{projects}} project_one}} {{projects}} project_other}}, {{tasks}} task_one}} {{tasks}} task_other}}",
     "newWorkspace": "New Workspace",
     "createWorkspace": "Create Workspace",
-    "addProject": "Add Project",
+    "linkProject": "Link Project",
     "removeFromWorkspace": "Remove from workspace",
     "inProgress": "in progress",
     "prCount": "{{count}} PR_one}} {{count}} PR_other}}",
@@ -380,6 +499,20 @@
     "noProjectsDesc": "Add a project to this workspace to start working on tasks.",
     "tasksSection": "Tasks ({{count}})",
     "linkExistingProject": "Link existing project",
+    "addProject": "Add Project",
+    "addProjectsToWorkspace": "Add Projects to Workspace",
+    "adding": "Adding...",
+    "addProjectsCount": "Add {{count}} Project{{count, plural, one{} other{s}}}",
+    "selectProjects": "Select Projects ({{count}})",
+    "noAvailableProjects": "No available projects to add",
+    "noExistingProjects": "No existing projects. Add projects first.",
+    "workspaceName": "Workspace Name",
+    "workspaceNamePlaceholder": "My Workspace",
+    "create": "Create",
+    "creating": "Creating...",
+    "nameRequired": "Name is required",
+    "workspaceNameExists": "A workspace with this name already exists",
+    "failedToCreateWorkspace": "Failed to create workspace",
     "createNewProject": "Create new project",
     "noProjectsShort": "No projects",
     "newTask": "New task",
@@ -438,6 +571,12 @@
     "save": "Save",
     "saving": "Saving…",
     "saved": "Saved"
+  },
+  "terminals": {
+    "title": "Terminals",
+    "lifecycleScripts": "Lifecycle Scripts",
+    "runScript": "Run script",
+    "stopScript": "Stop script"
   },
   "onboarding": {
     "steps": {
@@ -499,7 +638,23 @@
     "ssh": "SSH",
     "sshConnection": "SSH Connection",
     "create": "Create",
-    "noProjectsInWorkspace": "No projects in this workspace. Add projects first."
+    "noProjectsInWorkspace": "No projects in this workspace. Add projects first.",
+    "repoName": "Repository Name",
+    "repoNamePlaceholder": "Enter a repository name",
+    "owner": "Owner",
+    "privacy": "Privacy",
+    "private": "Private",
+    "public": "Public",
+    "projectName": "Project Name",
+    "projectNamePlaceholder": "Enter a project name",
+    "localProjectDir": "Project Directory",
+    "remoteProjectDir": "Remote Directory",
+    "selectLocalProjectTitle": "Select a local project",
+    "selectLocalProjectMessage": "Select a project directory to open",
+    "repoUrl": "Repository URL",
+    "repoUrlPlaceholder": "Enter a repository URL",
+    "notGitRepo": "This directory is not a git repository.",
+    "initGitRepo": "Initialize git repository"
   },
   "editor": {
     "noFileOpen": "No file open",
@@ -528,6 +683,12 @@
       "deleteCommentAria": "Delete comment",
       "updatePlaceholder": "Update the note...",
       "addPlaceholder": "Add a note about this line..."
+    },
+    "conflict": {
+      "title": "File Modified Externally",
+      "desc": "was changed outside the editor while you have unsaved edits. What would you like to do?",
+      "keepMine": "Keep Mine",
+      "acceptIncoming": "Accept Incoming"
     }
   },
   "feedback": {
@@ -545,14 +706,21 @@
     "noAgentInstalled": "No agent installed",
     "searchAgents": "Search agents..."
   },
+  "conversation": {
+    "createTitle": "Create Conversation"
+  },
   "githubAuth": {
     "notConnected": "GitHub is not connected. Connect your account to create a repository.",
-    "openAccountSettings": "Open Account Settings"
+    "openAccountSettings": "Open Account Settings",
+    "authFailed": "Authentication Failed",
+    "close": "Close",
+    "clickAuthorize": "Click Authorize"
   },
   "ssh": {
     "addConnection": "Add Connection",
     "editConnection": "Edit Connection",
-    "selectOrAdd": "Select or add a connection"
+    "selectOrAdd": "Select or add a connection",
+    "connectionName": "Connection Name"
   },
   "createPr": {
     "draftTitle": "Create Draft PR",
@@ -593,6 +761,15 @@
         "message": "\"{{name}}\" cannot be deleted because it is still associated with other resources.",
         "details": "It is linked to {{workspaceCount}} workspace(s) and {{taskCount}} task(s). Remove these associations first before deleting the project."
       }
+    },
+    "detail": {
+      "linkedWorkspaces": "Linked Workspaces",
+      "noLinkedWorkspaces": "No linked workspaces",
+      "noLinkedWorkspacesDesc": "This project is not part of any workspace.",
+      "linkedTasks": "Linked Tasks",
+      "noLinkedTasks": "No linked tasks",
+      "noLinkedTasksDesc": "Tasks will appear here when they are created for this project.",
+      "loading": "Loading..."
     }
   },
   "toast": {

@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isValidSkillName } from '@shared/skills/validation';
 import { rpc } from '@renderer/lib/ipc';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
@@ -20,6 +21,7 @@ import { captureTelemetry } from '@renderer/utils/telemetryClient';
 type Props = BaseModalProps<void>;
 
 export function CreateSkillModal({ onSuccess, onClose }: Props) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -69,7 +71,7 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
     <>
       <DialogHeader>
         <div className="flex flex-col gap-0.5">
-          <DialogTitle>New Skill</DialogTitle>
+          <DialogTitle>{t('skills:newSkill')}</DialogTitle>
         </div>
       </DialogHeader>
 

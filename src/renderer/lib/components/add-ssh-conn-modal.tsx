@@ -8,6 +8,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as z from 'zod';
 import type { ConnectionTestResult, SshConfig } from '@shared/ssh';
 import type { BaseModalProps } from '@renderer/lib/modal/modal-provider';
@@ -77,6 +78,7 @@ type AuthType = 'password' | 'key' | 'agent';
 type TestState = 'idle' | 'testing' | 'success' | 'error';
 
 export function AddSshConnModal({ onSuccess, onClose, initialConfig }: AddSshConnModalProps) {
+  const { t } = useTranslation();
   const sshConnections = appState.sshConnections;
   const isEditing = !!initialConfig;
 
@@ -216,7 +218,7 @@ export function AddSshConnModal({ onSuccess, onClose, initialConfig }: AddSshCon
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid}>
-                    <FieldLabel htmlFor={field.name}>Connection Name</FieldLabel>
+                    <FieldLabel htmlFor={field.name}>{t('ssh:connectionName')}</FieldLabel>
                     <Input
                       id={field.name}
                       name={field.name}

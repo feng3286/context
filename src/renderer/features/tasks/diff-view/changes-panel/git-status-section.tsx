@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, GitBranch, RefreshCcw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useTranslation } from 'react-i18next';
 import {
   getProjectStore,
   getRepositoryStore,
@@ -18,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@rende
 import { getBranchTooltipText, getPublishTooltipText } from './git-status-tooltips';
 
 export const GitStatusSection = observer(function GitStatusSection() {
+  const { t } = useTranslation();
   const { projectId, taskId } = useTaskViewContext();
   const workspaceId = asProvisioned(getTaskStore(projectId, taskId))?.workspaceId;
   const branchName = getTaskGitStore(projectId, taskId)?.branchName;
@@ -131,10 +133,10 @@ export const GitStatusSection = observer(function GitStatusSection() {
                   >
                     <ArrowUp className="size-3" />
                     {isPublishing
-                      ? 'Publishing...'
+                      ? t('git:push.pushing')
                       : shouldOfferAddRemote
-                        ? 'Add Remote'
-                        : 'Publish'}
+                        ? t('addRemote:title')
+                        : t('git:push.label')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

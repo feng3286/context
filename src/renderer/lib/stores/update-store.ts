@@ -1,5 +1,4 @@
 import { action, computed, makeObservable, observable, runInAction } from 'mobx';
-import { toast } from 'sonner';
 import { menuCheckForUpdatesChannel } from '@shared/events/appEvents';
 import {
   updateAvailableEvent,
@@ -11,7 +10,6 @@ import {
   updateNotAvailableEvent,
   updateProgressEvent,
 } from '@shared/events/updateEvents';
-import { i18n } from '@renderer/i18n/config';
 import { events, rpc } from '@renderer/lib/ipc';
 
 const LAST_NOTIFIED_KEY = 'context:update:lastNotified';
@@ -38,12 +36,16 @@ export class UpdateStore {
   state: UpdateState = { status: 'idle' };
   currentVersion = '';
   availableVersion: string | undefined = undefined;
+  showUpdateDialog: boolean = false;
+  updateDialogVersion: string | undefined = undefined;
 
   constructor() {
     makeObservable(this, {
       state: observable,
       currentVersion: observable,
       availableVersion: observable,
+      showUpdateDialog: observable,
+      updateDialogVersion: observable,
       setState: action,
       hasUpdate: computed,
       progressLabel: computed,
@@ -83,7 +85,7 @@ export class UpdateStore {
         this.availableVersion = d.version;
         this.state = { status: 'available', info: { version: d.version } };
       });
-      this._maybeToastAvailable(d.version);
+      this._maybeShowDialog(d.version);
     });
 
     events.on(updateNotAvailableEvent, () => {
@@ -219,12 +221,23 @@ export class UpdateStore {
     }
   }
 
-  private _maybeToastAvailable(version: string): void {
-    if (!this._shouldNotify(version)) return;
-    toast(i18n.t('toast:update.available'), {
-      description: i18n.t('toast:update.availableDesc', { version }),
+  dismissUpdateDialog(): void {
+    if (this.updateDialogVersion) {
+      this._rememberNotified(this.updateDialogVersion);
+    }
+    runInAction(() => {
+      this.showUpdateDialog = false;
+      this.updateDialogVersion = undefined;
     });
-    this._rememberNotified(version);
+  }
+
+  private _maybeShowDialog(version: string): void {
+    if (!this._shouldNotify(version)) return;
+    runInAction(() => {
+      this.availableVersion = version;
+      this.showUpdateDialog = true;
+      this.updateDialogVersion = version;
+    });
   }
 
   private _shouldNotify(version: string): boolean {

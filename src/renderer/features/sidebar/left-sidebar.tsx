@@ -54,7 +54,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
             <SidebarMenuButton
               isActive={false}
               onClick={() => showCreateWorkspaceModal({})}
-              aria-label="Create Workspace"
+              aria-label={t('sidebar:createWorkspace')}
               className="w-full justify-between"
             >
               <span className="flex items-center gap-2 min-w-0 w-full">
@@ -65,7 +65,7 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
             <SidebarMenuButton
               isActive={false}
               onClick={() => showAddProjectModal({})}
-              aria-label="Add Project"
+              aria-label={t('sidebar:addProject')}
               className="w-full justify-between"
             >
               <span className="flex items-center gap-2 min-w-0 w-full">

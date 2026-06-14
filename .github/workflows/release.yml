@@ -118,13 +118,26 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: node --experimental-strip-types scripts/release/upload-r2.ts
 
+      - name: Upload artifacts (dry-run)
+        if: ${{ steps.init.outputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: LINUX-ARTIFACTS
+          path: |
+            release/context-*.AppImage
+            release/context-*.deb
+            release/context-*.rpm
+            release/*.blockmap
+            release/latest*.yml
+          if-no-files-found: error
+
       - name: Upload update manifests to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for f in release/latest*.yml; do
+          for f in release/latest*.yml release/context-*.{AppImage,deb,rpm,dmg,zip,exe,msi}; do
             [ -f "$f" ] && gh release upload "$GITHUB_REF_NAME" "$f" --clobber
           done
 
@@ -358,7 +371,7 @@ jobs:
         if: ${{ steps.init.outputs.dry_run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: SIGNED-STAPLED-DMGS
+          name: MAC-ARTIFACTS
           path: |
             release/context-*.dmg
             release/context-*.zip
@@ -366,11 +379,11 @@ jobs:
             release/latest*.yml
           if-no-files-found: error
 
-      - name: Upload update manifests to GitHub Release
+      - name: Upload DMGs and update manifests to GitHub Release
         if: ${{ steps.init.outputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for f in release/latest*.yml; do
+          for f in release/latest*.yml release/context-arm64.{dmg,zip} release/*.blockmap; do
             [ -f "$f" ] && gh release upload "$GITHUB_REF_NAME" "$f" --clobber
           done

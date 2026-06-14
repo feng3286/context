@@ -7,7 +7,7 @@ const { values } = parseArgs({
     platform: { type: 'string' },
     arch: { type: 'string', default: 'arm64' },
     targets: { type: 'string' },
-    publish: { type: 'string', default: 'always' },
+    publish: { type: 'string', default: 'never' },
   },
   strict: true,
 });

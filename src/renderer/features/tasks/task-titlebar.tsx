@@ -13,6 +13,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useCallback } from 'react';
 import {
   asMounted,
   getProjectStore,
@@ -65,6 +66,378 @@ function getTaskProjectDisplayName(
   }
   return projectDisplayName(getProjectStore(projectId)) ?? 'Project';
 }
+
+/** Single-project git actions section inside the popover. */
+const ProjectGitActions = observer(function ProjectGitActions({
+  projectId,
+  taskId,
+  provisionedTask,
+}: {
+  projectId: string;
+  taskId: string;
+  provisionedTask: ReturnType<typeof useProvisionedTask>;
+}) {
+  const {
+    hasUpstream,
+    aheadCount,
+    behindCount,
+    fetch,
+    pull,
+    push,
+    publish,
+    isPublishing,
+    isFetching,
+    isPulling,
+    isPushing,
+  } = useGitActions(projectId, taskId);
+
+  const ctx = provisionedTask.projectContexts?.projects.get(projectId);
+  const branchName = provisionedTask.workspace.git.branchName;
+
+  return (
+    <div className="flex flex-col gap-1 border border-border rounded-md p-2">
+      <span className="flex items-center gap-1 text-foreground-muted">
+        <GitBranch className="size-3.5" />
+        <span>{branchName}</span>
+      </span>
+      {ctx?.sourceBranch && (
+        <span className="flex items-center gap-2 text-foreground-passive">
+          Created from
+          <span className="flex items-center gap-1 text-foreground-muted">
+            <GitBranch className="size-3.5" /> {ctx.sourceBranch}
+          </span>
+        </span>
+      )}
+      <div className="flex items-center gap-1 w-full">
+        {hasUpstream ? (
+          <>
+            <Tooltip>
+              <TooltipTrigger className="flex-1">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  size="xs"
+                  disabled={isFetching}
+                  onClick={() => fetch()}
+                >
+                  <RefreshCcw className="size-3" />
+                  {isFetching ? 'Fetching...' : 'Fetch'}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isFetching ? 'Fetching...' : 'Fetch changes'}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger className="flex-1">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  disabled={isPulling || behindCount === 0}
+                  size="xs"
+                  onClick={() => pull()}
+                >
+                  <ArrowDown className="size-3" />
+                  {isPulling ? (
+                    'Pulling...'
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      Pull
+                      <Badge variant="secondary" className="shrink-0">
+                        {behindCount}
+                      </Badge>
+                    </span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isPulling ? 'Pulling...' : behindCount === 0 ? 'Nothing to pull' : 'Pull changes'}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger className="flex-1">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  disabled={isPushing || aheadCount === 0}
+                  size="xs"
+                  onClick={() => push()}
+                >
+                  <ArrowUp className="size-3" />
+                  {isPushing ? (
+                    'Pushing...'
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      Push
+                      <Badge variant="secondary" className="shrink-0">
+                        {aheadCount}
+                      </Badge>
+                    </span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isPushing ? 'Pushing...' : aheadCount === 0 ? 'Nothing to push' : 'Push changes'}
+              </TooltipContent>
+            </Tooltip>
+          </>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger className="flex-1">
+              <Button
+                className="w-full"
+                variant="outline"
+                disabled={isPublishing}
+                size="xs"
+                onClick={() => publish()}
+              >
+                <ArrowUp className="size-3" />
+                {isPublishing ? 'Publishing...' : 'Publish'}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isPublishing ? 'Publishing...' : 'Publish branch'}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </div>
+  );
+});
+
+/** Multi-project git actions sections inside the popover. */
+const MultiProjectGitSections = observer(function MultiProjectGitSections({
+  provisionedTask,
+}: {
+  provisionedTask: ReturnType<typeof useProvisionedTask>;
+}) {
+  if (!provisionedTask.isMultiProject || !provisionedTask.projectContexts) return null;
+
+  return (
+    <>
+      {Array.from(provisionedTask.projectContexts.projects.values()).map((projectContext) => (
+        <div
+          key={projectContext.projectId}
+          className="flex flex-col gap-1 border border-border rounded-md p-2"
+        >
+          <span className="flex items-center gap-1 text-foreground-muted">
+            <Files className="size-3.5" />
+            <span className="font-medium">{projectContext.projectName}</span>
+          </span>
+          {projectContext.git.hasData && projectContext.git.branchName && (
+            <span className="flex items-center gap-1 text-foreground-muted">
+              <GitBranch className="size-3.5" />
+              <span>{projectContext.git.branchName}</span>
+            </span>
+          )}
+          {projectContext.sourceBranch && (
+            <span className="flex items-center gap-2 text-foreground-passive">
+              Created from
+              <span className="flex items-center gap-1 text-foreground-muted">
+                <GitBranch className="size-3.5" /> {projectContext.sourceBranch}
+              </span>
+            </span>
+          )}
+          <div className="flex items-center gap-1 w-full">
+            {projectContext.git.isBranchPublished ? (
+              <>
+                <Tooltip>
+                  <TooltipTrigger className="flex-1">
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      size="xs"
+                      disabled={!projectContext.git.hasData}
+                      onClick={() => projectContext.git.fetchRemote()}
+                    >
+                      <RefreshCcw className="size-3" />
+                      Fetch
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Fetch changes</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger className="flex-1">
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      disabled={projectContext.git.behindCount === 0}
+                      size="xs"
+                      onClick={() => projectContext.git.pull()}
+                    >
+                      <ArrowDown className="size-3" />
+                      <span className="flex items-center gap-1">
+                        Pull
+                        <Badge variant="secondary" className="shrink-0">
+                          {projectContext.git.behindCount}
+                        </Badge>
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {projectContext.git.behindCount === 0 ? 'Nothing to pull' : 'Pull changes'}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger className="flex-1">
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      disabled={projectContext.git.aheadCount === 0}
+                      size="xs"
+                      onClick={() => projectContext.git.push()}
+                    >
+                      <ArrowUp className="size-3" />
+                      <span className="flex items-center gap-1">
+                        Push
+                        <Badge variant="secondary" className="shrink-0">
+                          {projectContext.git.aheadCount}
+                        </Badge>
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {projectContext.git.aheadCount === 0 ? 'Nothing to push' : 'Push changes'}
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger className="flex-1">
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => projectContext.git.publishBranch()}
+                  >
+                    <ArrowUp className="size-3" />
+                    Publish
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Publish branch</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+});
+
+/** View toggle group (agents / diff / editor). */
+function ViewToggleGroup({ delayedIsPending }: { delayedIsPending: boolean }) {
+  const { openAgentsView, openEditorView, openDiffView } = useTaskViewNavigation();
+  const provisionedTask = useProvisionedTask();
+  const { view } = provisionedTask.taskView;
+
+  const handleValueChange = useCallback(
+    ([value]: string[]) => {
+      if (value === 'agents') openAgentsView();
+      if (value === 'editor') openEditorView();
+      if (value === 'diff') openDiffView();
+    },
+    [openAgentsView, openEditorView, openDiffView]
+  );
+
+  return (
+    <ToggleGroup
+      disabled={delayedIsPending}
+      variant="outline"
+      value={[view]}
+      size="sm"
+      onValueChange={handleValueChange}
+    >
+      <Tooltip>
+        <TooltipTrigger>
+          <ToggleGroupItem value="agents" size="sm">
+            <MessageSquare className="size-3.5" />
+          </ToggleGroupItem>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="flex flex-col gap-1">
+            <span>Conversations view</span>
+            <ShortcutHint settingsKey="taskViewAgents" />
+          </div>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger>
+          <ToggleGroupItem value="diff" size="sm">
+            <FileDiff className="size-3.5" />
+          </ToggleGroupItem>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="flex flex-col gap-1">
+            <span>Diff view</span>
+            <ShortcutHint settingsKey="taskViewDiff" />
+          </div>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger>
+          <ToggleGroupItem value="editor" size="sm">
+            <Files className="size-3.5" />
+          </ToggleGroupItem>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="flex flex-col gap-1">
+            <span>File view</span>
+            <ShortcutHint settingsKey="taskViewEditor" />
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </ToggleGroup>
+  );
+}
+
+/** Right panel toggle group (changes / terminals / files). */
+const RightPanelToggleGroup = observer(function RightPanelToggleGroup({
+  delayedIsPending,
+}: {
+  delayedIsPending: boolean;
+}) {
+  const provisionedTask = useProvisionedTask();
+  const { rightPanelView } = provisionedTask.taskView;
+
+  const handleValueChange = useCallback(
+    ([value]: string[]) => {
+      if (!value) return;
+      provisionedTask.taskView.setRightPanelView(value as RightPanelView);
+    },
+    [provisionedTask.taskView]
+  );
+
+  return (
+    <ToggleGroup
+      disabled={delayedIsPending}
+      variant="outline"
+      value={[rightPanelView]}
+      size="sm"
+      onValueChange={handleValueChange}
+    >
+      <Tooltip>
+        <TooltipTrigger>
+          <ToggleGroupItem value="changes" size="sm">
+            <GitCommit className="size-3.5" />
+          </ToggleGroupItem>
+        </TooltipTrigger>
+        <TooltipContent>Git changes</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger>
+          <ToggleGroupItem value="terminals" size="sm">
+            <Terminal className="size-3.5" />
+          </ToggleGroupItem>
+        </TooltipTrigger>
+        <TooltipContent>Terminals</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger>
+          <ToggleGroupItem value="files" size="sm">
+            <ListTree className="size-3.5" />
+          </ToggleGroupItem>
+        </TooltipTrigger>
+        <TooltipContent>File explorer</TooltipContent>
+      </Tooltip>
+    </ToggleGroup>
+  );
+});
 
 export const TaskTitlebar = observer(function TaskTitlebar() {
   const { projectId, taskId } = useTaskViewContext();
@@ -126,71 +499,18 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
   const taskStore = getTaskStore(projectId, taskId)!;
   const taskPayload = getRegisteredTaskData(projectId, taskId)!;
   const provisionedTask = useProvisionedTask();
-  const { taskView } = provisionedTask;
-  const { view, rightPanelView } = taskView;
-  const { openAgentsView, openEditorView, openDiffView, isPending } = useTaskViewNavigation();
-  const delayedIsPending = useDelayedBoolean(isPending, 200);
+  const { delayedIsPending } = useTitlebarState();
   useTaskViewShortcuts();
 
-  const {
-    hasUpstream,
-    aheadCount,
-    behindCount,
-    fetch,
-    pull,
-    push,
-    publish,
-    isPublishing,
-    isFetching,
-    isPulling,
-    isPushing,
-  } = useGitActions(projectId, taskId);
-
   const projectStore = asMounted(getProjectStore(projectId));
-
   const projectName = getTaskProjectDisplayName(projectId, provisionedTask);
-
   const isRemoteProject = projectStore?.data.type === 'ssh';
 
-  // Compute active file path and line number based on current view
-  const activeFilePath =
-    view === 'editor'
-      ? (taskView.editorView.activeFilePath ?? undefined)
-      : view === 'diff'
-        ? (taskView.diffView.activeFile?.path ?? undefined)
-        : undefined;
-
-  // Determine the project ID for the active file
-  const activeFileProjectId =
-    view === 'editor'
-      ? (taskView.editorView.activeTab?.projectId ?? projectId)
-      : view === 'diff'
-        ? (taskView.diffView.activeFile?.projectId ?? projectId)
-        : projectId;
-
-  // Get line number from Monaco editor when in editor view
-  const editorPosition = view === 'editor' ? getActiveEditorPosition() : null;
-  const activeLineNumber = editorPosition?.lineNumber ?? (activeFilePath ? 1 : undefined);
-
-  // For multi-project tasks, resolve the correct worktree path
-  const activeProjectWorktreePath =
-    provisionedTask.isMultiProject && activeFileProjectId
-      ? (provisionedTask.projectContexts?.projects.get(activeFileProjectId)?.worktreePath ??
-        provisionedTask.path)
-      : provisionedTask.path;
-
-  // Build project options for multi-project tasks
-  // Computed directly (not useMemo) so MobX can track changes to projectContexts.projects
-  const projectOptions: OpenInProjectOption[] | undefined = (() => {
-    if (!provisionedTask.isMultiProject || !provisionedTask.projectContexts) return undefined;
-    return Array.from(provisionedTask.projectContexts.projects.values())
-      .filter((ctx) => ctx.worktreePath)
-      .map((ctx) => ({
-        projectId: ctx.projectId,
-        projectName: ctx.projectName,
-        worktreePath: ctx.worktreePath!,
-      }));
-  })();
+  const activeFilePath = useActiveFilePath();
+  const activeFileProjectId = useActiveFileProjectId();
+  const activeLineNumber = useActiveLineNumber(activeFilePath);
+  const activeProjectWorktreePath = useWorktreePath(activeFileProjectId);
+  const projectOptions = useProjectOptions();
 
   return (
     <Titlebar
@@ -218,240 +538,13 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 projectOptions={projectOptions}
               />
               {provisionedTask.isMultiProject && provisionedTask.projectContexts ? (
-                // Multi-project: show each project's git section
-                Array.from(provisionedTask.projectContexts.projects.values()).map(
-                  (projectContext) => (
-                    <div
-                      key={projectContext.projectId}
-                      className="flex flex-col gap-1 border border-border rounded-md p-2"
-                    >
-                      <span className="flex items-center gap-1 text-foreground-muted">
-                        <Files className="size-3.5" />
-                        <span className="font-medium">{projectContext.projectName}</span>
-                      </span>
-                      {projectContext.git.hasData && projectContext.git.branchName && (
-                        <span className="flex items-center gap-1 text-foreground-muted">
-                          <GitBranch className="size-3.5" />
-                          <span>{projectContext.git.branchName}</span>
-                        </span>
-                      )}
-                      {projectContext.sourceBranch && (
-                        <span className="flex items-center gap-2 text-foreground-passive">
-                          Created from
-                          <span className="flex items-center gap-1 text-foreground-muted">
-                            <GitBranch className="size-3.5" /> {projectContext.sourceBranch}
-                          </span>
-                        </span>
-                      )}
-                      <div className="flex items-center gap-1 w-full">
-                        {projectContext.git.isBranchPublished ? (
-                          <>
-                            <Tooltip>
-                              <TooltipTrigger className="flex-1">
-                                <Button
-                                  className="w-full"
-                                  variant="outline"
-                                  size="xs"
-                                  disabled={!projectContext.git.hasData}
-                                  onClick={() => projectContext.git.fetchRemote()}
-                                >
-                                  <RefreshCcw className="size-3" />
-                                  Fetch
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Fetch changes</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger className="flex-1">
-                                <Button
-                                  className="w-full"
-                                  variant="outline"
-                                  disabled={projectContext.git.behindCount === 0}
-                                  size="xs"
-                                  onClick={() => projectContext.git.pull()}
-                                >
-                                  <ArrowDown className="size-3" />
-                                  <span className="flex items-center gap-1">
-                                    Pull
-                                    <Badge variant="secondary" className="shrink-0">
-                                      {projectContext.git.behindCount}
-                                    </Badge>
-                                  </span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {projectContext.git.behindCount === 0
-                                  ? 'Nothing to pull'
-                                  : 'Pull changes'}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger className="flex-1">
-                                <Button
-                                  className="w-full"
-                                  variant="outline"
-                                  disabled={projectContext.git.aheadCount === 0}
-                                  size="xs"
-                                  onClick={() => projectContext.git.push()}
-                                >
-                                  <ArrowUp className="size-3" />
-                                  <span className="flex items-center gap-1">
-                                    Push
-                                    <Badge variant="secondary" className="shrink-0">
-                                      {projectContext.git.aheadCount}
-                                    </Badge>
-                                  </span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {projectContext.git.aheadCount === 0
-                                  ? 'Nothing to push'
-                                  : 'Push changes'}
-                              </TooltipContent>
-                            </Tooltip>
-                          </>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger className="flex-1">
-                              <Button
-                                className="w-full"
-                                variant="outline"
-                                size="xs"
-                                onClick={() => projectContext.git.publishBranch()}
-                              >
-                                <ArrowUp className="size-3" />
-                                Publish
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Publish branch</TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </div>
-                  )
-                )
+                <MultiProjectGitSections provisionedTask={provisionedTask} />
               ) : (
-                // Single-project: show git section
-                <div className="flex flex-col gap-1 border border-border rounded-md p-2">
-                  <span className="flex items-center gap-1 text-foreground-muted">
-                    <GitBranch className="size-3.5" />
-                    <span>{provisionedTask.workspace.git.branchName}</span>
-                  </span>
-                  {(() => {
-                    const ctx = provisionedTask.projectContexts?.projects.get(projectId);
-                    return (
-                      ctx?.sourceBranch && (
-                        <span className="flex items-center gap-2 text-foreground-passive">
-                          Created from
-                          <span className="flex items-center gap-1 text-foreground-muted">
-                            <GitBranch className="size-3.5" /> {ctx.sourceBranch}
-                          </span>
-                        </span>
-                      )
-                    );
-                  })()}
-                  <div className="flex items-center gap-1 w-full">
-                    {hasUpstream ? (
-                      <>
-                        <Tooltip>
-                          <TooltipTrigger className="flex-1">
-                            <Button
-                              className="w-full"
-                              variant="outline"
-                              size="xs"
-                              disabled={isFetching}
-                              onClick={() => fetch()}
-                            >
-                              <RefreshCcw className="size-3" />
-                              {isFetching ? 'Fetching...' : 'Fetch'}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isFetching ? 'Fetching...' : 'Fetch changes'}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger className="flex-1">
-                            <Button
-                              className="w-full"
-                              variant="outline"
-                              disabled={isPulling || behindCount === 0}
-                              size="xs"
-                              onClick={() => pull()}
-                            >
-                              <ArrowDown className="size-3" />
-                              {isPulling ? (
-                                'Pulling...'
-                              ) : (
-                                <span className="flex items-center gap-1">
-                                  Pull
-                                  <Badge variant="secondary" className="shrink-0">
-                                    {behindCount}
-                                  </Badge>
-                                </span>
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isPulling
-                              ? 'Pulling...'
-                              : behindCount === 0
-                                ? 'Nothing to pull'
-                                : 'Pull changes'}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger className="flex-1">
-                            <Button
-                              className="w-full"
-                              variant="outline"
-                              disabled={isPushing || aheadCount === 0}
-                              size="xs"
-                              onClick={() => push()}
-                            >
-                              <ArrowUp className="size-3" />
-                              {isPushing ? (
-                                'Pushing...'
-                              ) : (
-                                <span className="flex items-center gap-1">
-                                  Push
-                                  <Badge variant="secondary" className="shrink-0">
-                                    {aheadCount}
-                                  </Badge>
-                                </span>
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isPushing
-                              ? 'Pushing...'
-                              : aheadCount === 0
-                                ? 'Nothing to push'
-                                : 'Push changes'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </>
-                    ) : (
-                      <Tooltip>
-                        <TooltipTrigger className="flex-1">
-                          <Button
-                            className="w-full"
-                            variant="outline"
-                            disabled={isPublishing}
-                            size="xs"
-                            onClick={() => publish()}
-                          >
-                            <ArrowUp className="size-3" />
-                            {isPublishing ? 'Publishing...' : 'Publish'}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isPublishing ? 'Publishing...' : 'Publish branch'}
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
+                <ProjectGitActions
+                  projectId={projectId}
+                  taskId={taskId}
+                  provisionedTask={provisionedTask}
+                />
               )}
               <IssueSelector
                 value={taskPayload.linkedIssue ?? null}
@@ -488,97 +581,70 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
               lineNumber={activeLineNumber}
               projectId={activeFileProjectId}
               projectOptions={projectOptions}
-              className="h-7  bg-background"
+              className="h-7 bg-background"
             />
           )}
-          <ToggleGroup
-            disabled={delayedIsPending}
-            variant="outline"
-            value={[view]}
-            size="sm"
-            onValueChange={([value]) => {
-              if (value === 'agents') openAgentsView();
-              if (value === 'editor') openEditorView();
-              if (value === 'diff') openDiffView();
-            }}
-          >
-            <Tooltip>
-              <TooltipTrigger>
-                <ToggleGroupItem value="agents" size="sm">
-                  <MessageSquare className="size-3.5" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="flex flex-col gap-1">
-                  <span>Conversations view</span>
-                  <ShortcutHint settingsKey="taskViewAgents" />
-                </div>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <ToggleGroupItem value="diff" size="sm">
-                  <FileDiff className="size-3.5" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="flex flex-col gap-1">
-                  <span>Diff view</span>
-                  <ShortcutHint settingsKey="taskViewDiff" />
-                </div>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <ToggleGroupItem value="editor" size="sm">
-                  <Files className="size-3.5" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="flex flex-col gap-1">
-                  <span>File view</span>
-                  <ShortcutHint settingsKey="taskViewEditor" />
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </ToggleGroup>
-          <ToggleGroup
-            disabled={delayedIsPending}
-            variant="outline"
-            value={[rightPanelView]}
-            size="sm"
-            onValueChange={([value]) => {
-              if (!value) return;
-              taskView.setRightPanelView(value as RightPanelView);
-            }}
-          >
-            <Tooltip>
-              <TooltipTrigger>
-                <ToggleGroupItem value="changes" size="sm">
-                  <GitCommit className="size-3.5" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>Git changes</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <ToggleGroupItem value="terminals" size="sm">
-                  <Terminal className="size-3.5" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>Terminals</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <ToggleGroupItem value="files" size="sm">
-                  <ListTree className="size-3.5" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>File explorer</TooltipContent>
-            </Tooltip>
-          </ToggleGroup>
+          <ViewToggleGroup delayedIsPending={delayedIsPending} />
+          <RightPanelToggleGroup delayedIsPending={delayedIsPending} />
         </div>
       }
     />
   );
 });
+
+// ── Extracted hooks for ActiveTaskTitlebar computed values ───────────────────
+
+function useTitlebarState() {
+  const { isPending } = useTaskViewNavigation();
+  const delayedIsPending = useDelayedBoolean(isPending, 200);
+  return { delayedIsPending };
+}
+
+function useActiveFilePath(): string | undefined {
+  const provisionedTask = useProvisionedTask();
+  const { view } = provisionedTask.taskView;
+  return view === 'editor'
+    ? (provisionedTask.taskView.editorView.activeFilePath ?? undefined)
+    : view === 'diff'
+      ? (provisionedTask.taskView.diffView.activeFile?.path ?? undefined)
+      : undefined;
+}
+
+function useActiveFileProjectId(): string {
+  const provisionedTask = useProvisionedTask();
+  const { view } = provisionedTask.taskView;
+  const { projectId } = useTaskViewContext();
+  return view === 'editor'
+    ? (provisionedTask.taskView.editorView.activeTab?.projectId ?? projectId)
+    : view === 'diff'
+      ? (provisionedTask.taskView.diffView.activeFile?.projectId ?? projectId)
+      : projectId;
+}
+
+function useActiveLineNumber(activeFilePath: string | undefined): number | undefined {
+  const provisionedTask = useProvisionedTask();
+  const { view } = provisionedTask.taskView;
+  const editorPosition = view === 'editor' ? getActiveEditorPosition() : null;
+  return editorPosition?.lineNumber ?? (activeFilePath ? 1 : undefined);
+}
+
+function useWorktreePath(activeFileProjectId: string): string {
+  const provisionedTask = useProvisionedTask();
+  return provisionedTask.isMultiProject && activeFileProjectId
+    ? (provisionedTask.projectContexts?.projects.get(activeFileProjectId)?.worktreePath ??
+        provisionedTask.path)
+    : provisionedTask.path;
+}
+
+function useProjectOptions(): OpenInProjectOption[] | undefined {
+  const provisionedTask = useProvisionedTask();
+  // Computed directly so MobX can track changes to projectContexts.projects
+  if (!provisionedTask.isMultiProject || !provisionedTask.projectContexts) return undefined;
+  return Array.from(provisionedTask.projectContexts.projects.values())
+    .filter((ctx) => ctx.worktreePath)
+    .map((ctx) => ({
+      projectId: ctx.projectId,
+      projectName: ctx.projectName,
+      worktreePath: ctx.worktreePath!,
+    }));
+}

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { taskDeletedChannel } from '@shared/events/taskEvents';
 import { projectManager } from '@main/core/projects/project-manager';
 import { viewStateService } from '@main/core/view-state/view-state-service';
@@ -75,15 +75,19 @@ export async function deleteTask(taskId: string): Promise<void> {
 
   // Clean up worktrees (only if there are project associations)
   if (taskProjectRows.length > 0 && task.workDir) {
+    // Batch fetch all project names in a single query
+    const projectIds = taskProjectRows.map((r) => r.projectId);
+    const projectRows = await db
+      .select({ id: projects.id, name: projects.name })
+      .from(projects)
+      .where(inArray(projects.id, projectIds));
+    const nameById = new Map(projectRows.map((r) => [r.id, r.name]));
+
     // Remove worktrees under task.workDir/{project.name} for each associated project
     for (const row of taskProjectRows) {
       const rowProject = projectManager.getProject(row.projectId);
-      const [projectRow] = await db
-        .select({ name: projects.name })
-        .from(projects)
-        .where(eq(projects.id, row.projectId))
-        .limit(1);
-      const worktreePath = path.join(task.workDir, projectRow?.name ?? row.projectId);
+      const projectName = nameById.get(row.projectId) ?? row.projectId;
+      const worktreePath = path.join(task.workDir, projectName);
       if (rowProject) {
         try {
           await rowProject.removeWorktreeAtPath(worktreePath);

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Octokit } from '@octokit/rest';
-import { and, eq, inArray, lt, ne } from 'drizzle-orm';
+import { and, eq, inArray, lt, ne, sql } from 'drizzle-orm';
 import { prSyncProgressChannel, prUpdatedChannel } from '@shared/events/prEvents';
 import type {
   MergeableState,
@@ -775,60 +775,76 @@ export class PrSyncEngine {
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private async _upsertBatch(repositoryUrl: string, nodes: GqlPrNode[]): Promise<PullRequest[]> {
-    const results: PullRequest[] = [];
+    if (nodes.length === 0) return [];
+
+    // 1. Collect all unique user IDs across authors and assignees
+    const userMap = new Map<string, typeof pullRequestUsers.$inferInsert>();
+    const prUrls: string[] = [];
 
     for (const node of nodes) {
-      const pr = await this._upsertOne(repositoryUrl, node);
-      if (pr) results.push(pr);
-    }
+      prUrls.push(node.url);
 
-    return results;
-  }
-
-  private async _upsertOne(repositoryUrl: string, node: GqlPrNode): Promise<PullRequest | null> {
-    const status: PullRequestStatus =
-      node.state === 'MERGED' ? 'merged' : node.state === 'CLOSED' ? 'closed' : 'open';
-
-    // Normalise URLs
-    const headRepositoryUrl = node.headRepository?.url
-      ? normalizeGitHubUrl(node.headRepository.url)
-      : repositoryUrl;
-
-    const baseRepositoryUrl = node.baseRepository?.url
-      ? normalizeGitHubUrl(node.baseRepository.url)
-      : repositoryUrl;
-
-    // Upsert author
-    let authorUserId: string | null = null;
-    if (node.author) {
-      authorUserId = actorUserId(node.author);
-      await db
-        .insert(pullRequestUsers)
-        .values({
-          userId: authorUserId,
+      // Author
+      if (node.author) {
+        const uid = actorUserId(node.author);
+        userMap.set(uid, {
+          userId: uid,
           userName: node.author.login,
           displayName: node.author.login,
-          avatarUrl: node.author.avatarUrl || null,
+          avatarUrl: node.author.avatarUrl ?? null,
           url: node.author.url ?? null,
           userCreatedAt: node.author.createdAt ?? null,
           userUpdatedAt: node.author.updatedAt ?? null,
-        })
+        });
+      }
+
+      // Assignees
+      for (const a of node.assignees.nodes) {
+        const uid = actorUserId(a);
+        if (!userMap.has(uid)) {
+          userMap.set(uid, {
+            userId: uid,
+            userName: a.login,
+            displayName: a.login,
+            avatarUrl: a.avatarUrl ?? null,
+            url: a.url ?? null,
+            userCreatedAt: a.createdAt ?? null,
+            userUpdatedAt: a.updatedAt ?? null,
+          });
+        }
+      }
+    }
+
+    // 2. Bulk upsert all users in a single query
+    if (userMap.size > 0) {
+      await db
+        .insert(pullRequestUsers)
+        .values([...userMap.values()])
         .onConflictDoUpdate({
           target: pullRequestUsers.userId,
           set: {
-            userName: node.author.login,
-            displayName: node.author.login,
-            avatarUrl: node.author.avatarUrl || null,
+            userName: sql`excluded.user_name`,
+            displayName: sql`excluded.display_name`,
+            avatarUrl: sql`excluded.avatar_url`,
           },
         });
     }
 
-    // Upsert PR row
-    const [prRow] = await db
-      .insert(pullRequests)
-      .values({
+    // 3. Bulk upsert all PR rows in a single query
+    const prValues = nodes.map((node) => {
+      const headRepositoryUrl = node.headRepository?.url
+        ? normalizeGitHubUrl(node.headRepository.url)
+        : repositoryUrl;
+      const baseRepositoryUrl = node.baseRepository?.url
+        ? normalizeGitHubUrl(node.baseRepository.url)
+        : repositoryUrl;
+      const status: PullRequestStatus =
+        node.state === 'MERGED' ? 'merged' : node.state === 'CLOSED' ? 'closed' : 'open';
+      const authorUserId = node.author ? actorUserId(node.author) : null;
+
+      return {
         url: node.url,
-        provider: 'github',
+        provider: 'github' as const,
         repositoryUrl: baseRepositoryUrl,
         baseRefName: node.baseRefName,
         baseRefOid: node.baseRefOid,
@@ -850,107 +866,149 @@ export class PrSyncEngine {
         reviewDecision: node.reviewDecision ?? null,
         pullRequestCreatedAt: node.createdAt,
         pullRequestUpdatedAt: node.updatedAt,
-      })
+      };
+    });
+
+    const prRows = await db
+      .insert(pullRequests)
+      .values(prValues)
       .onConflictDoUpdate({
         target: pullRequests.url,
         set: {
-          baseRefName: node.baseRefName,
-          baseRefOid: node.baseRefOid,
-          headRepositoryUrl,
-          headRefName: node.headRefName,
-          headRefOid: node.headRefOid,
-          title: node.title,
-          description: node.body ?? null,
-          status,
-          isDraft: node.isDraft ? 1 : 0,
-          authorUserId,
-          additions: node.additions,
-          deletions: node.deletions,
-          changedFiles: node.changedFiles,
-          commitCount: node.commitCount?.totalCount ?? null,
-          mergeableStatus: node.mergeable,
-          mergeStateStatus: node.mergeStateStatus ?? null,
-          reviewDecision: node.reviewDecision ?? null,
-          pullRequestUpdatedAt: node.updatedAt,
+          baseRefName: sql`excluded.base_ref_name`,
+          baseRefOid: sql`excluded.base_ref_oid`,
+          headRepositoryUrl: sql`excluded.head_repository_url`,
+          headRefName: sql`excluded.head_ref_name`,
+          headRefOid: sql`excluded.head_ref_oid`,
+          title: sql`excluded.title`,
+          description: sql`excluded.description`,
+          status: sql`excluded.status`,
+          isDraft: sql`excluded.is_draft`,
+          authorUserId: sql`excluded.author_user_id`,
+          additions: sql`excluded.additions`,
+          deletions: sql`excluded.deletions`,
+          changedFiles: sql`excluded.changed_files`,
+          commitCount: sql`excluded.commit_count`,
+          mergeableStatus: sql`excluded.mergeable_status`,
+          mergeStateStatus: sql`excluded.merge_state_status`,
+          reviewDecision: sql`excluded.review_decision`,
+          pullRequestUpdatedAt: sql`excluded.pull_request_updated_at`,
         },
       })
       .returning();
 
-    if (!prRow) return null;
+    if (prRows.length === 0) return [];
 
-    // Sync labels
-    await db.delete(pullRequestLabels).where(eq(pullRequestLabels.pullRequestId, node.url));
-    if (node.labels.nodes.length > 0) {
-      await db.insert(pullRequestLabels).values(
-        node.labels.nodes.map((l) => ({
+    // 4. Bulk delete + insert labels for all PRs
+    await db.delete(pullRequestLabels).where(inArray(pullRequestLabels.pullRequestId, prUrls));
+    const labelValues: (typeof pullRequestLabels.$inferInsert)[] = [];
+    for (const node of nodes) {
+      for (const l of node.labels.nodes) {
+        labelValues.push({
           pullRequestId: node.url,
           name: l.name,
           color: l.color ?? null,
-        }))
-      );
-    }
-
-    // Upsert assignee users and links
-    await db.delete(pullRequestAssignees).where(eq(pullRequestAssignees.pullRequestUrl, node.url));
-    const assigneeRows: (typeof pullRequestUsers.$inferSelect)[] = [];
-    for (const a of node.assignees.nodes) {
-      const uid = actorUserId(a);
-      await db
-        .insert(pullRequestUsers)
-        .values({
-          userId: uid,
-          userName: a.login,
-          displayName: a.login,
-          avatarUrl: a.avatarUrl || null,
-          url: a.url ?? null,
-          userCreatedAt: a.createdAt ?? null,
-          userUpdatedAt: a.updatedAt ?? null,
-        })
-        .onConflictDoUpdate({
-          target: pullRequestUsers.userId,
-          set: { userName: a.login, displayName: a.login, avatarUrl: a.avatarUrl || null },
         });
-
-      await db
-        .insert(pullRequestAssignees)
-        .values({ pullRequestUrl: node.url, userId: uid })
-        .onConflictDoNothing();
-
-      assigneeRows.push({
-        userId: uid,
-        userName: a.login,
-        displayName: a.login,
-        avatarUrl: a.avatarUrl || null,
-        url: a.url ?? null,
-        userCreatedAt: a.createdAt ?? null,
-        userUpdatedAt: a.updatedAt ?? null,
-      });
+      }
+    }
+    if (labelValues.length > 0) {
+      await db.insert(pullRequestLabels).values(labelValues);
     }
 
-    const authorRow = node.author
-      ? {
-          userId: actorUserId(node.author),
-          userName: node.author.login,
-          displayName: node.author.login,
-          avatarUrl: node.author.avatarUrl || null,
-          url: node.author.url ?? null,
-          userCreatedAt: node.author.createdAt ?? null,
-          userUpdatedAt: node.author.updatedAt ?? null,
-        }
-      : null;
+    // 5. Bulk delete + insert assignees for all PRs
+    await db
+      .delete(pullRequestAssignees)
+      .where(inArray(pullRequestAssignees.pullRequestUrl, prUrls));
+    const assigneeValues: (typeof pullRequestAssignees.$inferInsert)[] = [];
+    for (const node of nodes) {
+      for (const a of node.assignees.nodes) {
+        assigneeValues.push({
+          pullRequestUrl: node.url,
+          userId: actorUserId(a),
+        });
+      }
+    }
+    if (assigneeValues.length > 0) {
+      await db.insert(pullRequestAssignees).values(assigneeValues);
+    }
 
-    const labelRows = node.labels.nodes.map((l) => ({
-      pullRequestId: node.url,
-      name: l.name,
-      color: l.color ?? null,
-    }));
-
+    // 6. Bulk fetch checks for all PRs
     const checkRows = await db
       .select()
       .from(pullRequestChecks)
-      .where(eq(pullRequestChecks.pullRequestUrl, node.url));
+      .where(inArray(pullRequestChecks.pullRequestUrl, prUrls));
+    const checksByPr = new Map<string, typeof checkRows>();
+    for (const c of checkRows) {
+      if (!checksByPr.has(c.pullRequestUrl)) checksByPr.set(c.pullRequestUrl, []);
+      checksByPr.get(c.pullRequestUrl)!.push(c);
+    }
 
-    return assemblePullRequest(prRow, authorRow, labelRows, assigneeRows, checkRows);
+    // 7. Bulk fetch labels and assignees from DB (not from memory-cast objects)
+    const dbLabels = await db
+      .select()
+      .from(pullRequestLabels)
+      .where(inArray(pullRequestLabels.pullRequestId, prUrls));
+    const labelsByPr = new Map<string, (typeof pullRequestLabels.$inferSelect)[]>();
+    for (const l of dbLabels) {
+      if (!labelsByPr.has(l.pullRequestId)) labelsByPr.set(l.pullRequestId, []);
+      labelsByPr.get(l.pullRequestId)!.push(l);
+    }
+
+    const dbAssignees = await db
+      .select()
+      .from(pullRequestAssignees)
+      .where(inArray(pullRequestAssignees.pullRequestUrl, prUrls));
+    // Collect unique assignee user IDs, then fetch their rows
+    const assigneeUserIds = new Set<string>();
+    for (const a of dbAssignees) assigneeUserIds.add(a.userId);
+    const assigneeUserRows =
+      assigneeUserIds.size > 0
+        ? await db
+            .select()
+            .from(pullRequestUsers)
+            .where(inArray(pullRequestUsers.userId, [...assigneeUserIds]))
+        : [];
+    const userRowById = new Map(assigneeUserRows.map((u) => [u.userId, u]));
+
+    const assigneesByPr = new Map<string, (typeof pullRequestUsers.$inferSelect)[]>();
+    for (const a of dbAssignees) {
+      const userRow = userRowById.get(a.userId);
+      if (userRow) {
+        if (!assigneesByPr.has(a.pullRequestUrl)) assigneesByPr.set(a.pullRequestUrl, []);
+        assigneesByPr.get(a.pullRequestUrl)!.push(userRow);
+      }
+    }
+
+    // Build a Map for O(1) node lookup
+    const nodeByUrl = new Map<string, GqlPrNode>();
+    for (const node of nodes) nodeByUrl.set(node.url, node);
+
+    // 8. Assemble results
+    const results: PullRequest[] = [];
+    for (const prRow of prRows) {
+      const node = nodeByUrl.get(prRow.url);
+      if (!node) continue;
+
+      const authorRow = node.author
+        ? {
+            userId: actorUserId(node.author),
+            userName: node.author.login,
+            displayName: node.author.login,
+            avatarUrl: node.author.avatarUrl || null,
+            url: node.author.url ?? null,
+            userCreatedAt: node.author.createdAt ?? null,
+            userUpdatedAt: node.author.updatedAt ?? null,
+          }
+        : null;
+
+      const prLabels = labelsByPr.get(prRow.url) ?? [];
+      const prAssignees = assigneesByPr.get(prRow.url) ?? [];
+      const prChecks = checksByPr.get(prRow.url) ?? [];
+
+      results.push(assemblePullRequest(prRow, authorRow, prLabels, prAssignees, prChecks));
+    }
+
+    return results;
   }
 
   private async _archiveOldPrs(repositoryUrl: string): Promise<void> {

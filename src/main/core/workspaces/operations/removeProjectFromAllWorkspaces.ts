@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from '@main/db/client';
 import { taskProjects, tasks, workspaceProjects } from '@main/db/schema';
 
@@ -21,22 +21,32 @@ export async function canRemoveProjectFromAllWorkspaces(
 
   const workspaceIds = wpRows.map((r) => r.workspaceId);
 
+  // Batch: get all tasks in these workspaces in a single query
+  const wsTasks = await db
+    .select({ id: tasks.id, workspaceId: tasks.workspaceId })
+    .from(tasks)
+    .where(inArray(tasks.workspaceId, workspaceIds));
+
+  // Batch: get all task-project associations for this project
+  const tpTasks = await db
+    .select({ taskId: taskProjects.taskId })
+    .from(taskProjects)
+    .where(eq(taskProjects.projectId, projectId));
+
+  // Build workspace -> task set map
+  const wsTaskIdsByWs = new Map<string, Set<string>>();
+  for (const t of wsTasks) {
+    if (!wsTaskIdsByWs.has(t.workspaceId)) wsTaskIdsByWs.set(t.workspaceId, new Set());
+    wsTaskIdsByWs.get(t.workspaceId)!.add(t.id);
+  }
+
+  const tpTaskIds = new Set(tpTasks.map((t) => t.taskId));
+
   let totalTaskCount = 0;
+
+  // Count tasks that exist in both sets per workspace
   for (const wsId of workspaceIds) {
-    // Same logic as canRemoveProjectFromWorkspace
-    const wsTasks = await db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(eq(tasks.workspaceId, wsId));
-
-    const tpTasks = await db
-      .select({ taskId: taskProjects.taskId })
-      .from(taskProjects)
-      .where(eq(taskProjects.projectId, projectId));
-
-    const wsTaskIds = new Set(wsTasks.map((t) => t.id));
-    const tpTaskIds = new Set(tpTasks.map((t) => t.taskId));
-
+    const wsTaskIds = wsTaskIdsByWs.get(wsId) ?? new Set();
     for (const id of tpTaskIds) {
       if (wsTaskIds.has(id)) totalTaskCount++;
     }

@@ -123,6 +123,7 @@ export const projectRemotes = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.projectId, table.remoteName] }),
+    remoteUrlIdx: index('idx_project_remotes_remote_url').on(table.remoteUrl),
   })
 );
 
@@ -167,6 +168,9 @@ export const tasks = sqliteTable(
   },
   (table) => ({
     workspaceIdIdx: index('idx_tasks_workspace_id').on(table.workspaceId),
+    taskBranchIdx: index('idx_tasks_task_branch').on(table.taskBranch),
+    statusIdx: index('idx_tasks_status').on(table.status),
+    archivedAtIdx: index('idx_tasks_archived_at').on(table.archivedAt),
   })
 );
 
@@ -283,6 +287,10 @@ export const pullRequestChecks = sqliteTable(
   },
   (table) => ({
     pullRequestUrlIdx: index('idx_prc_pull_request_url').on(table.pullRequestUrl),
+    pullRequestUrlStatusIdx: index('idx_prc_pull_request_url_status').on(
+      table.pullRequestUrl,
+      table.status
+    ),
   })
 );
 
@@ -349,6 +357,10 @@ export const messages = sqliteTable(
   (table) => ({
     conversationIdIdx: index('idx_messages_conversation_id').on(table.conversationId),
     timestampIdx: index('idx_messages_timestamp').on(table.timestamp),
+    conversationTimestampIdx: index('idx_messages_conversation_timestamp').on(
+      table.conversationId,
+      table.timestamp
+    ),
   })
 );
 

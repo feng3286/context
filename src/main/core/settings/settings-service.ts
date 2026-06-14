@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { AppSettingsKeys, type AppSettings, type AppSettingsKey } from '@shared/app-settings';
 import { db } from '@main/db/client';
 import { appSettings } from '@main/db/schema';
@@ -128,10 +128,32 @@ export class SettingsStore {
   }
 
   async getAll(): Promise<AppSettings> {
-    const entries = await Promise.all(
-      AppSettingsKeys.map(async (key) => [key, await this.get(key)] as const)
-    );
-    return Object.fromEntries(entries) as AppSettings;
+    // Single query for all settings instead of N individual lookups
+    const rows = await db.select().from(appSettings).execute();
+    const rawMap = new Map<AppSettingsKey, unknown>();
+    for (const row of rows) {
+      try {
+        rawMap.set(row.key as AppSettingsKey, JSON.parse(row.value));
+      } catch {
+        rawMap.set(row.key as AppSettingsKey, undefined);
+      }
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const key of AppSettingsKeys) {
+      const defaults = getDefaultForKey(key);
+      const raw = rawMap.get(key);
+      if (raw === undefined) {
+        result[key] = defaults;
+      } else if (isPlainObject(raw) && isPlainObject(defaults)) {
+        result[key] = mergeDeep(defaults as Record<string, unknown>, raw);
+      } else {
+        result[key] = raw;
+      }
+    }
+
+    this.cache = result as Partial<AppSettings>;
+    return result as AppSettings;
   }
 
   async initialize(): Promise<void> {

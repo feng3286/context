@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { workspaceKey } from '@shared/workspace-key';
 import { mapConversationRowToConversation } from '@main/core/conversations/utils';
 import { projectManager } from '@main/core/projects/project-manager';
@@ -34,6 +34,14 @@ export async function provisionTask(taskId: string) {
   const existingTask = primaryProject.getTask(taskId);
   const wsId = workspaceKey(task.taskBranch);
 
+  // Batch fetch all project names in a single query
+  const projectIds = taskProjectRows.map((r) => r.projectId);
+  const projectRows = await db
+    .select({ id: projects.id, name: projects.name })
+    .from(projects)
+    .where(inArray(projects.id, projectIds));
+  const nameById = new Map(projectRows.map((r) => [r.id, r.name]));
+
   // Ensure workspaces are registered in ALL associated projects' providers
   for (const tpRow of taskProjectRows) {
     const rowProject = projectManager.getProject(tpRow.projectId);
@@ -41,12 +49,8 @@ export async function provisionTask(taskId: string) {
       let worktreePath: string | undefined;
 
       if (task.workDir) {
-        const [projectRow] = await db
-          .select({ name: projects.name })
-          .from(projects)
-          .where(eq(projects.id, tpRow.projectId))
-          .limit(1);
-        worktreePath = path.join(task.workDir, projectRow?.name ?? tpRow.projectId);
+        const projectName = nameById.get(tpRow.projectId) ?? tpRow.projectId;
+        worktreePath = path.join(task.workDir, projectName);
       }
 
       if (worktreePath) {

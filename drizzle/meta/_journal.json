@@ -99,6 +99,13 @@
       "when": 1777600000000,
       "tag": "0015_remove_tasks_source_branch",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1781500000000,
+      "tag": "0016_add_missing_indexes",
+      "breakpoints": true
     }
   ]
 }

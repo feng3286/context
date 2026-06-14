@@ -64,7 +64,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: >
           node --experimental-strip-types scripts/release/build.ts
-          --platform mac --arch ${{ github.event.inputs.arch || 'both' }} --targets dmg
+          --platform mac --arch ${{ github.event.inputs.arch || 'both' }} --targets dmg --publish never
 
       - name: Verify macOS bundle
         run: node --experimental-strip-types scripts/release/verify-mac.ts

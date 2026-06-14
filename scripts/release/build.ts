@@ -7,7 +7,7 @@ const { values } = parseArgs({
     platform: { type: 'string' },
     arch: { type: 'string', default: 'both' },
     targets: { type: 'string' },
-    publish: { type: 'string', default: 'always' },
+    publish: { type: 'string', default: undefined },
   },
   strict: true,
 });
@@ -36,7 +36,7 @@ for (const arch of archs) {
 
   const platformFlag = `--${platform}`;
   const archFlag = `--${arch}`;
-  const publishFlag = values.publish === 'never' ? '--publish never' : '--publish always';
+  const publishFlag = values.publish ? `--publish ${values.publish}` : '';
   const cmd = [
     'pnpm exec electron-builder',
     platformFlag,
@@ -45,7 +45,9 @@ for (const arch of archs) {
     publishFlag,
     '--config electron-builder.config.ts',
     '--config.npmRebuild=false',
-  ].join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   exec(cmd, { echo: true });
   info(`Built ${platform} ${targets} for ${arch}`);

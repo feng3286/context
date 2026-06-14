@@ -94,13 +94,13 @@
                     inherit pname version src;
                     inherit pnpm;
                     fetcherVersion = 1;
-                    hash = "";
+                    hash = "sha256-zW65j09F3p/mhWJROr5H4wuXGRn4GDCTcsJkIzLaUWo=";
                   }
                 else
                   pnpm.fetchDeps {
                     inherit pname version src;
                     fetcherVersion = 1;
-                    hash = "";
+                    hash = "sha256-zW65j09F3p/mhWJROr5H4wuXGRn4GDCTcsJkIzLaUWo=";
                   };
               nativeBuildInputs =
                 sharedEnv

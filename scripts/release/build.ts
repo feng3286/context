@@ -5,9 +5,9 @@ import { fail, info, step } from './lib/log.ts';
 const { values } = parseArgs({
   options: {
     platform: { type: 'string' },
-    arch: { type: 'string', default: 'both' },
+    arch: { type: 'string', default: 'arm64' },
     targets: { type: 'string' },
-    publish: { type: 'string', default: undefined },
+    publish: { type: 'string', default: 'always' },
   },
   strict: true,
 });
@@ -36,18 +36,15 @@ for (const arch of archs) {
 
   const platformFlag = `--${platform}`;
   const archFlag = `--${arch}`;
-  const publishFlag = values.publish ? `--publish ${values.publish}` : '';
   const cmd = [
     'pnpm exec electron-builder',
     platformFlag,
     targets,
     archFlag,
-    publishFlag,
+    `--publish ${values.publish}`,
     '--config electron-builder.config.ts',
     '--config.npmRebuild=false',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  ].join(' ');
 
   exec(cmd, { echo: true });
   info(`Built ${platform} ${targets} for ${arch}`);

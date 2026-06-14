@@ -67,7 +67,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: >
           node --experimental-strip-types scripts/release/build.ts
-          --platform mac --arch arm64 --targets dmg
+          --platform mac --arch arm64 --targets dmg --publish never
 
       - name: Verify macOS bundle
         run: node --experimental-strip-types scripts/release/verify-mac.ts

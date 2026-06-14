@@ -64,7 +64,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: >
           node --experimental-strip-types scripts/release/build.ts
-          --platform mac --arch ${{ github.event.inputs.arch || 'both' }} --targets dmg
+          --platform mac --arch arm64 --targets dmg
 
       - name: Verify macOS bundle
         run: node --experimental-strip-types scripts/release/verify-mac.ts
@@ -323,7 +323,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: >
           node --experimental-strip-types scripts/release/build.ts
-          --platform mac --arch ${{ github.event.inputs.arch || 'both' }} --targets dmg,zip
+          --platform mac --arch arm64 --targets dmg,zip
 
       - name: Verify macOS bundle
         if: ${{ steps.mac-signing.outputs.has_signing == 'true' }}

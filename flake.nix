@@ -50,7 +50,7 @@
         # electron-builder expects zips named: electron-v${version}-linux-x64.zip
         electronLinuxZip = pkgs.fetchurl {
           url = "https://github.com/electron/electron/releases/download/v${electronVersion}/electron-v${electronVersion}-linux-x64.zip";
-          sha256 = "sha256-7EcHeD056GAF9CiZ4wrlnlDdXZx/KFMe1JTrQ/I2FAM=";
+          sha256 = "sha256-D3utkbADhMTStZ6++QRBW+lb8G7b/llfD8tX9R/RR+Q=";
         };
 
         # Create a directory with the electron zip for electronDist

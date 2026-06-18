@@ -56,15 +56,15 @@ export function SettingsPage({
     label: string;
     isExternal?: boolean;
   }> = [
-    { id: 'general', label: t('settings.tabs.general') },
+    { id: 'general', label: t('settings:tabs.general') },
     // Context account feature disabled: auth.context.sh not deployed yet
-    // { id: 'account', label: t('settings.tabs.account') },
-    { id: 'clis-models', label: t('settings.tabs.agents') },
-    { id: 'integrations', label: t('settings.tabs.integrations') },
-    { id: 'repository', label: t('settings.tabs.repository') },
-    { id: 'interface', label: t('settings.tabs.interface') },
-    { id: 'marketplaces', label: t('settings.tabs.marketplaces') },
-    { id: 'docs', label: t('settings.tabs.docs'), isExternal: true },
+    // { id: 'account', label: t('settings:tabs.account') },
+    { id: 'clis-models', label: t('settings:tabs.agents') },
+    { id: 'integrations', label: t('settings:tabs.integrations') },
+    { id: 'repository', label: t('settings:tabs.repository') },
+    { id: 'interface', label: t('settings:tabs.interface') },
+    { id: 'marketplaces', label: t('settings:tabs.marketplaces') },
+    { id: 'docs', label: t('settings:tabs.docs'), isExternal: true },
   ];
 
   const tabContent: Record<
@@ -72,8 +72,8 @@ export function SettingsPage({
     { title: string; description: string; sections: SectionConfig[] }
   > = {
     general: {
-      title: t('settings.general.title'),
-      description: t('settings.general.description'),
+      title: t('settings:general.title'),
+      description: t('settings:general.description'),
       sections: [
         { component: <LanguageSelector /> },
         { component: <TelemetryCard /> },
@@ -84,24 +84,24 @@ export function SettingsPage({
       ],
     },
     account: {
-      title: t('settings.account.title'),
-      description: t('settings.account.description'),
+      title: t('settings:account.title'),
+      description: t('settings:account.description'),
       // Context account feature disabled: auth.context.sh not deployed yet
       // sections: [{ component: <AccountTab /> }],
       sections: [],
     },
     'clis-models': {
-      title: t('settings.agents.title'),
-      description: t('settings.agents.description'),
+      title: t('settings:agents.title'),
+      description: t('settings:agents.description'),
       sections: [
         { component: <DefaultAgentSettingsCard /> },
         {
-          title: t('settings.agents.reviewPrompt'),
+          title: t('settings:agents.reviewPrompt'),
           action: <ReviewPromptResetButton />,
           component: <ReviewPromptSettingsCard />,
         },
         {
-          title: t('settings.agents.cliAgents'),
+          title: t('settings:agents.cliAgents'),
           component: (
             <div className="rounded-xl border border-border/60 bg-muted/10 p-2">
               <CliAgentsList />
@@ -111,33 +111,33 @@ export function SettingsPage({
       ],
     },
     integrations: {
-      title: t('settings.integrations.title'),
-      description: t('settings.integrations.description'),
-      sections: [{ title: t('settings.integrations.title'), component: <IntegrationsCard /> }],
+      title: t('settings:integrations.title'),
+      description: t('settings:integrations.description'),
+      sections: [{ title: t('settings:integrations.title'), component: <IntegrationsCard /> }],
     },
     repository: {
-      title: t('settings.repository.title'),
-      description: t('settings.repository.description'),
+      title: t('settings:repository.title'),
+      description: t('settings:repository.description'),
       sections: [
-        { title: t('settings.repository.branchPrefix'), component: <RepositorySettingsCard /> },
+        { title: t('settings:repository.branchPrefix'), component: <RepositorySettingsCard /> },
       ],
     },
     interface: {
-      title: t('settings.interface.title'),
-      description: t('settings.interface.description'),
+      title: t('settings:interface.title'),
+      description: t('settings:interface.description'),
       sections: [
         { component: <ThemeCard /> },
         { component: <TerminalSettingsCard /> },
-        { title: t('settings.interface.keyboardShortcuts'), component: <KeyboardSettingsCard /> },
+        { title: t('settings:interface.keyboardShortcuts'), component: <KeyboardSettingsCard /> },
         {
-          title: t('settings.interface.tools'),
+          title: t('settings:interface.tools'),
           component: <HiddenToolsSettingsCard />,
         },
       ],
     },
     marketplaces: {
-      title: t('settings.marketplaces.title'),
-      description: t('settings.marketplaces.description'),
+      title: t('settings:marketplaces.title'),
+      description: t('settings:marketplaces.description'),
       sections: [{ component: <MarketplacesCard /> }],
     },
   };

@@ -137,7 +137,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for f in release/latest*.yml release/context-*.{AppImage,deb,rpm,dmg,zip,exe,msi}; do
+          for f in release/latest*.yml release/context-*.AppImage release/context-*.deb release/context-*.rpm release/*.blockmap; do
             [ -f "$f" ] && gh release upload "$GITHUB_REF_NAME" "$f" --clobber
           done
 

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Pencil, Plus } from 'lucide-react';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { CatalogSkill } from '@shared/skills/types';
 import SkillIconRenderer from './SkillIconRenderer';
 
@@ -11,6 +12,7 @@ interface SkillCardProps {
 }
 
 const SkillCard: React.FC<SkillCardProps> = ({ skill, onSelect, onInstall }) => {
+  const { t } = useTranslation();
   return (
     <motion.div
       role="button"
@@ -46,7 +48,7 @@ const SkillCard: React.FC<SkillCardProps> = ({ skill, onSelect, onInstall }) => 
               onInstall(skill.id);
             }}
             className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={`Install ${skill.displayName}`}
+            aria-label={t('skills:installAria', { name: skill.displayName })}
           >
             <Plus className="h-4 w-4" />
           </button>

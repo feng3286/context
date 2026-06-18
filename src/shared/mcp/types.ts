@@ -27,6 +27,10 @@ export interface McpCatalogEntry {
   docsUrl: string;
   defaultConfig: RawServerEntry;
   credentialKeys: CredentialKey[];
+  /** Marketplace source ID (e.g. 'builtin-mcp', 'github-mcp-registry') */
+  sourceId?: string;
+  iconUrl?: string;
+  brandColor?: string;
 }
 
 /** Raw server entry as stored in agent config files */

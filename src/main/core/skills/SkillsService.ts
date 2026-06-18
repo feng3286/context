@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { agentTargets, skillScanPaths } from '@shared/skills/agentTargets';
 import type { CatalogIndex, CatalogSkill, DetectedAgent } from '@shared/skills/types';
 import { generateSkillMd, isValidSkillName, parseFrontmatter } from '@shared/skills/validation';
+import { fetchMarketplaceSkills } from '@main/core/marketplace/skills-fetcher';
 import { log } from '@main/lib/logger';
 import bundledCatalog from './bundled-catalog.json';
 
@@ -83,10 +84,13 @@ export class SkillsService {
 
   async refreshCatalog(): Promise<CatalogIndex> {
     try {
-      const [openaiSkills, anthropicSkills] = await Promise.allSettled([
-        this.fetchOpenAICatalog(),
-        this.fetchAnthropicCatalog(),
-      ]);
+      const [openaiSkills, anthropicSkills, obraSkills, marketplaceSkills] =
+        await Promise.allSettled([
+          this.fetchOpenAICatalog(),
+          this.fetchAnthropicCatalog(),
+          this.fetchObraCatalog(),
+          fetchMarketplaceSkills(),
+        ]);
 
       const allSkills: CatalogSkill[] = [];
       if (openaiSkills.status === 'fulfilled') {
@@ -94,6 +98,12 @@ export class SkillsService {
       }
       if (anthropicSkills.status === 'fulfilled') {
         allSkills.push(...anthropicSkills.value);
+      }
+      if (obraSkills.status === 'fulfilled') {
+        allSkills.push(...obraSkills.value);
+      }
+      if (marketplaceSkills.status === 'fulfilled') {
+        allSkills.push(...marketplaceSkills.value);
       }
 
       // Deduplicate by id — first occurrence wins
@@ -104,7 +114,7 @@ export class SkillsService {
         return true;
       });
 
-      // If both failed, fall back to bundled
+      // If all failed, fall back to bundled
       if (skills.length === 0) {
         log.warn('Failed to fetch any remote catalogs, using bundled');
         return this.getCatalogIndex();
@@ -215,7 +225,7 @@ export class SkillsService {
   }
 
   private getSkillMdUrl(skill: CatalogSkill): string | null {
-    if (skill.source === 'openai' && skill.sourceUrl) {
+    if ((skill.source === 'openai' || skill.source === 'anthropic') && skill.sourceUrl) {
       // e.g. https://github.com/openai/skills/tree/main/skills/.curated/linear
       // → https://raw.githubusercontent.com/openai/skills/main/skills/.curated/linear/SKILL.md
       const match = skill.sourceUrl.match(/github\.com\/([^/]+\/[^/]+)\/tree\/main\/(.+)/);
@@ -223,7 +233,8 @@ export class SkillsService {
         return `https://raw.githubusercontent.com/${match[1]}/main/${match[2]}/SKILL.md`;
       }
     }
-    if (skill.source === 'anthropic' && skill.sourceUrl) {
+    if (skill.source === 'github' && skill.sourceUrl) {
+      // Same pattern for github-sourced skills
       const match = skill.sourceUrl.match(/github\.com\/([^/]+\/[^/]+)\/tree\/main\/(.+)/);
       if (match) {
         return `https://raw.githubusercontent.com/${match[1]}/main/${match[2]}/SKILL.md`;
@@ -604,6 +615,55 @@ export class SkillsService {
       }
     }
     return result;
+  }
+
+  /** Fetch skills from obra/superpowers GitHub repo. */
+  private async fetchObraCatalog(): Promise<CatalogSkill[]> {
+    const baseUrl = 'https://api.github.com/repos/obra/superpowers/contents/skills';
+    const rawBase = 'https://raw.githubusercontent.com/obra/superpowers/main/skills';
+    try {
+      const data = await httpsGet(baseUrl);
+      const entries = JSON.parse(data) as Array<{ name: string; type: string; html_url?: string }>;
+      const skills: CatalogSkill[] = [];
+
+      for (const entry of entries) {
+        if (entry.type !== 'dir') continue;
+        const fallbackName = entry.name
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+
+        let description = '';
+        try {
+          const mdUrl = `${rawBase}/${entry.name}/SKILL.md`;
+          const md = await httpsGet(mdUrl);
+          const { frontmatter: fm } = parseFrontmatter(md);
+          if (fm.description) description = fm.description;
+        } catch {
+          // Use fallback
+        }
+
+        if (!description) {
+          description = `${entry.name.replace(/-/g, ' ')}`;
+        }
+
+        skills.push({
+          id: entry.name,
+          displayName: fallbackName,
+          description,
+          source: 'github',
+          sourceUrl: entry.html_url,
+          brandColor: '#6366f1',
+          frontmatter: { name: entry.name, description },
+          installed: false,
+        });
+      }
+
+      return skills;
+    } catch (error) {
+      log.warn('Failed to fetch obra/superpowers catalog:', error);
+      return [];
+    }
   }
 }
 

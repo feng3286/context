@@ -1,7 +1,7 @@
 import type { McpLoadAllResponse, McpServer, ServerMap } from '@shared/mcp/types';
 import { log } from '@main/lib/logger';
+import { getCachedMcpCatalog } from '../../marketplace/controller';
 import { adaptForward, adaptReverse } from '../utils/adapters';
-import { loadCatalog } from '../utils/catalog';
 import { readServers, writeServers } from '../utils/config-io';
 import { getAgentMcpMeta, getAllMcpAgentIds } from '../utils/config-paths';
 import { mcpServerToRaw, rawEntryToMcpFields, rawToMcpServer } from '../utils/conversion';
@@ -69,7 +69,7 @@ export class McpService {
         installed.push(server);
       }
 
-      const catalog = loadCatalog();
+      const catalog = await getCachedMcpCatalog();
 
       return { installed, catalog };
     });

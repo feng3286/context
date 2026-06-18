@@ -7,6 +7,7 @@
       "integrations": "Integrations",
       "repository": "Repository",
       "interface": "Interface",
+      "marketplaces": "Marketplaces",
       "docs": "Docs"
     },
     "general": {
@@ -308,6 +309,10 @@
       "loadingAccount": "Loading account...",
       "connectedAs": "Connected as",
       "reconnectDesc": "Sign in again to reconnect your Context account."
+    },
+    "marketplaces": {
+      "title": "Marketplaces",
+      "description": "Configure MCP and Skills marketplace sources."
     }
   },
   "common": {
@@ -425,11 +430,33 @@
     "searchPlaceholder": "Search skills...",
     "refreshCatalog": "Refresh catalog",
     "newSkill": "New Skill",
-    "infoText": "Skills from the OpenAI and Anthropic catalogs. Install a skill to make it available across all your coding agents. Skills follow the open Agent Skills standard. If you want to use skills from another library, feel free to let us know through the feedback modal.",
+    "infoText": "Skills from the <openai>OpenAI</openai> and <anthropic>Anthropic</anthropic> catalogs. Install a skill to make it available across all your coding agents. Skills follow the open <agentskills>Agent Skills</agentskills> standard. If you want to use skills from another library, feel free to let us know through the feedback modal.",
     "installed": "Installed",
     "recommended": "Recommended",
     "noMatchSearch": "No skills match your search.",
-    "noAvailable": "No skills available."
+    "noAvailable": "No skills available.",
+    "installAria": "Install {{name}}",
+    "fromLibrary": "From {{source}} skill library",
+    "examplePrompt": "Example prompt",
+    "uninstall": "Uninstall",
+    "open": "Open",
+    "installing": "Installing...",
+    "install": "Install",
+    "createSkill": {
+      "name": "Name",
+      "nameHelp": "Lowercase letters, numbers, and hyphens",
+      "nameError": "Name must be lowercase letters, numbers, and hyphens (2-64 chars).",
+      "description": "Description",
+      "descriptionPlaceholder": "What does this skill do?",
+      "descriptionError": "Description is required.",
+      "instructions": "Instructions",
+      "instructionsPlaceholder": "Write the skill instructions here. The YAML frontmatter (name and description) will be added automatically.",
+      "instructionsHelp": "Define what this skill does and how agents should use it",
+      "create": "Create",
+      "creating": "Creating...",
+      "cancel": "Cancel",
+      "failed": "Failed to create skill"
+    }
   },
   "mcp": {
     "title": "MCP",
@@ -469,7 +496,13 @@
     "namePlaceholder": "my-server",
     "commandPlaceholder": "npx",
     "urlPlaceholder": "https://mcp.example.com",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "transportServer": "{{transport}} server",
+    "viewDocsAria": "View {{name}} docs",
+    "addAria": "Add {{name}}",
+    "syncToAgents": "Sync to agents",
+    "httpUnsupportedTitle": "{{name}} does not support HTTP servers",
+    "httpUnsupportedNote": "Some agents don't support HTTP servers and are disabled."
   },
   "workspaces": {
     "getStarted": "Get Started",
@@ -826,5 +859,75 @@
       "failed": "Open in {{label}} failed"
     },
     "commandPalette": "CMDK coming soon"
+  },
+  "issues": {
+    "defaultProvider": "issues",
+    "clickToLink": "Click to link an issue",
+    "search": "Search {{provider}}…",
+    "noResults": "No issues found",
+    "noProviderIssues": "No {{provider}} issues to show",
+    "navigateWithArrows": "Navigate with arrow keys",
+    "selectIssue": "Select Issue",
+    "connect": {
+      "desc": "Connect with one of our issue integrations to link your issues to your tasks and use them as context in your conversations.",
+      "configure": "Configure integrations"
+    }
+  },
+  "integrations": {
+    "github": {
+      "description": "Connect your repositories",
+      "cliManagedTooltip": "Run `gh auth logout` in your terminal to disconnect"
+    },
+    "linear": {
+      "description": "Work on Linear tickets",
+      "connectTitle": "Connect Linear",
+      "connectSubtitle": "Enter your Linear API key to connect your workspace.",
+      "apiKeyPlaceholder": "Linear API key",
+      "howToGetKey": "How to get a Linear API key",
+      "step1": "Open Linear, go to Settings → Security & access → Personal API keys.",
+      "step2": "Create a new token and copy the key."
+    },
+    "jira": {
+      "description": "Work on Jira tickets",
+      "connectTitle": "Connect Jira",
+      "connectSubtitle": "Enter your Jira site URL, email, and API token to connect.",
+      "siteUrlPlaceholder": "https://your-domain.atlassian.net",
+      "emailPlaceholder": "Email",
+      "apiTokenPlaceholder": "API token",
+      "createTokenHint": "Create an API token at <url>id.atlassian.com/manage-profile/security/api-tokens</url>"
+    },
+    "gitlab": {
+      "description": "Work on GitLab issues",
+      "connectTitle": "Connect GitLab",
+      "connectSubtitle": "Enter your GitLab instance URL and personal access token.",
+      "instanceUrlPlaceholder": "https://gitlab.com",
+      "tokenPlaceholder": "Personal access token",
+      "createTokenHint": "Create a personal access token with <scope>read_api</scope> scope in GitLab settings."
+    },
+    "plain": {
+      "description": "Work on Plain threads",
+      "connectTitle": "Connect Plain",
+      "connectSubtitle": "Enter your Plain API key to connect your workspace.",
+      "apiKeyPlaceholder": "Plain API key",
+      "howToGetKey": "How to get a Plain API key",
+      "step1": "Open Plain, go to Settings → API keys.",
+      "step2": "Create a new API key and copy it."
+    },
+    "forgejo": {
+      "description": "Work on Forgejo issues",
+      "connectTitle": "Connect Forgejo",
+      "connectSubtitle": "Enter your Forgejo instance URL and API token.",
+      "instanceUrlPlaceholder": "https://forgejo.example.com",
+      "tokenPlaceholder": "API token",
+      "createTokenHint": "Create an API token in your Forgejo user settings under <section>Applications</section>."
+    },
+    "actions": {
+      "disconnect": "Disconnect {{name}}",
+      "cancelConnecting": "Cancel connecting {{name}}",
+      "connect": "Connect {{name}}",
+      "cancel": "Cancel",
+      "connectButton": "Connect",
+      "failedToConnect": "Failed to connect."
+    }
   }
 }

@@ -7,6 +7,7 @@
       "integrations": "集成",
       "repository": "仓库",
       "interface": "界面",
+      "marketplaces": "市场",
       "docs": "文档"
     },
     "general": {
@@ -308,6 +309,10 @@
       "loadingAccount": "正在加载账户...",
       "connectedAs": "已连接为",
       "reconnectDesc": "再次登录以重新连接你的 Context 账户。"
+    },
+    "marketplaces": {
+      "title": "市场",
+      "description": "配置 MCP 和技能市场来源。"
     }
   },
   "common": {
@@ -425,11 +430,33 @@
     "searchPlaceholder": "搜索技能...",
     "refreshCatalog": "刷新目录",
     "newSkill": "新建技能",
-    "infoText": "来自 OpenAI 和 Anthropic 目录的技能。安装技能后可在所有编码智能体中使用。技能遵循开放的 Agent Skills 标准。如果你想使用其他库的技能，请通过反馈模式告诉我们。",
+    "infoText": "来自 <openai>OpenAI</openai> 和 <anthropic>Anthropic</anthropic> 目录的技能。安装技能后可在所有编码智能体中使用。技能遵循开放的 <agentskills>Agent Skills</agentskills> 标准。如果你想使用其他库的技能，请通过反馈模式告诉我们。",
     "installed": "已安装",
     "recommended": "推荐",
     "noMatchSearch": "没有匹配搜索结果的技能。",
-    "noAvailable": "没有可用的技能。"
+    "noAvailable": "没有可用的技能。",
+    "installAria": "安装 {{name}}",
+    "fromLibrary": "来自 {{source}} 技能库",
+    "examplePrompt": "示例提示词",
+    "uninstall": "卸载",
+    "open": "打开",
+    "installing": "安装中...",
+    "install": "安装",
+    "createSkill": {
+      "name": "名称",
+      "nameHelp": "小写字母、数字和连字符",
+      "nameError": "名称只能包含小写字母、数字和连字符（2-64 个字符）。",
+      "description": "描述",
+      "descriptionPlaceholder": "这个技能做什么？",
+      "descriptionError": "描述为必填项。",
+      "instructions": "说明",
+      "instructionsPlaceholder": "在此处编写技能说明。YAML frontmatter（名称和描述）会自动添加。",
+      "instructionsHelp": "定义这个技能做什么以及智能体应如何使用它",
+      "create": "创建",
+      "creating": "创建中...",
+      "cancel": "取消",
+      "failed": "创建技能失败"
+    }
   },
   "mcp": {
     "title": "MCP",
@@ -469,7 +496,13 @@
     "namePlaceholder": "my-server",
     "commandPlaceholder": "npx",
     "urlPlaceholder": "https://mcp.example.com",
-    "unknown": "未知"
+    "unknown": "未知",
+    "transportServer": "{{transport}} 服务器",
+    "viewDocsAria": "查看 {{name}} 文档",
+    "addAria": "添加 {{name}}",
+    "syncToAgents": "同步到智能体",
+    "httpUnsupportedTitle": "{{name}} 不支持 HTTP 服务器",
+    "httpUnsupportedNote": "部分智能体不支持 HTTP 服务器，已禁用。"
   },
   "workspaces": {
     "getStarted": "开始使用",
@@ -826,5 +859,75 @@
       "failed": "在 {{label}} 中打开失败"
     },
     "commandPalette": "CMDK 即将推出"
+  },
+  "issues": {
+    "defaultProvider": "issue",
+    "clickToLink": "点击关联 issue",
+    "search": "搜索 {{provider}}…",
+    "noResults": "未找到 issue",
+    "noProviderIssues": "没有可显示的 {{provider}} issue",
+    "navigateWithArrows": "使用方向键导航",
+    "selectIssue": "选择 Issue",
+    "connect": {
+      "desc": "连接 issue 集成以将 issue 关联到任务，并在对话中将其作为上下文使用。",
+      "configure": "配置集成"
+    }
+  },
+  "integrations": {
+    "github": {
+      "description": "连接你的仓库",
+      "cliManagedTooltip": "在终端运行 `gh auth logout` 断开连接"
+    },
+    "linear": {
+      "description": "处理 Linear 工单",
+      "connectTitle": "连接 Linear",
+      "connectSubtitle": "输入你的 Linear API 密钥以连接工作区。",
+      "apiKeyPlaceholder": "Linear API 密钥",
+      "howToGetKey": "如何获取 Linear API 密钥",
+      "step1": "打开 Linear，进入 Settings → Security & access → Personal API keys。",
+      "step2": "创建新令牌并复制密钥。"
+    },
+    "jira": {
+      "description": "处理 Jira 工单",
+      "connectTitle": "连接 Jira",
+      "connectSubtitle": "输入你的 Jira 站点 URL、邮箱和 API 令牌以连接。",
+      "siteUrlPlaceholder": "https://your-domain.atlassian.net",
+      "emailPlaceholder": "邮箱",
+      "apiTokenPlaceholder": "API 令牌",
+      "createTokenHint": "在 <url>id.atlassian.com/manage-profile/security/api-tokens</url> 创建 API 令牌"
+    },
+    "gitlab": {
+      "description": "处理 GitLab issue",
+      "connectTitle": "连接 GitLab",
+      "connectSubtitle": "输入你的 GitLab 实例 URL 和个人访问令牌。",
+      "instanceUrlPlaceholder": "https://gitlab.com",
+      "tokenPlaceholder": "个人访问令牌",
+      "createTokenHint": "在 GitLab 设置中创建具有 <scope>read_api</scope> 权限的个人访问令牌。"
+    },
+    "plain": {
+      "description": "处理 Plain 会话",
+      "connectTitle": "连接 Plain",
+      "connectSubtitle": "输入你的 Plain API 密钥以连接工作区。",
+      "apiKeyPlaceholder": "Plain API 密钥",
+      "howToGetKey": "如何获取 Plain API 密钥",
+      "step1": "打开 Plain，进入 Settings → API keys。",
+      "step2": "创建新的 API 密钥并复制。"
+    },
+    "forgejo": {
+      "description": "处理 Forgejo issue",
+      "connectTitle": "连接 Forgejo",
+      "connectSubtitle": "输入你的 Forgejo 实例 URL 和 API 令牌。",
+      "instanceUrlPlaceholder": "https://forgejo.example.com",
+      "tokenPlaceholder": "API 令牌",
+      "createTokenHint": "在 Forgejo 用户设置的 <section>Applications</section> 下创建 API 令牌。"
+    },
+    "actions": {
+      "disconnect": "断开 {{name}}",
+      "cancelConnecting": "取消连接 {{name}}",
+      "connect": "连接 {{name}}",
+      "cancel": "取消",
+      "connectButton": "连接",
+      "failedToConnect": "连接失败。"
+    }
   }
 }

@@ -4,13 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { rpc } from '@renderer/lib/ipc';
 import { Separator } from '@renderer/lib/ui/separator';
 import { cn } from '@renderer/utils/utils';
-import { AccountTab } from './AccountTab';
+// Context account feature disabled: auth.context.sh not deployed yet
+// import { AccountTab } from './AccountTab';
 import { CliAgentsList } from './CliAgentsList';
 import DefaultAgentSettingsCard from './DefaultAgentSettingsCard';
 import HiddenToolsSettingsCard from './HiddenToolsSettingsCard';
 import IntegrationsCard from './IntegrationsCard';
 import KeyboardSettingsCard from './KeyboardSettingsCard';
 import { LanguageSelector } from './LanguageSelector';
+import { MarketplacesCard } from './MarketplacesCard';
 import NotificationSettingsCard from './NotificationSettingsCard';
 import RepositorySettingsCard from './RepositorySettingsCard';
 import { ReviewPromptResetButton, ReviewPromptSettingsCard } from './ReviewPromptSettingsCard';
@@ -27,6 +29,7 @@ export type SettingsPageTab =
   | 'integrations'
   | 'repository'
   | 'interface'
+  | 'marketplaces'
   | 'docs';
 
 interface SectionConfig {
@@ -54,11 +57,13 @@ export function SettingsPage({
     isExternal?: boolean;
   }> = [
     { id: 'general', label: t('settings:tabs.general') },
-    { id: 'account', label: t('settings:tabs.account') },
+    // Context account feature disabled: auth.context.sh not deployed yet
+    // { id: 'account', label: t('settings:tabs.account') },
     { id: 'clis-models', label: t('settings:tabs.agents') },
     { id: 'integrations', label: t('settings:tabs.integrations') },
     { id: 'repository', label: t('settings:tabs.repository') },
     { id: 'interface', label: t('settings:tabs.interface') },
+    { id: 'marketplaces', label: t('settings:tabs.marketplaces') },
     { id: 'docs', label: t('settings:tabs.docs'), isExternal: true },
   ];
 
@@ -81,7 +86,9 @@ export function SettingsPage({
     account: {
       title: t('settings:account.title'),
       description: t('settings:account.description'),
-      sections: [{ component: <AccountTab /> }],
+      // Context account feature disabled: auth.context.sh not deployed yet
+      // sections: [{ component: <AccountTab /> }],
+      sections: [],
     },
     'clis-models': {
       title: t('settings:agents.title'),
@@ -127,6 +134,11 @@ export function SettingsPage({
           component: <HiddenToolsSettingsCard />,
         },
       ],
+    },
+    marketplaces: {
+      title: t('settings:marketplaces.title'),
+      description: t('settings:marketplaces.description'),
+      sections: [{ component: <MarketplacesCard /> }],
     },
   };
 

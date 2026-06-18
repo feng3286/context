@@ -33,7 +33,9 @@ function getSyncedProviders(server?: McpServer) {
 export const McpCard: React.FC<McpCardProps> = ({ server, catalogEntry, onEdit, onAdd }) => {
   const { t } = useTranslation();
   const name = server?.name ?? catalogEntry?.name ?? t('mcp:unknown');
-  const description = catalogEntry?.description ?? (server ? `${server.transport} server` : '');
+  const description =
+    catalogEntry?.description ??
+    (server ? t('mcp:transportServer', { transport: server.transport }) : '');
   const isInstalled = !!server;
   const transport = getTransport(server, catalogEntry);
   const docsUrl = catalogEntry?.docsUrl;
@@ -102,7 +104,7 @@ export const McpCard: React.FC<McpCardProps> = ({ server, catalogEntry, onEdit, 
               window.open(docsUrl, '_blank', 'noopener,noreferrer');
             }}
             className="rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100"
-            aria-label={`View ${name} docs`}
+            aria-label={t('mcp:viewDocsAria', { name })}
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
@@ -117,7 +119,7 @@ export const McpCard: React.FC<McpCardProps> = ({ server, catalogEntry, onEdit, 
               if (catalogEntry) onAdd(catalogEntry);
             }}
             className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={`Add ${name}`}
+            aria-label={t('mcp:addAria', { name })}
           >
             <Plus className="h-4 w-4" />
           </button>

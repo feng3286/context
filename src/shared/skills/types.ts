@@ -15,7 +15,7 @@ export interface CatalogSkill {
   /** Short description */
   description: string;
   /** Catalog source */
-  source: 'openai' | 'anthropic' | 'local';
+  source: 'openai' | 'anthropic' | 'github' | 'local';
   /** GitHub URL */
   sourceUrl?: string;
   /** Icon URL (OpenAI skills have SVG/PNG) */

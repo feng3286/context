@@ -36,11 +36,11 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
 
     const trimmedName = name.trim();
     if (!isValidSkillName(trimmedName)) {
-      setCreateError('Name must be lowercase letters, numbers, and hyphens (2-64 chars).');
+      setCreateError(t('skills:createSkill.nameError'));
       return;
     }
     if (!description.trim()) {
-      setCreateError('Description is required.');
+      setCreateError(t('skills:createSkill.descriptionError'));
       return;
     }
 
@@ -53,7 +53,7 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
       });
 
       if (!result.success) {
-        setCreateError(result.error || 'Failed to create skill');
+        setCreateError(result.error || t('skills:createSkill.failed'));
         return;
       }
 
@@ -61,7 +61,7 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
       onSuccess();
       void queryClient.invalidateQueries({ queryKey: ['skills', 'catalog'] });
     } catch (error) {
-      setCreateError(error instanceof Error ? error.message : 'Failed to create skill');
+      setCreateError(error instanceof Error ? error.message : t('skills:createSkill.failed'));
     } finally {
       setIsCreating(false);
     }
@@ -79,7 +79,7 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="skill-name" className="text-xs">
-              Name
+              {t('skills:createSkill.name')}
             </Label>
             <Input
               id="skill-name"
@@ -91,18 +91,16 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
               }}
               className="text-sm"
             />
-            <p className="text-[10px] text-muted-foreground">
-              Lowercase letters, numbers, and hyphens
-            </p>
+            <p className="text-[10px] text-muted-foreground">{t('skills:createSkill.nameHelp')}</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="skill-desc" className="text-xs">
-              Description
+              {t('skills:createSkill.description')}
             </Label>
             <Input
               id="skill-desc"
-              placeholder="What does this skill do?"
+              placeholder={t('skills:createSkill.descriptionPlaceholder')}
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
@@ -114,11 +112,11 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
 
           <div className="space-y-2">
             <Label htmlFor="skill-content" className="text-xs">
-              Instructions
+              {t('skills:createSkill.instructions')}
             </Label>
             <Textarea
               id="skill-content"
-              placeholder="Write the skill instructions here. The YAML frontmatter (name and description) will be added automatically."
+              placeholder={t('skills:createSkill.instructionsPlaceholder')}
               value={content}
               onChange={(e) => {
                 setContent(e.target.value);
@@ -127,7 +125,7 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
               className="min-h-[200px] font-mono text-sm"
             />
             <p className="text-[10px] text-muted-foreground">
-              Define what this skill does and how agents should use it
+              {t('skills:createSkill.instructionsHelp')}
             </p>
           </div>
 
@@ -137,7 +135,7 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
 
       <DialogFooter className="gap-2 sm:gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isCreating}>
-          Cancel
+          {t('skills:createSkill.cancel')}
         </Button>
         <ConfirmButton
           type="button"
@@ -145,7 +143,7 @@ export function CreateSkillModal({ onSuccess, onClose }: Props) {
           size="sm"
           disabled={isCreating}
         >
-          {isCreating ? 'Creating...' : 'Create'}
+          {isCreating ? t('skills:createSkill.creating') : t('skills:createSkill.create')}
         </ConfirmButton>
       </DialogFooter>
     </>

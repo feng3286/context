@@ -1,5 +1,6 @@
 import { Check, Loader2, Plus } from 'lucide-react';
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import forgejoSvg from '@/assets/images/Forgejo.svg?raw';
 import githubSvg from '@/assets/images/Github.svg?raw';
 import gitlabSvg from '@/assets/images/GitLab.svg?raw';
@@ -33,6 +34,7 @@ const SvgLogo = ({ raw }: { raw: string }) => {
 };
 
 const IntegrationsCard: React.FC = () => {
+  const { t } = useTranslation();
   const {
     authenticated,
     isLoading,
@@ -74,16 +76,14 @@ const IntegrationsCard: React.FC = () => {
     {
       id: 'github',
       name: 'GitHub',
-      description: 'Connect your repositories',
+      description: t('integrations:github.description'),
       logoSvg: githubSvg,
       connected: authenticated,
       loading: isLoading || githubLoading,
       onConnect: handleGithubConnect,
       onCancel: cancelGithubConnect,
       onDisconnect: logout,
-      disabledTooltip: isCliManaged
-        ? 'Run `gh auth logout` in your terminal to disconnect'
-        : undefined,
+      disabledTooltip: isCliManaged ? t('integrations:github.cliManagedTooltip') : undefined,
     },
     {
       id: 'linear',
@@ -91,7 +91,7 @@ const IntegrationsCard: React.FC = () => {
       description:
         isLinearConnected && connectionStatus.linear.displayName
           ? connectionStatus.linear.displayName
-          : 'Work on Linear tickets',
+          : t('integrations:linear.description'),
       logoSvg: linearSvg,
       connected: !!isLinearConnected,
       loading: isLinearLoading,
@@ -104,7 +104,7 @@ const IntegrationsCard: React.FC = () => {
       description:
         isJiraConnected && connectionStatus.jira.displayName
           ? connectionStatus.jira.displayName
-          : 'Work on Jira tickets',
+          : t('integrations:jira.description'),
       logoSvg: jiraSvg,
       connected: !!isJiraConnected,
       loading: isJiraLoading,
@@ -117,7 +117,7 @@ const IntegrationsCard: React.FC = () => {
       description:
         isGitlabConnected && connectionStatus.gitlab.displayName
           ? connectionStatus.gitlab.displayName
-          : 'Work on GitLab issues',
+          : t('integrations:gitlab.description'),
       logoSvg: gitlabSvg,
       connected: !!isGitlabConnected,
       loading: isGitlabLoading,
@@ -127,7 +127,7 @@ const IntegrationsCard: React.FC = () => {
     {
       id: 'plain',
       name: 'Plain',
-      description: 'Work on Plain threads',
+      description: t('integrations:plain.description'),
       logoSvg: plainSvg,
       connected: !!isPlainConnected,
       loading: isPlainLoading,
@@ -140,7 +140,7 @@ const IntegrationsCard: React.FC = () => {
       description:
         isForgejoConnected && connectionStatus.forgejo.displayName
           ? connectionStatus.forgejo.displayName
-          : 'Work on Forgejo issues',
+          : t('integrations:forgejo.description'),
       logoSvg: forgejoSvg,
       connected: !!isForgejoConnected,
       loading: isForgejoLoading,
@@ -186,7 +186,7 @@ const IntegrationsCard: React.FC = () => {
                   size="icon"
                   className="h-8 w-8 shrink-0"
                   onClick={integration.onDisconnect}
-                  aria-label={`Disconnect ${integration.name}`}
+                  aria-label={t('integrations:actions.disconnect', { name: integration.name })}
                 >
                   <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </Button>
@@ -204,8 +204,8 @@ const IntegrationsCard: React.FC = () => {
                 }
                 aria-label={
                   integration.loading
-                    ? `Cancel connecting ${integration.name}`
-                    : `Connect ${integration.name}`
+                    ? t('integrations:actions.cancelConnecting', { name: integration.name })
+                    : t('integrations:actions.connect', { name: integration.name })
                 }
               >
                 {integration.loading ? (

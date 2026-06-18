@@ -1,5 +1,6 @@
 import { Check, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Issue } from '@shared/tasks';
 import {
   ISSUE_PROVIDER_META,
@@ -29,6 +30,7 @@ export function InlineIssueSelector({
   projectPath = '',
   disabled,
 }: InlineIssueSelectorProps) {
+  const { t } = useTranslation();
   const {
     issues,
     issueProvider,
@@ -155,7 +157,11 @@ export function InlineIssueSelector({
           value={query}
           onChange={handleQueryChange}
           onKeyDown={handleKeyDown}
-          placeholder={`Search ${issueProvider ?? 'issues'}…`}
+          placeholder={t('issues:search', {
+            provider: issueProvider
+              ? ISSUE_PROVIDER_META[issueProvider].displayName
+              : t('issues:defaultProvider'),
+          })}
           autoFocus
         />
       </InputGroup>
@@ -164,7 +170,13 @@ export function InlineIssueSelector({
       <div ref={listRef} className="overflow-y-auto overflow-x-hidden h-52 p-1">
         {issues.length === 0 ? (
           <div className="text-center text-sm text-foreground-passive flex items-center justify-center h-full">
-            {query ? 'No issues found' : `No ${issueProvider} issues to show`}
+            {query
+              ? t('issues:noResults')
+              : t('issues:noProviderIssues', {
+                  provider: issueProvider
+                    ? ISSUE_PROVIDER_META[issueProvider].displayName
+                    : t('issues:defaultProvider'),
+                })}
           </div>
         ) : (
           issues.map((issue, index) => {
@@ -192,10 +204,10 @@ export function InlineIssueSelector({
         )}
       </div>
       <div className="flex items-center justify-between h-6 px-2 text-xs bg-background-1 border-t border-border">
-        <div className="text-foreground-muted">Navigate with arrow keys</div>
+        <div className="text-foreground-muted">{t('issues:navigateWithArrows')}</div>
         <div className="text-foreground-muted">
           <button className="flex items-center gap-2">
-            Select Issue <ShortcutHint settingsKey="confirm" />
+            {t('issues:selectIssue')} <ShortcutHint settingsKey="confirm" />
           </button>{' '}
         </div>
       </div>

@@ -530,13 +530,6 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 <MicroLabel className="text-foreground-passive items-center flex">Task</MicroLabel>
                 <span className="text-sm tracking-tight">{taskDisplayName(taskStore)}</span>
               </div>
-              <OpenInMenu
-                path={activeProjectWorktreePath}
-                filePath={activeFilePath}
-                lineNumber={activeLineNumber}
-                projectId={activeFileProjectId}
-                projectOptions={projectOptions}
-              />
               {provisionedTask.isMultiProject && provisionedTask.projectContexts ? (
                 <MultiProjectGitSections provisionedTask={provisionedTask} />
               ) : (

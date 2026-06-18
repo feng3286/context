@@ -30,7 +30,10 @@ function AppContent() {
     localStorage.getItem(HAS_SEEN_ONBOARDING) === 'true' ? 'workspace' : 'onboarding'
   );
 
-  const { data: session, isLoading: sessionLoading } = useAccountSession();
+  // Context account feature disabled: auth.context.sh not deployed yet.
+  // Only `sessionLoading` is still needed for the onboarding gate; `data: session`
+  // is dropped to avoid an unused binding while the sign-in step is commented out.
+  const { isLoading: sessionLoading } = useAccountSession();
   const { data: legacyStatus, isLoading: legacyLoading } = useLegacyPortStatus();
 
   const isLoading = sessionLoading || legacyLoading;
@@ -43,7 +46,8 @@ function AppContent() {
   useEffect(() => {
     if (!isLoading && view === 'onboarding' && frozenSteps === null) {
       const computed: OnboardingStep[] = [];
-      if (!session?.isSignedIn) computed.push('sign-in');
+      // Context account feature disabled: auth.context.sh not deployed yet
+      // if (!session?.isSignedIn) computed.push('sign-in');
       const needsImport =
         legacyStatus?.hasLegacyDb &&
         legacyStatus.portStatus !== 'completed' &&
@@ -52,7 +56,7 @@ function AppContent() {
       if (needsImport) computed.push('import');
       setFrozenSteps(computed);
     }
-  }, [view, isLoading, frozenSteps, session, legacyStatus]);
+  }, [view, isLoading, frozenSteps, legacyStatus]);
 
   const stepsNeeded = frozenSteps ?? [];
 

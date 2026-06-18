@@ -1,5 +1,6 @@
 import { ExternalLink, Loader2 } from 'lucide-react';
 import { forwardRef, useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Issue } from '@shared/tasks';
 import {
   ISSUE_PROVIDER_META,
@@ -103,6 +104,7 @@ export function IssueSelector({
   value,
   onValueChange,
 }: IssueSelectorProps) {
+  const { t } = useTranslation();
   const {
     issues,
     issueProvider,
@@ -199,7 +201,7 @@ export function IssueSelector({
                 <ComboboxValue
                   placeholder={
                     <div className="text-foreground-passive justify-center w-full text-sm text-center flex items-center gap-1 h-6">
-                      Click to link an issue
+                      {t('issues:clickToLink')}
                     </div>
                   }
                 >
@@ -218,11 +220,15 @@ export function IssueSelector({
               inputRef={inputRef}
               showClear={!!value}
               showTrigger={false}
-              placeholder={`Search ${issueProvider ?? 'issues'}…`}
+              placeholder={t('issues:search', {
+                provider: issueProvider
+                  ? ISSUE_PROVIDER_META[issueProvider].displayName
+                  : t('issues:defaultProvider'),
+              })}
               disabled={!hasAnyIntegration}
             />
             <ComboboxEmpty>
-              <span className="text-muted-foreground">No issues found</span>
+              <span className="text-muted-foreground">{t('issues:noResults')}</span>
             </ComboboxEmpty>
             <ComboboxList>
               {(issue: Issue) => (
@@ -272,6 +278,7 @@ export function SelectedIssueValue({ issue }: { issue: Issue }) {
 }
 
 export function ConnectIssueIntegrationPlaceholder() {
+  const { t } = useTranslation();
   const { navigate } = useNavigate();
 
   return (
@@ -287,8 +294,7 @@ export function ConnectIssueIntegrationPlaceholder() {
         ))}
       </div>
       <p className="text-foreground-muted font-nomral text-sm text-center">
-        Connect with one of our issue integrations to link your issues to your tasks and use them as
-        context in your conversations.
+        {t('issues:connect.desc')}
       </p>
       <Button
         variant="outline"
@@ -296,7 +302,7 @@ export function ConnectIssueIntegrationPlaceholder() {
         className="w-fit"
         onClick={() => navigate('settings', { tab: 'integrations' })}
       >
-        Configure integrations
+        {t('issues:connect.configure')}
       </Button>
     </div>
   );

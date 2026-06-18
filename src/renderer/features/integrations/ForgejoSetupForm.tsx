@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Input } from '@renderer/lib/ui/input';
 
 interface Props {
@@ -9,10 +10,11 @@ interface Props {
 }
 
 const ForgejoSetupForm: React.FC<Props> = ({ instanceUrl, token, onChange, error }) => {
+  const { t } = useTranslation();
   return (
     <div className="grid gap-2">
       <Input
-        placeholder="https://forgejo.example.com"
+        placeholder={t('integrations:forgejo.instanceUrlPlaceholder')}
         value={instanceUrl}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
           onChange({ instanceUrl: e.target.value })
@@ -22,14 +24,17 @@ const ForgejoSetupForm: React.FC<Props> = ({ instanceUrl, token, onChange, error
       />
       <Input
         type="password"
-        placeholder="API token"
+        placeholder={t('integrations:forgejo.tokenPlaceholder')}
         value={token}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ token: e.target.value })}
         className="h-9 w-full"
       />
       <p className="text-xs text-muted-foreground">
-        Create an API token in your Forgejo user settings under{' '}
-        <span className="font-medium">Applications</span>.
+        <Trans
+          t={t}
+          i18nKey="integrations:forgejo.createTokenHint"
+          components={{ section: <span className="font-medium" /> }}
+        />
       </p>
       {error ? (
         <p className="text-xs text-destructive" role="alert">

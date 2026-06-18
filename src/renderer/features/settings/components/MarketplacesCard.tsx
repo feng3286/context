@@ -159,7 +159,7 @@ export function MarketplacesCard() {
   if (loading) {
     return (
       <div className="rounded-xl border border-border/60 bg-muted/10 p-4 text-sm text-foreground-muted">
-        {t('settings.marketplaces.loading')}
+        {t('settings:marketplaces.loading')}
       </div>
     );
   }
@@ -178,7 +178,7 @@ export function MarketplacesCard() {
           className="flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground disabled:opacity-50"
         >
           <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
-          {t('settings.marketplaces.refresh')}
+          {t('settings:marketplaces.refresh')}
         </button>
       </div>
       <div className="space-y-2">
@@ -192,13 +192,13 @@ export function MarketplacesCard() {
                 <span className="text-sm">{source.name}</span>
                 {source.builtin && (
                   <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
-                    {t('settings.marketplaces.builtin')}
+                    {t('settings:marketplaces.builtin')}
                   </span>
                 )}
                 {source.auth?.token && (
                   <span className="flex items-center gap-0.5 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-500">
                     <Key className="h-2.5 w-2.5" />
-                    {t('settings.marketplaces.authenticated')}
+                    {t('settings:marketplaces.authenticated')}
                   </span>
                 )}
               </div>
@@ -211,7 +211,7 @@ export function MarketplacesCard() {
                 type="button"
                 onClick={() => openEditSource(source)}
                 className="rounded p-1 text-foreground-muted hover:text-foreground hover:bg-background-1"
-                title={t('settings.marketplaces.editSourceSettings')}
+                title={t('settings:marketplaces.editSourceSettings')}
               >
                 <Settings className="h-4 w-4" />
               </button>
@@ -224,7 +224,7 @@ export function MarketplacesCard() {
                   type="button"
                   onClick={() => handleRemoveSource(source.id)}
                   className="rounded p-1 text-foreground-muted hover:text-destructive hover:bg-background-1"
-                  title={t('settings.marketplaces.removeSource')}
+                  title={t('settings:marketplaces.removeSource')}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -238,10 +238,10 @@ export function MarketplacesCard() {
 
   return (
     <div className="rounded-xl border border-border/60 bg-muted/10 p-4 space-y-6 relative">
-      {mcpSources.length > 0 && renderSourceList(mcpSources, t('settings.marketplaces.mcpSources'))}
+      {mcpSources.length > 0 && renderSourceList(mcpSources, t('settings:marketplaces.mcpSources'))}
       {mcpSources.length > 0 && skillSources.length > 0 && <Separator />}
       {skillSources.length > 0 &&
-        renderSourceList(skillSources, t('settings.marketplaces.skillSources'))}
+        renderSourceList(skillSources, t('settings:marketplaces.skillSources'))}
 
       {!showAddForm ? (
         <button
@@ -250,25 +250,25 @@ export function MarketplacesCard() {
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 py-3 text-sm text-foreground-muted hover:text-foreground hover:border-border transition-colors"
         >
           <Plus className="h-4 w-4" />
-          {t('settings.marketplaces.addSource')}
+          {t('settings:marketplaces.addSource')}
         </button>
       ) : (
         <div className="rounded-lg border border-border/60 p-4 space-y-3">
-          <h4 className="text-sm font-medium">{t('settings.marketplaces.addSourceTitle')}</h4>
+          <h4 className="text-sm font-medium">{t('settings:marketplaces.addSourceTitle')}</h4>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-foreground-muted">
-                {t('settings.marketplaces.name')}
+                {t('settings:marketplaces.name')}
               </label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder={t('settings.marketplaces.namePlaceholder')}
+                placeholder={t('settings:marketplaces.namePlaceholder')}
               />
             </div>
             <div className="space-y-1">
               <label className="text-xs text-foreground-muted">
-                {t('settings.marketplaces.kind')}
+                {t('settings:marketplaces.kind')}
               </label>
               <select
                 value={formData.kind}
@@ -281,41 +281,41 @@ export function MarketplacesCard() {
                 }
                 className="flex h-9 w-full rounded-md border border-border/60 bg-background px-3 py-1 text-sm shadow-sm focus:border-primary focus:outline-none"
               >
-                <option value="mcp">{t('settings.marketplaces.kindMcp')}</option>
-                <option value="skill">{t('settings.marketplaces.kindSkill')}</option>
+                <option value="mcp">{t('settings:marketplaces.kindMcp')}</option>
+                <option value="skill">{t('settings:marketplaces.kindSkill')}</option>
               </select>
             </div>
           </div>
           <div className="space-y-1">
             <label className="text-xs text-foreground-muted">
-              {t('settings.marketplaces.url')}
+              {t('settings:marketplaces.url')}
             </label>
             <Input
               value={formData.url}
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              placeholder={t('settings.marketplaces.urlPlaceholder')}
+              placeholder={t('settings:marketplaces.urlPlaceholder')}
             />
           </div>
           <div className="space-y-1">
             <label className="text-xs text-foreground-muted">
-              {t('settings.marketplaces.type')}
+              {t('settings:marketplaces.type')}
             </label>
             <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="flex h-9 w-full rounded-md border border-border/60 bg-background px-3 py-1 text-sm shadow-sm focus:border-primary focus:outline-none"
             >
-              <option value="">{t('settings.marketplaces.autoDetect')}</option>
-              <option value="smithery">{t('settings.marketplaces.typeSmithery')}</option>
+              <option value="">{t('settings:marketplaces.autoDetect')}</option>
+              <option value="smithery">{t('settings:marketplaces.typeSmithery')}</option>
               <option value="github-mcp-registry">
-                {t('settings.marketplaces.typeGithubMcpRegistry')}
+                {t('settings:marketplaces.typeGithubMcpRegistry')}
               </option>
-              <option value="github-repo">{t('settings.marketplaces.typeGithubRepo')}</option>
-              <option value="openai-skills">{t('settings.marketplaces.typeOpenaiSkills')}</option>
+              <option value="github-repo">{t('settings:marketplaces.typeGithubRepo')}</option>
+              <option value="openai-skills">{t('settings:marketplaces.typeOpenaiSkills')}</option>
               <option value="anthropic-skills">
-                {t('settings.marketplaces.typeAnthropicSkills')}
+                {t('settings:marketplaces.typeAnthropicSkills')}
               </option>
-              <option value="json-feed">{t('settings.marketplaces.typeJsonFeed')}</option>
+              <option value="json-feed">{t('settings:marketplaces.typeJsonFeed')}</option>
             </select>
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -327,7 +327,7 @@ export function MarketplacesCard() {
               }}
               className="rounded-md px-3 py-1.5 text-sm text-foreground-muted hover:text-foreground"
             >
-              {t('settings.marketplaces.cancel')}
+              {t('settings:marketplaces.cancel')}
             </button>
             <button
               type="button"
@@ -335,7 +335,7 @@ export function MarketplacesCard() {
               disabled={!formData.name || !formData.url}
               className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              {t('settings.marketplaces.add')}
+              {t('settings:marketplaces.add')}
             </button>
           </div>
         </div>
@@ -347,7 +347,7 @@ export function MarketplacesCard() {
           <div className="mx-4 w-full max-w-md rounded-xl border border-border/60 bg-background p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-medium">
-                {t('settings.marketplaces.editTitle')}: {editingSource.name}
+                {t('settings:marketplaces.editTitle')}: {editingSource.name}
               </h3>
               <button
                 type="button"
@@ -360,7 +360,7 @@ export function MarketplacesCard() {
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs text-foreground-muted">
-                  {t('settings.marketplaces.authentication')}
+                  {t('settings:marketplaces.authentication')}
                 </label>
                 <select
                   value={editingSource.authType}
@@ -373,31 +373,31 @@ export function MarketplacesCard() {
                   }
                   className="flex h-9 w-full rounded-md border border-border/60 bg-background px-3 py-1 text-sm shadow-sm focus:border-primary focus:outline-none"
                 >
-                  <option value="none">{t('settings.marketplaces.noAuth')}</option>
-                  <option value="github-token">{t('settings.marketplaces.githubToken')}</option>
-                  <option value="bearer">{t('settings.marketplaces.bearerToken')}</option>
+                  <option value="none">{t('settings:marketplaces.noAuth')}</option>
+                  <option value="github-token">{t('settings:marketplaces.githubToken')}</option>
+                  <option value="bearer">{t('settings:marketplaces.bearerToken')}</option>
                 </select>
               </div>
               {editingSource.authType !== 'none' && (
                 <div className="space-y-1">
                   <label className="text-xs text-foreground-muted">
                     {editingSource.authType === 'github-token'
-                      ? t('settings.marketplaces.githubPatLabel')
-                      : t('settings.marketplaces.bearerTokenLabel')}
+                      ? t('settings:marketplaces.githubPatLabel')
+                      : t('settings:marketplaces.bearerTokenLabel')}
                   </label>
                   <Input
                     value={editingSource.token}
                     onChange={(e) => setEditingSource({ ...editingSource, token: e.target.value })}
                     placeholder={
                       editingSource.authType === 'github-token'
-                        ? t('settings.marketplaces.githubPatPlaceholder')
-                        : t('settings.marketplaces.bearerTokenPlaceholder')
+                        ? t('settings:marketplaces.githubPatPlaceholder')
+                        : t('settings:marketplaces.bearerTokenPlaceholder')
                     }
                     type="password"
                   />
                   {editingSource.authType === 'github-token' && (
                     <p className="text-[11px] text-foreground-muted/70">
-                      {t('settings.marketplaces.githubTokenHelp')}
+                      {t('settings:marketplaces.githubTokenHelp')}
                     </p>
                   )}
                 </div>
@@ -409,14 +409,14 @@ export function MarketplacesCard() {
                 onClick={() => setEditingSource(null)}
                 className="rounded-md px-3 py-1.5 text-sm text-foreground-muted hover:text-foreground"
               >
-                {t('settings.marketplaces.cancel')}
+                {t('settings:marketplaces.cancel')}
               </button>
               <button
                 type="button"
                 onClick={handleSaveEdit}
                 className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
               >
-                {t('settings.marketplaces.save')}
+                {t('settings:marketplaces.save')}
               </button>
             </div>
           </div>

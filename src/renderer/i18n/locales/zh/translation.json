@@ -821,6 +821,7 @@
     "taskBranchPlaceholder": "从名称自动生成",
     "finalBranch": "最终分支：",
     "allProjectsUseBranch": "所有项目将使用此分支名称。",
+    "createBranch": "创建新分支",
     "pushBranch": "推送分支到远程",
     "creating": "创建中...",
     "create": "创建"

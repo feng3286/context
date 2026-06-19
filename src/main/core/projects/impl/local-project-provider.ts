@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import { Conversation } from '@shared/conversations';
@@ -10,7 +11,6 @@ import { err, ok, type Result } from '@shared/result';
 import { getTaskEnvVars } from '@shared/task/envVars';
 import { Task, type TaskBootstrapStatus } from '@shared/tasks';
 import { type Terminal } from '@shared/terminals';
-import { workspaceKey } from '@shared/workspace-key';
 import { LocalConversationProvider } from '@main/core/conversations/impl/local-conversation';
 import { LocalFileSystem } from '@main/core/fs/impl/local-fs';
 import type { FileSystemProvider } from '@main/core/fs/types';
@@ -26,9 +26,8 @@ import { LocalTerminalProvider } from '@main/core/terminals/impl/local-terminal-
 import { getGitLocalExec, getLocalExec } from '@main/core/utils/exec';
 import type { Workspace } from '@main/core/workspaces/workspace';
 import { WorkspaceLifecycleService } from '@main/core/workspaces/workspace-lifecycle-service';
-import { WorkspaceRegistry } from '@main/core/workspaces/workspace-registry';
 import { db } from '@main/db/client';
-import { taskProjects } from '@main/db/schema';
+import { taskProjects, tasks } from '@main/db/schema';
 import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
 import {
@@ -84,11 +83,11 @@ export class LocalProjectProvider implements ProjectProvider {
   readonly fs: FileSystemProvider;
 
   private tasks = new Map<string, TaskProvider>();
+  private taskWorkspaces = new Map<string, Workspace>();
   private provisioningTasks = new Map<string, Promise<Result<TaskProvider, ProvisionTaskError>>>();
   private tearingDownTasks = new Map<string, Promise<Result<void, TeardownTaskError>>>();
   private bootstrapErrors = new Map<string, ProvisionTaskError>();
   private worktreeService: WorktreeService;
-  private workspaceRegistry = new WorkspaceRegistry();
   private readonly localExec = getLocalExec();
   private readonly _gitWatcher: GitWatcherService;
   private readonly _gitFetchService: GitFetchService;
@@ -184,76 +183,83 @@ export class LocalProjectProvider implements ProjectProvider {
     // Sync PRs for this task's branch in the background.
     void prSyncScheduler.onTaskProvisioned(this.project.id, task.taskBranch);
 
-    const workspaceId = workspaceKey(task.taskBranch);
-    const workspace = await this.workspaceRegistry.acquire(workspaceId, async () => {
-      const workDir = await this.resolveTaskWorkDir(task, customWorkDir);
-      const exec = getGitLocalExec(() => githubConnectionService.getToken());
-      const workspaceFs = new LocalFileSystem(workDir);
+    const workspaceId = task.id;
 
-      const projectSettings = await this.settings.get();
-      const defaultBranch = await this.settings.getDefaultBranch();
-      const bootstrapTaskEnvVars = getTaskEnvVars({
-        taskId: task.id,
-        taskName: task.name,
-        taskPath: workDir,
-        projectPath: this.project.path,
-        defaultBranch,
-        portSeed: workDir,
-      });
-      const tmuxEnabled = projectSettings.tmux ?? false;
+    // Check if task already exists in DB (re-provisioning vs initial creation)
+    const existingTask = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.id, task.id))
+      .limit(1);
+    const allowExisting = existingTask.length > 0;
 
-      const taskLevelSettings = await getEffectiveTaskSettings({
-        projectSettings: this.settings,
-        taskFs: workspaceFs,
-      });
-      const shellSetup = taskLevelSettings.shellSetup ?? projectSettings.shellSetup;
-      const scripts = taskLevelSettings.scripts;
+    const workDir = await this.resolveTaskWorkDir(task, customWorkDir, allowExisting);
+    const exec = getGitLocalExec(() => githubConnectionService.getToken());
+    const workspaceFs = new LocalFileSystem(workDir);
 
-      const workspaceTerminals = new LocalTerminalProvider({
-        taskWorkDir: workDir,
-        taskId: workspaceId,
-        tmux: tmuxEnabled,
-        shellSetup,
-        exec,
-        taskEnvVars: bootstrapTaskEnvVars,
-      });
-      const lifecycleService = new WorkspaceLifecycleService({
-        workspaceId,
-        terminals: workspaceTerminals,
-      });
-
-      const createdWorkspace: Workspace = {
-        id: workspaceId,
-        path: workDir,
-        fs: workspaceFs,
-        git: new GitService(workDir, exec, workspaceFs),
-        settings: this.settings,
-        lifecycleService,
-      };
-
-      if (scripts?.setup) {
-        void lifecycleService.prepareAndRunLifecycleScript({
-          type: 'setup',
-          script: scripts.setup,
-        });
-      }
-
-      if (scripts?.run) {
-        void lifecycleService.prepareLifecycleScript({
-          type: 'run',
-          script: scripts.run,
-        });
-      }
-
-      if (scripts?.teardown) {
-        void lifecycleService.prepareLifecycleScript({
-          type: 'teardown',
-          script: scripts.teardown,
-        });
-      }
-
-      return createdWorkspace;
+    const projectSettings = await this.settings.get();
+    const defaultBranch = await this.settings.getDefaultBranch();
+    const bootstrapTaskEnvVars = getTaskEnvVars({
+      taskId: task.id,
+      taskName: task.name,
+      taskPath: workDir,
+      projectPath: this.project.path,
+      defaultBranch,
+      portSeed: task.id,
     });
+    const tmuxEnabled = projectSettings.tmux ?? false;
+
+    const taskLevelSettings = await getEffectiveTaskSettings({
+      projectSettings: this.settings,
+      taskFs: workspaceFs,
+    });
+    const shellSetup = taskLevelSettings.shellSetup ?? projectSettings.shellSetup;
+    const scripts = taskLevelSettings.scripts;
+
+    const workspaceTerminals = new LocalTerminalProvider({
+      taskWorkDir: workDir,
+      taskId: workspaceId,
+      tmux: tmuxEnabled,
+      shellSetup,
+      exec,
+      taskEnvVars: bootstrapTaskEnvVars,
+    });
+    const lifecycleService = new WorkspaceLifecycleService({
+      workspaceId,
+      terminals: workspaceTerminals,
+    });
+
+    const workspace: Workspace = {
+      id: workspaceId,
+      path: workDir,
+      fs: workspaceFs,
+      git: new GitService(workDir, exec, workspaceFs),
+      settings: this.settings,
+      lifecycleService,
+    };
+
+    if (scripts?.setup) {
+      void lifecycleService.prepareAndRunLifecycleScript({
+        type: 'setup',
+        script: scripts.setup,
+      });
+    }
+
+    if (scripts?.run) {
+      void lifecycleService.prepareLifecycleScript({
+        type: 'run',
+        script: scripts.run,
+      });
+    }
+
+    if (scripts?.teardown) {
+      void lifecycleService.prepareLifecycleScript({
+        type: 'teardown',
+        script: scripts.teardown,
+      });
+    }
+
+    this.taskWorkspaces.set(workspaceId, workspace);
 
     // Register the workspace with the git watcher so that index/HEAD changes
     // in its worktree git dir are emitted as granular workspace events.
@@ -263,9 +269,6 @@ export class LocalProjectProvider implements ProjectProvider {
 
     let provisionSucceeded = false;
     try {
-      const exec = getGitLocalExec(() => githubConnectionService.getToken());
-      const projectSettings = await this.settings.get();
-      const defaultBranch = await this.settings.getDefaultBranch();
       const effectiveTaskPath =
         projectCount === 1 && taskBaseDir
           ? path.join(taskBaseDir, this.project.name)
@@ -276,14 +279,8 @@ export class LocalProjectProvider implements ProjectProvider {
         taskPath: effectiveTaskPath,
         projectPath: this.project.path,
         defaultBranch,
-        portSeed: effectiveTaskPath,
+        portSeed: task.id,
       });
-      const tmuxEnabled = projectSettings.tmux ?? false;
-      const taskLevelSettings = await getEffectiveTaskSettings({
-        projectSettings: this.settings,
-        taskFs: workspace.fs,
-      });
-      const shellSetup = taskLevelSettings.shellSetup ?? projectSettings.shellSetup;
 
       const conversationProvider = new LocalConversationProvider({
         taskWorkDir: effectiveTaskPath,
@@ -340,7 +337,7 @@ export class LocalProjectProvider implements ProjectProvider {
       return taskEnv;
     } finally {
       if (!provisionSucceeded) {
-        await this.workspaceRegistry.release(workspace.id).catch(() => {});
+        await this.disposeWorkspace(workspaceId);
       }
     }
   }
@@ -393,55 +390,53 @@ export class LocalProjectProvider implements ProjectProvider {
   getWorkspace(
     workspaceId: string
   ): import('@main/core/workspaces/workspace').Workspace | undefined {
-    return this.workspaceRegistry.get(workspaceId);
+    return this.taskWorkspaces.get(workspaceId);
   }
 
   async ensureWorkspace(workspaceId: string, worktreePath: string): Promise<Workspace> {
-    const existing = this.workspaceRegistry.get(workspaceId);
+    const existing = this.taskWorkspaces.get(workspaceId);
     if (existing) {
       return existing;
     }
 
-    return this.workspaceRegistry.acquire(workspaceId, async () => {
-      const exec = getGitLocalExec(() => githubConnectionService.getToken());
-      const workspaceFs = new LocalFileSystem(worktreePath);
-      const projectSettings = await this.settings.get();
-      const defaultBranch = await this.settings.getDefaultBranch();
+    const exec = getGitLocalExec(() => githubConnectionService.getToken());
+    const workspaceFs = new LocalFileSystem(worktreePath);
+    const projectSettings = await this.settings.get();
+    const defaultBranch = await this.settings.getDefaultBranch();
 
-      const workspaceTerminals = new LocalTerminalProvider({
-        taskWorkDir: worktreePath,
-        taskId: workspaceId,
-        tmux: projectSettings.tmux ?? false,
-        shellSetup: projectSettings.shellSetup,
-        exec,
-        taskEnvVars: {},
-      });
-      const lifecycleService = new WorkspaceLifecycleService({
-        workspaceId,
-        terminals: workspaceTerminals,
-      });
-
-      const createdWorkspace: Workspace = {
-        id: workspaceId,
-        path: worktreePath,
-        fs: workspaceFs,
-        git: new GitService(worktreePath, exec, workspaceFs),
-        settings: this.settings,
-        lifecycleService,
-      };
-
-      // Register with git watcher
-      const mainDotGitAbs = path.resolve(this.project.path, '.git');
-      const relativeGitDir = await createdWorkspace.git.getWorktreeGitDir(mainDotGitAbs);
-      this._gitWatcher.registerWorktree(workspaceId, relativeGitDir);
-
-      return createdWorkspace;
+    const workspaceTerminals = new LocalTerminalProvider({
+      taskWorkDir: worktreePath,
+      taskId: workspaceId,
+      tmux: projectSettings.tmux ?? false,
+      shellSetup: projectSettings.shellSetup,
+      exec,
+      taskEnvVars: {},
     });
+    const lifecycleService = new WorkspaceLifecycleService({
+      workspaceId,
+      terminals: workspaceTerminals,
+    });
+
+    const createdWorkspace: Workspace = {
+      id: workspaceId,
+      path: worktreePath,
+      fs: workspaceFs,
+      git: new GitService(worktreePath, exec, workspaceFs),
+      settings: this.settings,
+      lifecycleService,
+    };
+
+    // Register with git watcher
+    const mainDotGitAbs = path.resolve(this.project.path, '.git');
+    const relativeGitDir = await createdWorkspace.git.getWorktreeGitDir(mainDotGitAbs);
+    this._gitWatcher.registerWorktree(workspaceId, relativeGitDir);
+
+    this.taskWorkspaces.set(workspaceId, createdWorkspace);
+    return createdWorkspace;
   }
 
   private async doTeardownTask(task: TaskProvider): Promise<void> {
-    const wsId = workspaceKey(task.taskBranch);
-    const workspace = this.workspaceRegistry.get(wsId);
+    const workspace = this.taskWorkspaces.get(task.taskId);
 
     if (workspace) {
       const settings = await getEffectiveTaskSettings({
@@ -450,7 +445,7 @@ export class LocalProjectProvider implements ProjectProvider {
       });
       const scripts = settings.scripts;
 
-      if (scripts?.teardown && this.workspaceRegistry.refCount(wsId) === 1) {
+      if (scripts?.teardown) {
         try {
           const runTeardown = workspace.lifecycleService.runLifecycleScript(
             { type: 'teardown', script: scripts.teardown },
@@ -475,10 +470,16 @@ export class LocalProjectProvider implements ProjectProvider {
 
     await task.conversations.destroyAll();
     await task.terminals.destroyAll();
-    if (this.workspaceRegistry.refCount(wsId) <= 1) {
-      this._gitWatcher.unregisterWorktree(wsId);
+    this._gitWatcher.unregisterWorktree(task.taskId);
+    await this.disposeWorkspace(task.taskId);
+  }
+
+  private async disposeWorkspace(workspaceId: string): Promise<void> {
+    const workspace = this.taskWorkspaces.get(workspaceId);
+    if (workspace) {
+      await workspace.lifecycleService.dispose();
+      this.taskWorkspaces.delete(workspaceId);
     }
-    await this.workspaceRegistry.release(wsId);
   }
 
   private async cleanupDetachedTmuxSessions(taskId: string): Promise<void> {
@@ -505,6 +506,16 @@ export class LocalProjectProvider implements ProjectProvider {
 
   async removeWorktreeAtPath(worktreePath: string): Promise<void> {
     await this.worktreeService.removeWorktree(worktreePath);
+    // Verify removal succeeded
+    try {
+      await fs.access(worktreePath);
+      throw new Error(`Worktree directory still exists after removal: ${worktreePath}`);
+    } catch (err: unknown) {
+      // If access fails (ENOENT), removal succeeded. If other error, re-throw.
+      if (err && typeof err === 'object' && 'code' in err && err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
   }
 
   async fetch(): Promise<Result<void, FetchError>> {
@@ -525,50 +536,110 @@ export class LocalProjectProvider implements ProjectProvider {
         )
       );
       this.tasks.clear();
-      await this.workspaceRegistry.releaseAll();
+      await this.cleanupWorkspaces();
     } else {
       await Promise.all(Array.from(this.tasks.keys()).map((id) => this.teardownTask(id)));
-      await this.workspaceRegistry.releaseAll();
+      await this.cleanupWorkspaces();
     }
   }
 
-  private async resolveTaskWorkDir(task: Task, customWorkDir?: string): Promise<string> {
-    if (!task.taskBranch) {
-      return this.project.path;
+  private async cleanupWorkspaces(): Promise<void> {
+    for (const [workspaceId] of this.taskWorkspaces) {
+      await this.disposeWorkspace(workspaceId);
     }
+  }
 
+  private async resolveTaskWorkDir(
+    task: Task,
+    customWorkDir?: string,
+    allowExisting?: boolean
+  ): Promise<string> {
     // Re-read worktree directory from settings to pick up any changes
     // made to the global defaultWorktreeDirectory since project was opened.
     await this.worktreeService.syncWorktreePoolPath();
 
-    const existing = await this.worktreeService.getWorktree(task.taskBranch);
-    if (existing) {
-      return existing;
-    }
+    // If task has a branch, try to find or create its worktree
+    if (task.taskBranch) {
+      // Only look up existing worktree during re-provisioning (allowExisting=true).
+      // During initial provisioning, always create a fresh worktree.
+      if (allowExisting) {
+        const existing = await this.worktreeService.getWorktree(task.taskBranch);
+        if (existing) {
+          return existing;
+        }
+      }
 
-    // Get sourceBranch from taskProjects (per-project source branch)
-    const sourceBranchName = await this.getSourceBranchForTask(task.id);
+      // Check if worktree already exists at the expected custom path (re-provisioning case)
+      if (customWorkDir) {
+        try {
+          await fs.access(customWorkDir);
+          if (await this.isValidWorktree(customWorkDir)) {
+            return customWorkDir;
+          }
+          // Directory exists but is not a valid worktree — clean it up and recreate
+          await fs.rm(customWorkDir, { recursive: true, force: true });
+        } catch {
+          // Directory doesn't exist — proceed to create
+        }
+      }
 
-    if (!sourceBranchName || task.taskBranch === sourceBranchName) {
-      const result = await this.worktreeService.checkoutExistingBranch(
+      // Get sourceBranch from taskProjects (per-project source branch)
+      const sourceBranchName = await this.getSourceBranchForTask(task.id);
+
+      if (!sourceBranchName || task.taskBranch === sourceBranchName) {
+        const result = await this.worktreeService.checkoutExistingBranch(
+          task.taskBranch,
+          customWorkDir
+        );
+        if (!result.success) {
+          if (allowExisting && result.error.type === 'worktree-already-exists') {
+            return result.error.path;
+          }
+          throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);
+        }
+        return result.data;
+      }
+
+      const result = await this.worktreeService.checkoutBranchWorktree(
+        { type: 'local', branch: sourceBranchName },
         task.taskBranch,
         customWorkDir
       );
       if (!result.success) {
+        if (allowExisting && result.error.type === 'worktree-already-exists') {
+          return result.error.path;
+        }
         throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);
       }
       return result.data;
     }
 
-    const result = await this.worktreeService.checkoutBranchWorktree(
-      { type: 'local', branch: sourceBranchName },
-      task.taskBranch,
+    // No task branch — create worktree from source branch directly
+    const sourceBranchName = await this.getSourceBranchForTask(task.id);
+    if (!sourceBranchName) {
+      throw new Error('No source branch found for task');
+    }
+
+    const result = await this.worktreeService.checkoutExistingBranch(
+      sourceBranchName,
       customWorkDir
     );
     if (!result.success) {
-      throw mapWorktreeErrorToProvisionError(task.taskBranch, result.error);
+      if (allowExisting && result.error.type === 'worktree-already-exists') {
+        return result.error.path;
+      }
+      throw mapWorktreeErrorToProvisionError(sourceBranchName, result.error);
     }
     return result.data;
+  }
+
+  private async isValidWorktree(worktreePath: string): Promise<boolean> {
+    try {
+      await this.localExec('git', ['rev-parse', '--git-dir'], { cwd: worktreePath });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async getSourceBranchForTask(taskId: string): Promise<string | undefined> {

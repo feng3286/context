@@ -533,15 +533,16 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 <MicroLabel className="text-foreground-passive items-center flex">Task</MicroLabel>
                 <span className="text-sm tracking-tight">{taskDisplayName(taskStore)}</span>
               </div>
-              {provisionedTask.isMultiProject && provisionedTask.projectContexts ? (
-                <MultiProjectGitSections provisionedTask={provisionedTask} />
-              ) : (
-                <ProjectGitActions
-                  projectId={projectId}
-                  taskId={taskId}
-                  provisionedTask={provisionedTask}
-                />
-              )}
+              {provisionedTask.taskBranch &&
+                (provisionedTask.isMultiProject && provisionedTask.projectContexts ? (
+                  <MultiProjectGitSections provisionedTask={provisionedTask} />
+                ) : (
+                  <ProjectGitActions
+                    projectId={projectId}
+                    taskId={taskId}
+                    provisionedTask={provisionedTask}
+                  />
+                ))}
               <IssueSelector
                 value={taskPayload.linkedIssue ?? null}
                 onValueChange={(issue) => {

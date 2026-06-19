@@ -61,6 +61,7 @@ export type CreateMultiProjectTaskParams = {
   name: string;
   taskBranch: string;
   pushBranch?: boolean;
+  createBranch?: boolean;
   projectBranchSources: Array<{
     projectId: string;
     sourceBranch: string;

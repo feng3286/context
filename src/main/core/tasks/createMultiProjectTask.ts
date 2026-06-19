@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { eq, sql } from 'drizzle-orm';
 import { err, ok, Result } from '@shared/result';
@@ -73,20 +74,34 @@ async function rollbackProjects(provisioned: ProvisionedProject[]): Promise<void
   }
 }
 
+async function cleanupTaskBaseDir(taskBaseDir: string): Promise<void> {
+  try {
+    await fs.promises.rm(taskBaseDir, { recursive: true, force: true });
+    log.info('createMultiProjectTask: cleaned up taskBaseDir', { taskBaseDir });
+  } catch (e) {
+    log.warn('createMultiProjectTask: failed to clean up taskBaseDir', {
+      taskBaseDir,
+      error: e,
+    });
+  }
+}
+
 export async function createMultiProjectTask(
   params: CreateMultiProjectTaskParams
 ): Promise<Result<CreateTaskSuccess, CreateTaskError>> {
-  const { projectBranchSources, pushBranch } = params;
+  const { projectBranchSources, pushBranch, createBranch = true } = params;
   const initialStatus: TaskLifecycleStatus = 'in_progress';
   let warning: CreateTaskWarning | undefined;
 
-  // Generate suffix and get branchPrefix
-  const suffix = generateBranchSuffix();
+  // Generate suffix and get branchPrefix (only needed if creating branch)
+  const suffix = createBranch ? generateBranchSuffix() : '';
   const branchPrefix = (await appSettingsService.get('localProject')).branchPrefix ?? '';
 
-  // Resolve the final task branch name with prefix and suffix
+  // Resolve the final task branch name with prefix and suffix (or empty if not creating branch)
   const rawBranch = params.taskBranch.trim();
-  const resolvedTaskBranch = resolveTaskBranchName({ rawBranch, branchPrefix, suffix });
+  const resolvedTaskBranch = createBranch
+    ? resolveTaskBranchName({ rawBranch, branchPrefix, suffix })
+    : '';
 
   // Validate all projects exist
   for (const source of projectBranchSources) {
@@ -127,62 +142,130 @@ export async function createMultiProjectTask(
     conversations: {},
   };
 
-  // Phase 1: Create branches for all projects in parallel (async, outside DB transaction)
+  // Phase 1: Create branches for all projects in parallel (only if createBranch is true)
   const phase1Results: Awaited<ReturnType<typeof phase1ForProject>>[] = [];
-  try {
-    phase1Results.push(
-      ...(await Promise.all(
-        projectBranchSources.map((source) =>
-          phase1ForProject(source, resolvedTaskBranch, pushBranch)
-        )
-      ))
-    );
-  } catch (error) {
-    // Phase 1 failure: no branches were created yet, nothing to rollback
-    return err({
-      type: 'provision-failed',
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  if (createBranch) {
+    try {
+      phase1Results.push(
+        ...(await Promise.all(
+          projectBranchSources.map((source) =>
+            phase1ForProject(source, resolvedTaskBranch, pushBranch)
+          )
+        ))
+      );
+    } catch (error) {
+      // Phase 1 failure: no branches were created yet, nothing to rollback
+      return err({
+        type: 'provision-failed',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
 
-  // Collect provisioned projects from Phase 1 successes (for rollback)
-  for (const r of phase1Results) {
-    if (r.type === 'error') continue;
-    provisioned.push({ projectId: r.projectId, branchName: resolvedTaskBranch });
-    if (r.type === 'warning') {
-      warning ??= r.warning;
+    // Collect provisioned projects from Phase 1 successes (for rollback)
+    for (const r of phase1Results) {
+      if (r.type === 'error') continue;
+      provisioned.push({ projectId: r.projectId, branchName: resolvedTaskBranch });
+      if (r.type === 'warning') {
+        warning ??= r.warning;
+      }
     }
   }
 
-  // Phase 2: Provision worktrees + terminals for all Phase 1 successes in parallel
+  // Phase 2: Provision worktrees + terminals for all projects
+  // If createBranch is true, use Phase 1 successes; otherwise use all projects
+  // Track worktrees created in this phase for rollback on failure
+  const phase2Worktrees: { projectId: string; worktreePath: string }[] = [];
+
   try {
-    const phase1Success = phase1Results.filter(
-      (r): r is Extract<Phase1Result, { type: 'success' | 'warning' }> => r.type !== 'error'
-    );
+    const projectsToProvision = createBranch
+      ? phase1Results.filter(
+          (r): r is Extract<Phase1Result, { type: 'success' | 'warning' }> => r.type !== 'error'
+        )
+      : projectBranchSources.map((source) => ({
+          type: 'success' as const,
+          projectId: source.projectId,
+          projectName: '',
+          sourceBranch: source.sourceBranch,
+        }));
+
     const phase2Results = await Promise.all(
-      phase1Success.map((r) =>
+      projectsToProvision.map((r) =>
         phase2ForProject(
           r.projectId,
-          r.projectName,
+          'projectName' in r ? r.projectName : '',
           resolvedTaskBranch,
           temporaryTask,
           taskBaseDir,
-          projectBranchSources.length
+          projectBranchSources.length,
+          createBranch ? undefined : ('sourceBranch' in r ? r.sourceBranch : undefined)
         )
       )
     );
 
     for (const r of phase2Results) {
       if (!r.success) {
+        log.warn('createMultiProjectTask: Phase 2 failure, rolling back', {
+          failedProjectId: r.projectId,
+          error: r.error,
+          worktreesToRollback: phase2Worktrees.length,
+        });
+        // Rollback Phase 2 worktrees created in this phase
+        for (let i = phase2Worktrees.length - 1; i >= 0; i--) {
+          const wt = phase2Worktrees[i];
+          try {
+            const proj = projectManager.getProject(wt.projectId);
+            if (proj) {
+              await proj.removeWorktreeAtPath(wt.worktreePath);
+              log.info('createMultiProjectTask: Phase 2 rollback succeeded', {
+                projectId: wt.projectId,
+                worktreePath: wt.worktreePath,
+              });
+            } else {
+              log.warn('createMultiProjectTask: Phase 2 rollback skipped, project not in manager', {
+                projectId: wt.projectId,
+                worktreePath: wt.worktreePath,
+              });
+            }
+          } catch (e) {
+            log.error('createMultiProjectTask: Phase 2 rollback failed', {
+              projectId: wt.projectId,
+              worktreePath: wt.worktreePath,
+              error: e,
+            });
+          }
+        }
         await rollbackProjects(provisioned);
+        await cleanupTaskBaseDir(taskBaseDir);
         return err(mapProvisionError(r.error));
       }
       // Attach worktree path to the matching provisioned entry for rollback
       const lastP = provisioned.find((p) => p.projectId === r.projectId && !p.worktreePath);
       if (lastP) lastP.worktreePath = r.worktreePath;
+      // Also track for Phase 2-only rollback (when createBranch=false)
+      if (r.worktreePath) {
+        phase2Worktrees.push({ projectId: r.projectId, worktreePath: r.worktreePath });
+        log.info('createMultiProjectTask: Phase 2 worktree tracked for rollback', {
+          projectId: r.projectId,
+          worktreePath: r.worktreePath,
+        });
+      }
     }
   } catch (error) {
+    // Rollback Phase 2 worktrees created in this phase
+    for (let i = phase2Worktrees.length - 1; i >= 0; i--) {
+      const wt = phase2Worktrees[i];
+      try {
+        const proj = projectManager.getProject(wt.projectId);
+        if (proj) await proj.removeWorktreeAtPath(wt.worktreePath);
+      } catch (e) {
+        log.warn('createMultiProjectTask: Phase 2 rollback failed', {
+          worktreePath: wt.worktreePath,
+          error: e,
+        });
+      }
+    }
     await rollbackProjects(provisioned);
+    await cleanupTaskBaseDir(taskBaseDir);
     log.error('createMultiProjectTask: unexpected error during worktree setup', { error });
     return err({
       type: 'provision-failed',
@@ -247,6 +330,7 @@ export async function createMultiProjectTask(
 
   if (dbError) {
     await rollbackProjects(provisioned);
+    await cleanupTaskBaseDir(taskBaseDir);
     // Clean up orphaned task row if taskProjects insert failed after tasks insert
     try {
       await db.delete(tasks).where(eq(tasks.id, params.id));
@@ -269,8 +353,8 @@ export async function createMultiProjectTask(
 // --- Phase 1 helpers: run per project in parallel ---
 
 type Phase1Result =
-  | { type: 'success'; projectId: string; projectName: string }
-  | { type: 'warning'; projectId: string; projectName: string; warning: CreateTaskWarning }
+  | { type: 'success'; projectId: string; projectName: string; sourceBranch?: string }
+  | { type: 'warning'; projectId: string; projectName: string; warning: CreateTaskWarning; sourceBranch?: string }
   | { type: 'error'; error: CreateTaskError };
 
 async function phase1ForProject(
@@ -330,6 +414,7 @@ async function phase1ForProject(
       projectId: source.projectId,
       projectName,
       warning,
+      sourceBranch: source.sourceBranch,
     };
     return result;
   }
@@ -337,6 +422,7 @@ async function phase1ForProject(
     type: 'success',
     projectId: source.projectId,
     projectName,
+    sourceBranch: source.sourceBranch,
   };
   return result;
 }
@@ -351,14 +437,23 @@ async function phase2ForProject(
   taskBranch: string,
   temporaryTask: Task,
   taskBaseDir: string,
-  projectCount: number
+  projectCount: number,
+  sourceBranch?: string
 ): Promise<Phase2Result> {
   const project = projectManager.getProject(projectId);
   if (!project) return { success: false, error: 'Project not found', projectId };
 
-  const projectWorkDir = path.join(taskBaseDir, projectName);
+  // Resolve actual project name when not provided (e.g. no-branch creation flow)
+  const resolvedProjectName = projectName || (await getProjectById(projectId))?.name || projectId;
+
+  // When no taskBranch (no branch creation), use source branch for the temporary task
+  const effectiveTask = sourceBranch
+    ? { ...temporaryTask, taskBranch: sourceBranch }
+    : temporaryTask;
+
+  const projectWorkDir = path.join(taskBaseDir, resolvedProjectName);
   const provisionResult = await project.provisionTask(
-    temporaryTask,
+    effectiveTask,
     [],
     [],
     projectWorkDir,
@@ -369,6 +464,10 @@ async function phase2ForProject(
     return { success: false, error: provisionResult.error.type, projectId };
   }
 
-  const worktreePath = await project.getWorktreeForBranch(taskBranch);
+  const worktreePath = taskBranch
+    ? await project.getWorktreeForBranch(taskBranch)
+    : sourceBranch
+      ? await project.getWorktreeForBranch(sourceBranch)
+      : undefined;
   return { success: true, projectId, worktreePath };
 }

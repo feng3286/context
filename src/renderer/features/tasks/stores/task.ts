@@ -1,7 +1,6 @@
 import { makeAutoObservable, observable, runInAction } from 'mobx';
 import { Issue, Task, TaskLifecycleStatus } from '@shared/tasks';
 import type { TaskViewSnapshot } from '@shared/view-state';
-import { workspaceKey } from '@shared/workspace-key';
 import type { RepositoryStore } from '@renderer/features/projects/stores/repository-store';
 import { ConversationManagerStore } from '@renderer/features/tasks/conversations/conversation-manager';
 import { DraftCommentsStore } from '@renderer/features/tasks/diff-view/stores/draft-comments-store';
@@ -73,7 +72,7 @@ export class ProvisionedTask {
     this._taskData = taskData;
     this._projectId = projectId;
     this.path = path;
-    this.workspaceId = workspaceKey(taskData.taskBranch);
+    this.workspaceId = taskData.id;
     this.repositoryStore = repositoryStore;
 
     // Check if this is a multi-project task (workspace task)

@@ -9,7 +9,8 @@ import { ProjectSettingsProvider } from '../settings/schema';
 
 export type ServeWorktreeError =
   | { type: 'worktree-setup-failed'; cause: unknown }
-  | { type: 'branch-not-found'; branch: string };
+  | { type: 'branch-not-found'; branch: string }
+  | { type: 'worktree-already-exists'; path: string };
 
 export class WorktreeService {
   private gitOpQueue: Promise<unknown> = Promise.resolve();
@@ -162,14 +163,16 @@ export class WorktreeService {
   ): Promise<Result<string, ServeWorktreeError>> {
     const checkedOutPath = await this.findCheckedOutPathForBranch(branchName);
     if (checkedOutPath) {
-      return ok(checkedOutPath);
+      return err({ type: 'worktree-already-exists', path: checkedOutPath });
     }
 
     // If customWorkDir is provided, use it directly as the target path
     // Otherwise, use default pool path + branchName
     const targetPath = customWorkDir ?? path.join(this.worktreePoolPath, branchName);
     if (await this.rootFs.exists(targetPath)) {
-      if (await this.isValidWorktree(targetPath)) return ok(targetPath);
+      if (await this.isValidWorktree(targetPath)) {
+        return err({ type: 'worktree-already-exists', path: targetPath });
+      }
       await this.rootFs.remove(targetPath, { recursive: true }).catch(() => {});
       await this.exec('git', ['worktree', 'prune'], { cwd: this.repoPath }).catch(() => {});
     }
@@ -204,6 +207,8 @@ export class WorktreeService {
         timeout: 300_000,
       });
     } catch (cause) {
+      // Clean up orphan directory created by mkdir above
+      await this.rootFs.remove(targetPath, { recursive: true }).catch(() => {});
       return err({ type: 'worktree-setup-failed', cause });
     }
 
@@ -231,7 +236,7 @@ export class WorktreeService {
   ): Promise<Result<string, ServeWorktreeError>> {
     const checkedOutPath = await this.findCheckedOutPathForBranch(branchName);
     if (checkedOutPath) {
-      return ok(checkedOutPath);
+      return err({ type: 'worktree-already-exists', path: checkedOutPath });
     }
 
     // If customWorkDir is provided, use it directly as the target path
@@ -240,13 +245,14 @@ export class WorktreeService {
     const remoteCandidates = await this.getRemoteCandidates();
 
     if (await this.rootFs.exists(targetPath)) {
-      if (await this.isValidWorktree(targetPath)) return ok(targetPath);
+      if (await this.isValidWorktree(targetPath)) {
+        return err({ type: 'worktree-already-exists', path: targetPath });
+      }
       await this.rootFs.remove(targetPath, { recursive: true });
       await this.exec('git', ['worktree', 'prune'], { cwd: this.repoPath }).catch(() => {});
     }
 
     try {
-      await this.rootFs.mkdir(path.dirname(targetPath), { recursive: true });
       for (const remoteName of remoteCandidates) {
         await this.exec('git', ['fetch', remoteName], { cwd: this.repoPath }).catch(() => {});
       }
@@ -285,6 +291,8 @@ export class WorktreeService {
         );
       }
 
+      // Only create directory after all git checks pass
+      await this.rootFs.mkdir(path.dirname(targetPath), { recursive: true });
       await this.exec('git', ['worktree', 'prune'], { cwd: this.repoPath }).catch(() => {});
       // Enable long paths on Windows before worktree add
       if (process.platform === 'win32') {
@@ -295,6 +303,8 @@ export class WorktreeService {
         timeout: 300_000,
       });
     } catch (cause) {
+      // Clean up orphan directory created by mkdir above
+      await this.rootFs.remove(targetPath, { recursive: true }).catch(() => {});
       return err({ type: 'worktree-setup-failed', cause });
     }
 
@@ -313,7 +323,21 @@ export class WorktreeService {
   }
 
   async removeWorktree(worktreePath: string): Promise<void> {
-    await this.rootFs.remove(worktreePath, { recursive: true }).catch(() => {});
+    // Force remove the directory first with retries (handles Windows file locks)
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.rootFs.remove(worktreePath, { recursive: true });
+        break; // Success
+      } catch (err) {
+        lastError = err;
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+    }
+    if (lastError) throw lastError;
+    // Then prune stale worktree references
     await this.exec('git', ['worktree', 'prune'], { cwd: this.repoPath }).catch(() => {});
   }
 

@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { eq, inArray, sql } from 'drizzle-orm';
-import { workspaceKey } from '@shared/workspace-key';
 import { mapConversationRowToConversation } from '@main/core/conversations/utils';
 import { projectManager } from '@main/core/projects/project-manager';
 import { formatProvisionTaskError } from '@main/core/projects/provision-task-error';
@@ -32,7 +31,7 @@ export async function provisionTask(taskId: string) {
   }
 
   const existingTask = primaryProject.getTask(taskId);
-  const wsId = workspaceKey(task.taskBranch);
+  const wsId = task.id;
 
   // Batch fetch all project names in a single query
   const projectIds = taskProjectRows.map((r) => r.projectId);

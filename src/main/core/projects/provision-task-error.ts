@@ -14,6 +14,8 @@ export function mapWorktreeErrorToProvisionError(
         branch,
         message: error.cause instanceof Error ? error.cause.message : String(error.cause),
       };
+    case 'worktree-already-exists':
+      return { type: 'worktree-already-exists', branch, path: error.path };
   }
 }
 
@@ -24,7 +26,8 @@ export function isProvisionTaskError(e: unknown): e is ProvisionTaskError {
     type === 'timeout' ||
     type === 'error' ||
     type === 'branch-not-found' ||
-    type === 'worktree-setup-failed'
+    type === 'worktree-setup-failed' ||
+    type === 'worktree-already-exists'
   );
 }
 
@@ -39,5 +42,7 @@ export function formatProvisionTaskError(error: ProvisionTaskError): string {
       return error.message
         ? `Failed to set up worktree for branch "${error.branch}": ${error.message}`
         : `Failed to set up worktree for branch "${error.branch}"`;
+    case 'worktree-already-exists':
+      return `Worktree already exists for branch "${error.branch}" at ${error.path}`;
   }
 }

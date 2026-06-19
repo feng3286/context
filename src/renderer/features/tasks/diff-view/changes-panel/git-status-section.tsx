@@ -12,6 +12,7 @@ import {
   getTaskStore,
 } from '@renderer/features/tasks/stores/task-selectors';
 import { useTaskViewContext } from '@renderer/features/tasks/task-view-context';
+import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { useGitActions } from '@renderer/features/tasks/use-git-actions';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Button } from '@renderer/lib/ui/button';
@@ -21,6 +22,7 @@ import { getBranchTooltipText, getPublishTooltipText } from './git-status-toolti
 export const GitStatusSection = observer(function GitStatusSection() {
   const { t } = useTranslation();
   const { projectId, taskId } = useTaskViewContext();
+  const provisionedTask = useProvisionedTask();
   const workspaceId = asProvisioned(getTaskStore(projectId, taskId))?.workspaceId;
   const branchName = getTaskGitStore(projectId, taskId)?.branchName;
   const projectName = projectDisplayName(getProjectStore(projectId)) ?? 'repository';
@@ -41,6 +43,11 @@ export const GitStatusSection = observer(function GitStatusSection() {
     isPushing,
   } = useGitActions(projectId, taskId);
   const shouldOfferAddRemote = (repositoryStore?.remotes.length ?? 0) === 0;
+
+  // Hide git actions when taskBranch doesn't exist (no-branch creation path)
+  if (!provisionedTask.taskBranch) {
+    return null;
+  }
 
   const handlePublishClick = () => {
     if (!branchName || !workspaceId) return;

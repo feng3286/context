@@ -90,50 +90,54 @@ export async function addProjectToTask(
     .where(and(eq(taskProjects.taskId, taskId), eq(taskProjects.projectId, projectId)));
   if (existing) return err({ type: 'already-bound' });
 
-  // For adding a project to an existing task, we use the task's existing branch directly
+  // For adding a project to an existing task, use the task's existing branch.
+  // If the task has no branch (created without branch creation), we work directly from the source branch.
   const resolvedTaskBranch = taskRow.taskBranch ?? '';
+  const hasTaskBranch = !!resolvedTaskBranch;
 
   const project = projectManager.getProject(projectId);
   if (!project) return err({ type: 'project-not-found' });
 
   const projectName = projectRow.name;
 
-  // Phase 1: Create git branch (or reuse if already exists)
-  const repoInfo = await project.repository.getRepositoryInfo();
-  if (repoInfo.isUnborn) {
-    return err({
-      type: 'branch-create-failed',
-      branch: resolvedTaskBranch,
-      error: 'Repository has no commits',
-    });
-  }
+  // Phase 1: Create git branch (only if task has a branch)
+  if (hasTaskBranch) {
+    const repoInfo = await project.repository.getRepositoryInfo();
+    if (repoInfo.isUnborn) {
+      return err({
+        type: 'branch-create-failed',
+        branch: resolvedTaskBranch,
+        error: 'Repository has no commits',
+      });
+    }
 
-  const createResult = await project.repository.createBranch(
-    resolvedTaskBranch,
-    sourceBranch,
-    false
-  );
-  if (!createResult.success) {
-    const branchErr = createResult.error;
-    const errorMsg =
-      branchErr.type === 'already_exists'
-        ? `Branch '${resolvedTaskBranch}' already exists`
-        : branchErr.type === 'error'
-          ? branchErr.message
-          : branchErr.type === 'invalid_base'
-            ? `Invalid base branch '${branchErr.from}'`
-            : `Invalid branch name '${branchErr.name}'`;
-    return err({
-      type: 'branch-create-failed',
-      branch: resolvedTaskBranch,
-      error: errorMsg,
-    });
+    const createResult = await project.repository.createBranch(
+      resolvedTaskBranch,
+      sourceBranch,
+      false
+    );
+    if (!createResult.success) {
+      const branchErr = createResult.error;
+      const errorMsg =
+        branchErr.type === 'already_exists'
+          ? `Branch '${resolvedTaskBranch}' already exists`
+          : branchErr.type === 'error'
+            ? branchErr.message
+            : branchErr.type === 'invalid_base'
+              ? `Invalid base branch '${branchErr.from}'`
+              : `Invalid branch name '${branchErr.name}'`;
+      return err({
+        type: 'branch-create-failed',
+        branch: resolvedTaskBranch,
+        error: errorMsg,
+      });
+    }
   }
 
   let worktreePath: string | undefined;
   try {
-    // Optional push
-    if (pushBranch) {
+    // Optional push (only if task has a branch)
+    if (hasTaskBranch && pushBranch) {
       const configuredRemote = await project.repository.getConfiguredRemote();
       const publishResult = await project.repository.publishBranch(
         resolvedTaskBranch,
@@ -148,12 +152,14 @@ export async function addProjectToTask(
     }
 
     // Phase 2: Provision worktree
+    // When no taskBranch, use sourceBranch for provisioning
+    const effectiveTaskBranch = hasTaskBranch ? resolvedTaskBranch : sourceBranch;
     const temporaryTask: Task = {
       id: taskId,
       workspaceId: taskRow.workspaceId,
       workDir: taskRow.workDir ?? undefined,
       name: taskRow.name,
-      taskBranch: resolvedTaskBranch,
+      taskBranch: effectiveTaskBranch,
       status: taskRow.status as TaskLifecycleStatus,
       createdAt: taskRow.createdAt,
       updatedAt: taskRow.updatedAt,
@@ -175,13 +181,17 @@ export async function addProjectToTask(
       2 // at least 2 projects now
     );
     if (!provisionResult.success) {
-      await rollbackProject(projectId, resolvedTaskBranch);
+      if (hasTaskBranch) {
+        await rollbackProject(projectId, resolvedTaskBranch);
+      }
       return err({ type: 'provision-failed', message: provisionResult.error.type });
     }
 
-    worktreePath = await project.getWorktreeForBranch(resolvedTaskBranch);
+    worktreePath = await project.getWorktreeForBranch(effectiveTaskBranch);
   } catch (error) {
-    await rollbackProject(projectId, resolvedTaskBranch, worktreePath);
+    if (hasTaskBranch) {
+      await rollbackProject(projectId, resolvedTaskBranch, worktreePath);
+    }
     return err({
       type: 'provision-failed',
       message: error instanceof Error ? error.message : String(error),
@@ -224,7 +234,9 @@ export async function addProjectToTask(
       });
     }
   } catch (e) {
-    await rollbackProject(projectId, resolvedTaskBranch, worktreePath);
+    if (hasTaskBranch) {
+      await rollbackProject(projectId, resolvedTaskBranch, worktreePath);
+    }
     log.error('addProjectToTask: DB insert failed', { error: e });
     return err({ type: 'db-error', message: e instanceof Error ? e.message : String(e) });
   }

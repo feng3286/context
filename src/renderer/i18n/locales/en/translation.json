@@ -821,6 +821,7 @@
     "taskBranchPlaceholder": "Auto-generated from name",
     "finalBranch": "Final branch:",
     "allProjectsUseBranch": "All projects will use this branch name.",
+    "createBranch": "Create new branch",
     "pushBranch": "Push branch to remote",
     "creating": "Creating...",
     "create": "Create"

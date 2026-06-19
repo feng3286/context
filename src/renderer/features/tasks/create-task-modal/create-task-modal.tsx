@@ -2,6 +2,7 @@ import { Check, ChevronRight, FolderOpen, GitBranch } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { CreateTaskError } from '@shared/tasks';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
@@ -32,6 +33,61 @@ interface ProjectBranchSelectorProps {
   onProjectToggle: (projectId: string) => void;
   branchConfigs: Map<string, ProjectBranchConfig>;
   onBranchChange: (projectId: string, branch: string) => void;
+}
+
+function formatCreateTaskError(err: CreateTaskError): { title: string; detail?: string } {
+  switch (err.type) {
+    case 'project-not-found':
+      return { title: 'Project not found', detail: 'One or more selected projects do not exist.' };
+    case 'initial-commit-required':
+      return {
+        title: 'Initial commit required',
+        detail: `Project has no commits. Make an initial commit on "${err.branch}" first.`,
+      };
+    case 'branch-create-failed':
+      return {
+        title: 'Failed to create branch',
+        detail: `Could not create branch "${err.branch}". ${err.error}`,
+      };
+    case 'provision-failed': {
+      const msg = err.message;
+      // Try to extract a meaningful title from the error message
+      if (msg.includes('worktree')) {
+        return {
+          title: 'Worktree setup failed',
+          detail: msg,
+        };
+      }
+      if (msg.includes('branch') && msg.includes('not found')) {
+        return {
+          title: 'Branch not found',
+          detail: msg,
+        };
+      }
+      if (msg.includes('already exists')) {
+        return {
+          title: 'Worktree already exists',
+          detail: msg,
+        };
+      }
+      if (msg.includes('ENOENT') || msg.includes('no such file')) {
+        return {
+          title: 'Path not found',
+          detail: msg,
+        };
+      }
+      if (msg.includes('EACCES') || msg.includes('permission')) {
+        return {
+          title: 'Permission denied',
+          detail: msg,
+        };
+      }
+      return {
+        title: 'Task creation failed',
+        detail: msg,
+      };
+    }
+  }
 }
 
 const ProjectBranchSelector = observer(function ProjectBranchSelector({
@@ -137,8 +193,10 @@ export const CreateTaskModal = observer(function CreateTaskModal({
   const [taskBranch, setTaskBranch] = useState('');
   const [branchManuallyEdited, setBranchManuallyEdited] = useState(false);
   const [pushBranch, setPushBranch] = useState(false);
+  const [createBranch, setCreateBranch] = useState(true);
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { navigate } = useNavigate();
 
   // Get branchPrefix setting for preview
@@ -203,6 +261,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
 
   const handleTaskNameChange = (name: string) => {
     setTaskName(name);
+    setError(null);
     if (!branchManuallyEdited) {
       setTaskBranch(generateTaskBranch(name));
     }
@@ -235,14 +294,21 @@ export const CreateTaskModal = observer(function CreateTaskModal({
         };
       });
 
-      await rpc.tasks.createMultiProjectTask({
+      const result = await rpc.tasks.createMultiProjectTask({
         id,
         workspaceId,
         name: taskName.trim(),
         taskBranch: taskBranch.trim() || generateTaskBranch(taskName),
         pushBranch: pushBranch || undefined,
+        createBranch,
         projectBranchSources,
       });
+
+      if (!result.success) {
+        const formatted = formatCreateTaskError(result.error);
+        setError(formatted.detail ? `${formatted.title}: ${formatted.detail}` : formatted.title);
+        return;
+      }
 
       // Refresh workspace store to show new task in sidebar
       const wsStore = getWorkspaceStore(workspaceId);
@@ -265,6 +331,10 @@ export const CreateTaskModal = observer(function CreateTaskModal({
       onClose();
     } catch (err) {
       console.error('Failed to create task:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      const innerMatch = message.match(/Failed to provision task: (.+)/);
+      const innerMessage = innerMatch ? innerMatch[1] : message;
+      setError(`Task creation failed: ${innerMessage}`);
     } finally {
       setLoading(false);
     }
@@ -275,6 +345,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
     taskName,
     taskBranch,
     pushBranch,
+    createBranch,
     branchConfigs,
     navigate,
     onClose,
@@ -308,40 +379,59 @@ export const CreateTaskModal = observer(function CreateTaskModal({
           />
         </Field>
 
-        <Field>
-          <FieldLabel>{t('createTask:taskBranch')}</FieldLabel>
-          <input
-            type="text"
-            value={taskBranch}
-            onChange={(e) => {
-              setTaskBranch(e.target.value);
-              setBranchManuallyEdited(true);
-            }}
-            className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder={t('createTask:taskBranchPlaceholder')}
-          />
-          {previewBranchName && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('createTask:finalBranch')}{' '}
-              <code className="rounded bg-muted/60 px-1">{previewBranchName}</code>
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('createTask:allProjectsUseBranch')}
-          </p>
-        </Field>
-
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
-            checked={pushBranch}
-            onChange={(e) => setPushBranch(e.target.checked)}
+            checked={createBranch}
+            onChange={(e) => setCreateBranch(e.target.checked)}
             className="h-4 w-4 rounded border-border"
           />
-          <span className="text-sm">{t('createTask:pushBranch')}</span>
+          <span className="text-sm">{t('createTask:createBranch')}</span>
         </label>
+
+        {createBranch && (
+          <>
+            <Field>
+              <FieldLabel>{t('createTask:taskBranch')}</FieldLabel>
+              <input
+                type="text"
+                value={taskBranch}
+                onChange={(e) => {
+                  setTaskBranch(e.target.value);
+                  setBranchManuallyEdited(true);
+                }}
+                className="w-full mt-1 px-3 py-2 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder={t('createTask:taskBranchPlaceholder')}
+              />
+              {previewBranchName && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('createTask:finalBranch')}{' '}
+                  <code className="rounded bg-muted/60 px-1">{previewBranchName}</code>
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('createTask:allProjectsUseBranch')}
+              </p>
+            </Field>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={pushBranch}
+                onChange={(e) => setPushBranch(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">{t('createTask:pushBranch')}</span>
+            </label>
+          </>
+        )}
       </DialogContentArea>
       <DialogFooter>
+        {error && (
+          <div className="flex-1 min-w-0 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/20">
+            <p className="text-xs font-medium text-destructive truncate">{error}</p>
+          </div>
+        )}
         <ConfirmButton
           size="sm"
           onClick={() => void handleCreateTask()}

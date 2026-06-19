@@ -109,7 +109,7 @@ describe('WorktreeService', () => {
       }
     });
 
-    it('returns existing checked out path when branch is already checked out elsewhere', async () => {
+    it('returns worktree-already-exists when branch is already checked out elsewhere', async () => {
       await exec('git', ['branch', 'feature/already-open'], { cwd: repoDir });
       const externalDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wt-external-'));
       const externalPath = path.join(externalDir, 'feature-already-open');
@@ -123,9 +123,10 @@ describe('WorktreeService', () => {
         'feature/already-open'
       );
 
-      expect(result.success).toBe(true);
-      if (!result.success) throw new Error('expected success');
-      expect(result.data).toBe(fs.realpathSync(externalPath));
+      expect(result.success).toBe(false);
+      if (result.success) throw new Error('expected failure');
+      expect(result.error.type).toBe('worktree-already-exists');
+      expect(path.normalize((result.error as { type: 'worktree-already-exists'; path: string }).path)).toBe(fs.realpathSync(externalPath));
 
       fs.rmSync(externalDir, { recursive: true, force: true });
     });
@@ -160,7 +161,7 @@ describe('WorktreeService', () => {
   });
 
   describe('checkoutExistingBranch', () => {
-    it('returns existing checked out path when branch is already checked out elsewhere', async () => {
+    it('returns worktree-already-exists when branch is already checked out elsewhere', async () => {
       await exec('git', ['branch', 'feature/already-open-existing'], { cwd: repoDir });
       const externalDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wt-external-'));
       const externalPath = path.join(externalDir, 'feature-already-open-existing');
@@ -171,9 +172,10 @@ describe('WorktreeService', () => {
       const svc = makeService();
       const result = await svc.checkoutExistingBranch('feature/already-open-existing');
 
-      expect(result.success).toBe(true);
-      if (!result.success) throw new Error('expected success');
-      expect(result.data).toBe(fs.realpathSync(externalPath));
+      expect(result.success).toBe(false);
+      if (result.success) throw new Error('expected failure');
+      expect(result.error.type).toBe('worktree-already-exists');
+      expect(path.normalize((result.error as { type: 'worktree-already-exists'; path: string }).path)).toBe(fs.realpathSync(externalPath));
 
       fs.rmSync(externalDir, { recursive: true, force: true });
     });
@@ -196,6 +198,29 @@ describe('WorktreeService', () => {
       } finally {
         fs.rmSync(remoteDir, { recursive: true, force: true });
       }
+    });
+
+    it('cleans up target directory when git worktree add fails', async () => {
+      await exec('git', ['branch', 'feature/cleanup-test'], { cwd: repoDir });
+
+      // Wrap exec to make 'git worktree add' always fail
+      const failingExec: ExecFn = async (command, args, options) => {
+        if (command === 'git' && args[0] === 'worktree' && args[1] === 'add') {
+          throw new Error('simulated worktree add failure');
+        }
+        return exec(command, args, options);
+      };
+
+      const svc = makeService({ exec: failingExec });
+      const result = await svc.checkoutExistingBranch('feature/cleanup-test');
+
+      expect(result.success).toBe(false);
+      if (result.success) throw new Error('expected failure');
+      expect(result.error.type).toBe('worktree-setup-failed');
+
+      // Verify the target directory was cleaned up (not orphaned)
+      const expectedPath = path.join(poolDir, 'feature/cleanup-test');
+      expect(fs.existsSync(expectedPath)).toBe(false);
     });
   });
 });

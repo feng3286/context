@@ -133,14 +133,23 @@ export class LocalProjectProvider implements ProjectProvider {
     terminals: Terminal[],
     workDir?: string,
     taskBaseDir?: string,
-    projectCount?: number
+    projectCount?: number,
+    forceCreateWorktree?: boolean
   ): Promise<Result<TaskProvider, ProvisionTaskError>> {
     const existing = this.tasks.get(task.id);
     if (existing) return ok(existing);
     if (this.provisioningTasks.has(task.id)) return this.provisioningTasks.get(task.id)!;
 
     const promise = withTimeout(
-      this.doProvisionTask(task, conversations, terminals, workDir, taskBaseDir, projectCount),
+      this.doProvisionTask(
+        task,
+        conversations,
+        terminals,
+        workDir,
+        taskBaseDir,
+        projectCount,
+        forceCreateWorktree
+      ),
       TASK_TIMEOUT_MS
     )
       .then((taskEnv) => {
@@ -169,7 +178,8 @@ export class LocalProjectProvider implements ProjectProvider {
     terminals: Terminal[],
     customWorkDir?: string,
     taskBaseDir?: string,
-    projectCount?: number
+    projectCount?: number,
+    forceCreateWorktree?: boolean
   ): Promise<TaskProvider> {
     log.debug('LocalProjectProvider: doProvisionTask START', {
       taskId: task.id,
@@ -186,12 +196,14 @@ export class LocalProjectProvider implements ProjectProvider {
     const workspaceId = task.id;
 
     // Check if task already exists in DB (re-provisioning vs initial creation)
+    // When forceCreateWorktree is true (e.g. adding a project to an existing task),
+    // always create a fresh worktree at customWorkDir instead of reusing an existing one.
     const existingTask = await db
       .select({ id: tasks.id })
       .from(tasks)
       .where(eq(tasks.id, task.id))
       .limit(1);
-    const allowExisting = existingTask.length > 0;
+    const allowExisting = existingTask.length > 0 && !forceCreateWorktree;
 
     const workDir = await this.resolveTaskWorkDir(task, customWorkDir, allowExisting);
     const exec = getGitLocalExec(() => githubConnectionService.getToken());

@@ -1,5 +1,5 @@
-import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { SFTPWrapper } from 'ssh2';
@@ -173,7 +173,8 @@ export class SshProjectProvider implements ProjectProvider {
     terminals: Terminal[],
     _workDir?: string,
     _taskBaseDir?: string,
-    _projectCount?: number
+    _projectCount?: number,
+    _forceCreateWorktree?: boolean
   ): Promise<Result<TaskProvider, ProvisionTaskError>> {
     const existing = this.tasks.get(task.id);
     if (existing) return ok(existing);

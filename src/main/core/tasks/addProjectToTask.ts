@@ -178,20 +178,28 @@ export async function addProjectToTask(
       [],
       projectWorkDir,
       taskBaseDir,
-      2 // at least 2 projects now
+      2, // at least 2 projects now
+      true // forceCreateWorktree: always create worktree at customWorkDir
     );
     if (!provisionResult.success) {
       if (hasTaskBranch) {
         await rollbackProject(projectId, resolvedTaskBranch);
       }
-      return err({ type: 'provision-failed', message: provisionResult.error.type });
+      const errMsg =
+        ('message' in provisionResult.error ? provisionResult.error.message : undefined) ??
+        provisionResult.error.type;
+      return err({ type: 'provision-failed', message: errMsg });
     }
 
     worktreePath = await project.getWorktreeForBranch(effectiveTaskBranch);
   } catch (error) {
-    if (hasTaskBranch) {
-      await rollbackProject(projectId, resolvedTaskBranch, worktreePath);
-    }
+    // Rollback worktree + branch regardless of hasTaskBranch,
+    // since worktree may have been created from sourceBranch
+    await rollbackProject(
+      projectId,
+      hasTaskBranch ? resolvedTaskBranch : sourceBranch,
+      worktreePath
+    );
     return err({
       type: 'provision-failed',
       message: error instanceof Error ? error.message : String(error),
@@ -234,9 +242,13 @@ export async function addProjectToTask(
       });
     }
   } catch (e) {
-    if (hasTaskBranch) {
-      await rollbackProject(projectId, resolvedTaskBranch, worktreePath);
-    }
+    // Rollback worktree + branch regardless of hasTaskBranch,
+    // since worktree was created from sourceBranch when no taskBranch
+    await rollbackProject(
+      projectId,
+      hasTaskBranch ? resolvedTaskBranch : sourceBranch,
+      worktreePath
+    );
     log.error('addProjectToTask: DB insert failed', { error: e });
     return err({ type: 'db-error', message: e instanceof Error ? e.message : String(e) });
   }

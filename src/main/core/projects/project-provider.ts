@@ -55,7 +55,8 @@ export interface ProjectProvider {
     terminals: Terminal[],
     workDir?: string,
     taskBaseDir?: string,
-    projectCount?: number
+    projectCount?: number,
+    forceCreateWorktree?: boolean
   ): Promise<Result<TaskProvider, ProvisionTaskError>>;
   getTask(taskId: string): TaskProvider | undefined;
   getTaskBootstrapStatus(taskId: string): TaskBootstrapStatus;

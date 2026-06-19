@@ -146,8 +146,11 @@ export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal
               : errType === 'branch-create-failed'
                 ? (result.error as { error: string }).error
                 : errType === 'provision-failed'
-                  ? t('manageTaskProjects:provisionFailed', { project: project.projectName })
-                  : t('manageTaskProjects:addFailed', { project: project.projectName })
+                  ? ((result.error as { message?: string }).message ??
+                    t('manageTaskProjects:provisionFailed', { project: project.projectName }))
+                  : errType === 'db-error'
+                    ? (result.error as { message: string }).message
+                    : t('manageTaskProjects:addFailed', { project: project.projectName })
           );
         }
       }

@@ -178,6 +178,20 @@ export class WorktreeService {
     }
 
     try {
+      // Fetch remote tracking refs in parallel before creating or looking up branches,
+      // so that refs/remotes/<remote>/<branch> are up to date.
+      // Only fetch the specific branch, not the entire remote.
+      const remoteCandidates = await this.getRemoteCandidates();
+      await Promise.all(
+        remoteCandidates.map((remoteName) => {
+          const branchRef = sourceBranch?.type === 'local' ? sourceBranch.branch : branchName;
+          // Fetch only the specific branch ref (not the entire remote)
+          return this.exec('git', ['fetch', remoteName, branchRef], {
+            cwd: this.repoPath,
+          }).catch(() => {});
+        })
+      );
+
       let localExists = false;
       try {
         await this.exec('git', ['rev-parse', '--verify', `refs/heads/${branchName}`], {
@@ -253,9 +267,15 @@ export class WorktreeService {
     }
 
     try {
-      for (const remoteName of remoteCandidates) {
-        await this.exec('git', ['fetch', remoteName], { cwd: this.repoPath }).catch(() => {});
-      }
+      // Fetch the specific branch from remotes in parallel (not the entire remote)
+      const remoteCandidates = await this.getRemoteCandidates();
+      await Promise.all(
+        remoteCandidates.map((remoteName) =>
+          this.exec('git', ['fetch', remoteName, branchName], {
+            cwd: this.repoPath,
+          }).catch(() => {})
+        )
+      );
       let localExists = false;
       try {
         await this.exec('git', ['rev-parse', '--verify', `refs/heads/${branchName}`], {
@@ -332,7 +352,7 @@ export class WorktreeService {
       } catch (err) {
         lastError = err;
         if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 500));
         }
       }
     }

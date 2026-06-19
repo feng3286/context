@@ -9,6 +9,7 @@ import { CreateConversationModal } from '@renderer/features/tasks/conversations/
 import { CreateTaskModal } from '@renderer/features/tasks/create-task-modal/create-task-modal';
 import { CreatePrModal } from '@renderer/features/tasks/diff-view/changes-panel/components/pr-entry/create-pr-modal';
 import { ConflictDialog } from '@renderer/features/tasks/editor/conflict-dialog';
+import { ManageTaskProjectsModal } from '@renderer/features/tasks/manage-task-projects-modal';
 import { RenameTaskModal } from '@renderer/features/tasks/rename-task-modal';
 import { CreateWorkspaceModal } from '@renderer/features/workspaces/components/create-workspace-modal';
 import { SelectProjectModal } from '@renderer/features/workspaces/components/select-project-modal';
@@ -56,4 +57,5 @@ export const modalRegistry = {
   selectProjectModal: createModal(SelectProjectModal),
   pullRequestsModal: createModal(PullRequestsModal, { size: 'lg' }),
   projectSettingsModal: createModal(ProjectSettingsModal, { size: 'lg' }),
+  manageTaskProjectsModal: createModal(ManageTaskProjectsModal, { size: 'md' }),
 } satisfies Record<string, ModalRegistryEntry>;

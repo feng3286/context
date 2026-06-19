@@ -78,6 +78,15 @@ export class ProjectContextStore {
     this.activate();
   }
 
+  async refresh(
+    taskId: string,
+    workspaceId: string,
+    repositoryStore: RepositoryStore
+  ): Promise<void> {
+    this.dispose();
+    await this.loadProjectContexts(taskId, workspaceId, repositoryStore);
+  }
+
   setActiveProject(projectId: string | null): void {
     this.activeProjectId = projectId;
   }

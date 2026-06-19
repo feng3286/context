@@ -6,6 +6,7 @@ import {
   Files,
   GitBranch,
   GitCommit,
+  Link,
   ListTree,
   MessageSquare,
   Pin,
@@ -35,6 +36,7 @@ import {
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { getActiveEditorPosition } from '@renderer/lib/editor/activeCodeEditor';
 import { useDelayedBoolean } from '@renderer/lib/hooks/use-delay-boolean';
+import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Badge } from '@renderer/lib/ui/badge';
 import { Button } from '@renderer/lib/ui/button';
 import { MicroLabel } from '@renderer/lib/ui/label';
@@ -500,6 +502,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
   const taskPayload = getRegisteredTaskData(projectId, taskId)!;
   const provisionedTask = useProvisionedTask();
   const { delayedIsPending } = useTitlebarState();
+  const showModal = useShowModal('manageTaskProjectsModal');
   useTaskViewShortcuts();
 
   const projectStore = asMounted(getProjectStore(projectId));
@@ -577,6 +580,15 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
               className="h-7 bg-background"
             />
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1"
+            onClick={() => showModal({ taskId, projectId })}
+          >
+            <Link className="size-3.5" />
+            <span className="text-xs">关联项目</span>
+          </Button>
           <ViewToggleGroup delayedIsPending={delayedIsPending} />
           <RightPanelToggleGroup delayedIsPending={delayedIsPending} />
         </div>

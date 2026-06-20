@@ -76,7 +76,8 @@ export function SettingsPage({
       description: t('settings:general.description'),
       sections: [
         { component: <LanguageSelector /> },
-        { component: <TelemetryCard /> },
+        // TelemetryCard commented out — privacy & telemetry setting disabled
+        // { component: <TelemetryCard /> },
         { component: <AutoGenerateTaskNamesRow /> },
         { component: <AutoTrustWorktreesRow /> },
         { component: <NotificationSettingsCard /> },

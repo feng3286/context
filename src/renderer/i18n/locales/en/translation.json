@@ -968,5 +968,88 @@
       "connectButton": "Connect",
       "failedToConnect": "Failed to connect."
     }
+  },
+  "manageTaskProjects": {
+    "title": "Manage Task Projects",
+    "boundProjects_one": "{{count}} bound project",
+    "boundProjects_other": "{{count}} bound projects",
+    "addProject": "Add Project",
+    "hideAdd": "Hide Add Section",
+    "noAvailableProjects": "All workspace projects are already bound to this task",
+    "saving": "Saving...",
+    "alreadyBound": "{{project}} is already bound to this task",
+    "provisionFailed": "Failed to provision {{project}}",
+    "addFailed": "Failed to add {{project}}",
+    "linkedProjects": "Linked Projects"
+  },
+  "taskTitlebar": {
+    "workspace": "Workspace",
+    "project": "Project",
+    "createdFrom": "Created from",
+    "fetch": "Fetch",
+    "fetching": "Fetching...",
+    "fetchChanges": "Fetch changes",
+    "pull": "Pull",
+    "pulling": "Pulling...",
+    "nothingToPull": "Nothing to pull",
+    "pullChanges": "Pull changes",
+    "push": "Push",
+    "pushing": "Pushing...",
+    "nothingToPush": "Nothing to push",
+    "pushChanges": "Push changes",
+    "publish": "Publish",
+    "publishing": "Publishing...",
+    "publishBranch": "Publish branch",
+    "conversationsView": "Conversations view",
+    "diffView": "Diff view",
+    "fileView": "File view",
+    "gitChanges": "Git changes",
+    "terminals": "Terminals",
+    "fileExplorer": "File explorer",
+    "linkProject": "Link Projects"
+  },
+  "gitStatusTooltips": {
+    "createInitialCommit": "Create an initial commit first.",
+    "publishing": "Publishing...",
+    "addRemoteThenPublish": "Create or link a remote, then publish this branch",
+    "publishBranch": "Publish branch"
+  },
+  "createTaskError": {
+    "projectNotFound": {
+      "title": "Project not found",
+      "detail": "One or more selected projects do not exist."
+    },
+    "initialCommitRequired": {
+      "title": "Initial commit required",
+      "detail": "Project has no commits. Make an initial commit on \"{{branch}}\" first."
+    },
+    "branchCreateFailed": {
+      "title": "Failed to create branch",
+      "detail": "Could not create branch \"{{branch}}\". {{error}}"
+    },
+    "worktreeSetupFailed": {
+      "title": "Worktree setup failed",
+      "detail": "{{message}}"
+    },
+    "branchNotFound": {
+      "title": "Branch not found",
+      "detail": "{{message}}"
+    },
+    "worktreeAlreadyExists": {
+      "title": "Worktree already exists",
+      "detail": "{{message}}"
+    },
+    "pathNotFound": {
+      "title": "Path not found",
+      "detail": "{{message}}"
+    },
+    "permissionDenied": {
+      "title": "Permission denied",
+      "detail": "{{message}}"
+    },
+    "generic": {
+      "title": "Task creation failed",
+      "detail": "{{message}}"
+    }
   }
 }

@@ -126,7 +126,9 @@ describe('WorktreeService', () => {
       expect(result.success).toBe(false);
       if (result.success) throw new Error('expected failure');
       expect(result.error.type).toBe('worktree-already-exists');
-      expect(path.normalize((result.error as { type: 'worktree-already-exists'; path: string }).path)).toBe(fs.realpathSync(externalPath));
+      expect(
+        path.normalize((result.error as { type: 'worktree-already-exists'; path: string }).path)
+      ).toBe(fs.realpathSync(externalPath));
 
       fs.rmSync(externalDir, { recursive: true, force: true });
     });
@@ -175,7 +177,9 @@ describe('WorktreeService', () => {
       expect(result.success).toBe(false);
       if (result.success) throw new Error('expected failure');
       expect(result.error.type).toBe('worktree-already-exists');
-      expect(path.normalize((result.error as { type: 'worktree-already-exists'; path: string }).path)).toBe(fs.realpathSync(externalPath));
+      expect(
+        path.normalize((result.error as { type: 'worktree-already-exists'; path: string }).path)
+      ).toBe(fs.realpathSync(externalPath));
 
       fs.rmSync(externalDir, { recursive: true, force: true });
     });

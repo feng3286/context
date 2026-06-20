@@ -968,5 +968,88 @@
       "connectButton": "连接",
       "failedToConnect": "连接失败。"
     }
+  },
+  "manageTaskProjects": {
+    "title": "管理任务项目",
+    "boundProjects_one": "{{count}} 个已绑定项目",
+    "boundProjects_other": "{{count}} 个已绑定项目",
+    "addProject": "添加项目",
+    "hideAdd": "隐藏添加区域",
+    "noAvailableProjects": "工作区中的所有项目已绑定到此任务",
+    "saving": "保存中...",
+    "alreadyBound": "{{project}} 已绑定到此任务",
+    "provisionFailed": "配置 {{project}} 失败",
+    "addFailed": "添加 {{project}} 失败",
+    "linkedProjects": "关联项目"
+  },
+  "taskTitlebar": {
+    "workspace": "工作区",
+    "project": "项目",
+    "createdFrom": "创建于",
+    "fetch": "获取",
+    "fetching": "获取中...",
+    "fetchChanges": "获取更改",
+    "pull": "拉取",
+    "pulling": "拉取中...",
+    "nothingToPull": "无需拉取",
+    "pullChanges": "拉取更改",
+    "push": "推送",
+    "pushing": "推送中...",
+    "nothingToPush": "无需推送",
+    "pushChanges": "推送更改",
+    "publish": "发布",
+    "publishing": "发布中...",
+    "publishBranch": "发布分支",
+    "conversationsView": "对话视图",
+    "diffView": "差异视图",
+    "fileView": "文件视图",
+    "gitChanges": "Git 更改",
+    "terminals": "终端",
+    "fileExplorer": "文件浏览器",
+    "linkProject": "关联项目"
+  },
+  "gitStatusTooltips": {
+    "createInitialCommit": "请先创建初始提交。",
+    "publishing": "发布中...",
+    "addRemoteThenPublish": "创建或关联远程仓库，然后发布此分支",
+    "publishBranch": "发布分支"
+  },
+  "createTaskError": {
+    "projectNotFound": {
+      "title": "未找到项目",
+      "detail": "一个或多个所选项目不存在。"
+    },
+    "initialCommitRequired": {
+      "title": "需要初始提交",
+      "detail": "项目没有提交。请先在 \"{{branch}}\" 上进行初始提交。"
+    },
+    "branchCreateFailed": {
+      "title": "创建分支失败",
+      "detail": "无法创建分支 \"{{branch}}\"。{{error}}"
+    },
+    "worktreeSetupFailed": {
+      "title": "Worktree 设置失败",
+      "detail": "{{message}}"
+    },
+    "branchNotFound": {
+      "title": "未找到分支",
+      "detail": "{{message}}"
+    },
+    "worktreeAlreadyExists": {
+      "title": "Worktree 已存在",
+      "detail": "{{message}}"
+    },
+    "pathNotFound": {
+      "title": "路径不存在",
+      "detail": "{{message}}"
+    },
+    "permissionDenied": {
+      "title": "权限被拒绝",
+      "detail": "{{message}}"
+    },
+    "generic": {
+      "title": "任务创建失败",
+      "detail": "{{message}}"
+    }
   }
 }

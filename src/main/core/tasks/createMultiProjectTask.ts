@@ -197,7 +197,7 @@ export async function createMultiProjectTask(
           temporaryTask,
           taskBaseDir,
           projectBranchSources.length,
-          createBranch ? undefined : ('sourceBranch' in r ? r.sourceBranch : undefined)
+          createBranch ? undefined : 'sourceBranch' in r ? r.sourceBranch : undefined
         )
       )
     );
@@ -354,7 +354,13 @@ export async function createMultiProjectTask(
 
 type Phase1Result =
   | { type: 'success'; projectId: string; projectName: string; sourceBranch?: string }
-  | { type: 'warning'; projectId: string; projectName: string; warning: CreateTaskWarning; sourceBranch?: string }
+  | {
+      type: 'warning';
+      projectId: string;
+      projectName: string;
+      warning: CreateTaskWarning;
+      sourceBranch?: string;
+    }
   | { type: 'error'; error: CreateTaskError };
 
 async function phase1ForProject(

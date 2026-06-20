@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   asMounted,
   getProjectStore,
@@ -58,15 +59,16 @@ import { useGitActions } from './use-git-actions';
  */
 function getTaskProjectDisplayName(
   projectId: string,
-  provisionedTask: ReturnType<typeof useProvisionedTask>
+  provisionedTask: ReturnType<typeof useProvisionedTask>,
+  t: (key: string) => string
 ): string {
   if (provisionedTask.isMultiProject && provisionedTask._taskData.workspaceId) {
     const workspaceStore = getWorkspaceStore(provisionedTask._taskData.workspaceId);
-    const workspaceName = workspaceStore?.data?.name ?? 'Workspace';
+    const workspaceName = workspaceStore?.data?.name ?? t('taskTitlebar:workspace');
     const projectCount = provisionedTask.projectContexts?.projects.size ?? 0;
     return projectCount > 1 ? `${workspaceName} (${projectCount})` : workspaceName;
   }
-  return projectDisplayName(getProjectStore(projectId)) ?? 'Project';
+  return projectDisplayName(getProjectStore(projectId)) ?? t('taskTitlebar:project');
 }
 
 /** Single-project git actions section inside the popover. */
@@ -79,6 +81,7 @@ const ProjectGitActions = observer(function ProjectGitActions({
   taskId: string;
   provisionedTask: ReturnType<typeof useProvisionedTask>;
 }) {
+  const { t } = useTranslation();
   const {
     hasUpstream,
     aheadCount,
@@ -104,7 +107,7 @@ const ProjectGitActions = observer(function ProjectGitActions({
       </span>
       {ctx?.sourceBranch && (
         <span className="flex items-center gap-2 text-foreground-passive">
-          Created from
+          {t('taskTitlebar:createdFrom')}
           <span className="flex items-center gap-1 text-foreground-muted">
             <GitBranch className="size-3.5" /> {ctx.sourceBranch}
           </span>
@@ -123,10 +126,12 @@ const ProjectGitActions = observer(function ProjectGitActions({
                   onClick={() => fetch()}
                 >
                   <RefreshCcw className="size-3" />
-                  {isFetching ? 'Fetching...' : 'Fetch'}
+                  {isFetching ? t('taskTitlebar:fetching') : t('taskTitlebar:fetch')}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{isFetching ? 'Fetching...' : 'Fetch changes'}</TooltipContent>
+              <TooltipContent>
+                {isFetching ? t('taskTitlebar:fetching') : t('taskTitlebar:fetchChanges')}
+              </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger className="flex-1">
@@ -139,10 +144,10 @@ const ProjectGitActions = observer(function ProjectGitActions({
                 >
                   <ArrowDown className="size-3" />
                   {isPulling ? (
-                    'Pulling...'
+                    t('taskTitlebar:pulling')
                   ) : (
                     <span className="flex items-center gap-1">
-                      Pull
+                      {t('taskTitlebar:pull')}
                       <Badge variant="secondary" className="shrink-0">
                         {behindCount}
                       </Badge>
@@ -151,7 +156,11 @@ const ProjectGitActions = observer(function ProjectGitActions({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {isPulling ? 'Pulling...' : behindCount === 0 ? 'Nothing to pull' : 'Pull changes'}
+                {isPulling
+                  ? t('taskTitlebar:pulling')
+                  : behindCount === 0
+                    ? t('taskTitlebar:nothingToPull')
+                    : t('taskTitlebar:pullChanges')}
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -165,10 +174,10 @@ const ProjectGitActions = observer(function ProjectGitActions({
                 >
                   <ArrowUp className="size-3" />
                   {isPushing ? (
-                    'Pushing...'
+                    t('taskTitlebar:pushing')
                   ) : (
                     <span className="flex items-center gap-1">
-                      Push
+                      {t('taskTitlebar:push')}
                       <Badge variant="secondary" className="shrink-0">
                         {aheadCount}
                       </Badge>
@@ -177,7 +186,11 @@ const ProjectGitActions = observer(function ProjectGitActions({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {isPushing ? 'Pushing...' : aheadCount === 0 ? 'Nothing to push' : 'Push changes'}
+                {isPushing
+                  ? t('taskTitlebar:pushing')
+                  : aheadCount === 0
+                    ? t('taskTitlebar:nothingToPush')
+                    : t('taskTitlebar:pushChanges')}
               </TooltipContent>
             </Tooltip>
           </>
@@ -192,10 +205,12 @@ const ProjectGitActions = observer(function ProjectGitActions({
                 onClick={() => publish()}
               >
                 <ArrowUp className="size-3" />
-                {isPublishing ? 'Publishing...' : 'Publish'}
+                {isPublishing ? t('taskTitlebar:publishing') : t('taskTitlebar:publish')}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{isPublishing ? 'Publishing...' : 'Publish branch'}</TooltipContent>
+            <TooltipContent>
+              {isPublishing ? t('taskTitlebar:publishing') : t('taskTitlebar:publishBranch')}
+            </TooltipContent>
           </Tooltip>
         )}
       </div>
@@ -209,6 +224,7 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
 }: {
   provisionedTask: ReturnType<typeof useProvisionedTask>;
 }) {
+  const { t } = useTranslation();
   if (!provisionedTask.isMultiProject || !provisionedTask.projectContexts) return null;
 
   return (
@@ -230,7 +246,7 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
           )}
           {projectContext.sourceBranch && (
             <span className="flex items-center gap-2 text-foreground-passive">
-              Created from
+              {t('taskTitlebar:createdFrom')}
               <span className="flex items-center gap-1 text-foreground-muted">
                 <GitBranch className="size-3.5" /> {projectContext.sourceBranch}
               </span>
@@ -249,10 +265,10 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
                       onClick={() => projectContext.git.fetchRemote()}
                     >
                       <RefreshCcw className="size-3" />
-                      Fetch
+                      {t('taskTitlebar:fetch')}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Fetch changes</TooltipContent>
+                  <TooltipContent>{t('taskTitlebar:fetchChanges')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger className="flex-1">
@@ -265,7 +281,7 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
                     >
                       <ArrowDown className="size-3" />
                       <span className="flex items-center gap-1">
-                        Pull
+                        {t('taskTitlebar:pull')}
                         <Badge variant="secondary" className="shrink-0">
                           {projectContext.git.behindCount}
                         </Badge>
@@ -273,7 +289,9 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {projectContext.git.behindCount === 0 ? 'Nothing to pull' : 'Pull changes'}
+                    {projectContext.git.behindCount === 0
+                      ? t('taskTitlebar:nothingToPull')
+                      : t('taskTitlebar:pullChanges')}
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -287,7 +305,7 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
                     >
                       <ArrowUp className="size-3" />
                       <span className="flex items-center gap-1">
-                        Push
+                        {t('taskTitlebar:push')}
                         <Badge variant="secondary" className="shrink-0">
                           {projectContext.git.aheadCount}
                         </Badge>
@@ -295,7 +313,9 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {projectContext.git.aheadCount === 0 ? 'Nothing to push' : 'Push changes'}
+                    {projectContext.git.aheadCount === 0
+                      ? t('taskTitlebar:nothingToPush')
+                      : t('taskTitlebar:pushChanges')}
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -309,10 +329,10 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
                     onClick={() => projectContext.git.publishBranch()}
                   >
                     <ArrowUp className="size-3" />
-                    Publish
+                    {t('taskTitlebar:publish')}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Publish branch</TooltipContent>
+                <TooltipContent>{t('taskTitlebar:publishBranch')}</TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -324,6 +344,7 @@ const MultiProjectGitSections = observer(function MultiProjectGitSections({
 
 /** View toggle group (agents / diff / editor). */
 function ViewToggleGroup({ delayedIsPending }: { delayedIsPending: boolean }) {
+  const { t } = useTranslation();
   const { openAgentsView, openEditorView, openDiffView } = useTaskViewNavigation();
   const provisionedTask = useProvisionedTask();
   const { view } = provisionedTask.taskView;
@@ -353,7 +374,7 @@ function ViewToggleGroup({ delayedIsPending }: { delayedIsPending: boolean }) {
         </TooltipTrigger>
         <TooltipContent>
           <div className="flex flex-col gap-1">
-            <span>Conversations view</span>
+            <span>{t('taskTitlebar:conversationsView')}</span>
             <ShortcutHint settingsKey="taskViewAgents" />
           </div>
         </TooltipContent>
@@ -366,7 +387,7 @@ function ViewToggleGroup({ delayedIsPending }: { delayedIsPending: boolean }) {
         </TooltipTrigger>
         <TooltipContent>
           <div className="flex flex-col gap-1">
-            <span>Diff view</span>
+            <span>{t('taskTitlebar:diffView')}</span>
             <ShortcutHint settingsKey="taskViewDiff" />
           </div>
         </TooltipContent>
@@ -379,7 +400,7 @@ function ViewToggleGroup({ delayedIsPending }: { delayedIsPending: boolean }) {
         </TooltipTrigger>
         <TooltipContent>
           <div className="flex flex-col gap-1">
-            <span>File view</span>
+            <span>{t('taskTitlebar:fileView')}</span>
             <ShortcutHint settingsKey="taskViewEditor" />
           </div>
         </TooltipContent>
@@ -394,6 +415,7 @@ const RightPanelToggleGroup = observer(function RightPanelToggleGroup({
 }: {
   delayedIsPending: boolean;
 }) {
+  const { t } = useTranslation();
   const provisionedTask = useProvisionedTask();
   const { rightPanelView } = provisionedTask.taskView;
 
@@ -419,7 +441,7 @@ const RightPanelToggleGroup = observer(function RightPanelToggleGroup({
             <GitCommit className="size-3.5" />
           </ToggleGroupItem>
         </TooltipTrigger>
-        <TooltipContent>Git changes</TooltipContent>
+        <TooltipContent>{t('taskTitlebar:gitChanges')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger>
@@ -427,7 +449,7 @@ const RightPanelToggleGroup = observer(function RightPanelToggleGroup({
             <Terminal className="size-3.5" />
           </ToggleGroupItem>
         </TooltipTrigger>
-        <TooltipContent>Terminals</TooltipContent>
+        <TooltipContent>{t('taskTitlebar:terminals')}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger>
@@ -435,7 +457,7 @@ const RightPanelToggleGroup = observer(function RightPanelToggleGroup({
             <ListTree className="size-3.5" />
           </ToggleGroupItem>
         </TooltipTrigger>
-        <TooltipContent>File explorer</TooltipContent>
+        <TooltipContent>{t('taskTitlebar:fileExplorer')}</TooltipContent>
       </Tooltip>
     </ToggleGroup>
   );
@@ -460,6 +482,7 @@ const PendingTaskTitlebar = observer(function PendingTaskTitlebar({
   taskId: string;
   projectId: string;
 }) {
+  const { t } = useTranslation();
   const taskStore = getTaskStore(projectId, taskId);
   if (!taskStore) return null;
   const name = taskDisplayName(taskStore);
@@ -471,9 +494,9 @@ const PendingTaskTitlebar = observer(function PendingTaskTitlebar({
   let projectName: string;
   if (isMultiProject && taskData?.workspaceId) {
     const workspaceStore = getWorkspaceStore(taskData.workspaceId);
-    projectName = workspaceStore?.data?.name ?? 'Workspace';
+    projectName = workspaceStore?.data?.name ?? t('taskTitlebar:workspace');
   } else {
-    projectName = projectDisplayName(getProjectStore(projectId)) ?? 'Project';
+    projectName = projectDisplayName(getProjectStore(projectId)) ?? t('taskTitlebar:project');
   }
 
   return (
@@ -501,12 +524,13 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
   const taskStore = getTaskStore(projectId, taskId)!;
   const taskPayload = getRegisteredTaskData(projectId, taskId)!;
   const provisionedTask = useProvisionedTask();
+  const { t } = useTranslation();
   const { delayedIsPending } = useTitlebarState();
   const showModal = useShowModal('manageTaskProjectsModal');
   useTaskViewShortcuts();
 
   const projectStore = asMounted(getProjectStore(projectId));
-  const projectName = getTaskProjectDisplayName(projectId, provisionedTask);
+  const projectName = getTaskProjectDisplayName(projectId, provisionedTask, t);
   const isRemoteProject = projectStore?.data.type === 'ssh';
 
   const activeFilePath = useActiveFilePath();
@@ -588,7 +612,7 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
             onClick={() => showModal({ taskId, projectId })}
           >
             <Link className="size-3.5" />
-            <span className="text-xs">关联项目</span>
+            <span className="text-xs">{t('taskTitlebar:linkProject')}</span>
           </Button>
           <ViewToggleGroup delayedIsPending={delayedIsPending} />
           <RightPanelToggleGroup delayedIsPending={delayedIsPending} />

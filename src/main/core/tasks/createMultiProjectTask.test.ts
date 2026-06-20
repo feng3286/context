@@ -4,9 +4,9 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ok } from '@shared/result';
 import { LocalFileSystem } from '@main/core/fs/impl/local-fs';
-import { getLocalExec, type ExecFn } from '@main/core/utils/exec';
 import type { ProjectSettingsProvider } from '@main/core/projects/settings/schema';
 import { WorktreeService } from '@main/core/projects/worktrees/worktree-service';
+import { getLocalExec, type ExecFn } from '@main/core/utils/exec';
 
 // ─── Real worktree service tests with actual git ─────────────
 
@@ -46,12 +46,14 @@ describe('WorktreeService rollback behavior', () => {
     fs.rmSync(poolDir, { recursive: true, force: true });
   });
 
-  function makeService(overrides: Partial<{
-    worktreePoolPath: string;
-    repoPath: string;
-    exec: ExecFn;
-    projectSettings: ProjectSettingsProvider;
-  }> = {}): WorktreeService {
+  function makeService(
+    overrides: Partial<{
+      worktreePoolPath: string;
+      repoPath: string;
+      exec: ExecFn;
+      projectSettings: ProjectSettingsProvider;
+    }> = {}
+  ): WorktreeService {
     return new WorktreeService({
       worktreePoolPath: poolDir,
       repoPath: repoDir,

@@ -11,8 +11,7 @@ import {
   getTaskGitStore,
   getTaskStore,
 } from '@renderer/features/tasks/stores/task-selectors';
-import { useTaskViewContext } from '@renderer/features/tasks/task-view-context';
-import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
+import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
 import { useGitActions } from '@renderer/features/tasks/use-git-actions';
 import { useShowModal } from '@renderer/lib/modal/modal-provider';
 import { Button } from '@renderer/lib/ui/button';
@@ -72,7 +71,7 @@ export const GitStatusSection = observer(function GitStatusSection() {
               <GitBranch className="size-3 shrink-0" />
               <span className="truncate text-xs">{branchName}</span>
             </TooltipTrigger>
-            <TooltipContent side="bottom">{getBranchTooltipText(branchName)}</TooltipContent>
+            <TooltipContent side="bottom">{getBranchTooltipText(branchName, t)}</TooltipContent>
           </Tooltip>
           <div className="flex items-center gap-1">
             {hasUpstream ? (
@@ -88,7 +87,9 @@ export const GitStatusSection = observer(function GitStatusSection() {
                       <RefreshCcw className="size-3" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{isFetching ? 'Fetching...' : 'Fetch changes'}</TooltipContent>
+                  <TooltipContent>
+                    {isFetching ? t('taskTitlebar:fetching') : t('taskTitlebar:fetchChanges')}
+                  </TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger>
@@ -103,10 +104,10 @@ export const GitStatusSection = observer(function GitStatusSection() {
                   </TooltipTrigger>
                   <TooltipContent>
                     {isPulling
-                      ? 'Pulling...'
+                      ? t('taskTitlebar:pulling')
                       : behindCount === 0
-                        ? 'Nothing to pull'
-                        : 'Pull changes'}
+                        ? t('taskTitlebar:nothingToPull')
+                        : t('taskTitlebar:pullChanges')}
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -122,10 +123,10 @@ export const GitStatusSection = observer(function GitStatusSection() {
                   </TooltipTrigger>
                   <TooltipContent>
                     {isPushing
-                      ? 'Pushing...'
+                      ? t('taskTitlebar:pushing')
                       : aheadCount === 0
-                        ? 'Nothing to push'
-                        : 'Push changes'}
+                        ? t('taskTitlebar:nothingToPush')
+                        : t('taskTitlebar:pushChanges')}
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -147,7 +148,7 @@ export const GitStatusSection = observer(function GitStatusSection() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {getPublishTooltipText({ isPublishing, branchName, shouldOfferAddRemote })}
+                  {getPublishTooltipText({ isPublishing, branchName, shouldOfferAddRemote, t })}
                 </TooltipContent>
               </Tooltip>
             )}

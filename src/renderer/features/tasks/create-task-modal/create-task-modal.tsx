@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { Check, ChevronRight, FolderOpen, GitBranch } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -35,56 +36,64 @@ interface ProjectBranchSelectorProps {
   onBranchChange: (projectId: string, branch: string) => void;
 }
 
-function formatCreateTaskError(err: CreateTaskError): { title: string; detail?: string } {
+function formatCreateTaskError(
+  err: CreateTaskError,
+  t: TFunction
+): { title: string; detail?: string } {
   switch (err.type) {
     case 'project-not-found':
-      return { title: 'Project not found', detail: 'One or more selected projects do not exist.' };
+      return {
+        title: t('createTaskError:projectNotFound.title'),
+        detail: t('createTaskError:projectNotFound.detail'),
+      };
     case 'initial-commit-required':
       return {
-        title: 'Initial commit required',
-        detail: `Project has no commits. Make an initial commit on "${err.branch}" first.`,
+        title: t('createTaskError:initialCommitRequired.title'),
+        detail: t('createTaskError:initialCommitRequired.detail', { branch: err.branch }),
       };
     case 'branch-create-failed':
       return {
-        title: 'Failed to create branch',
-        detail: `Could not create branch "${err.branch}". ${err.error}`,
+        title: t('createTaskError:branchCreateFailed.title'),
+        detail: t('createTaskError:branchCreateFailed.detail', {
+          branch: err.branch,
+          error: err.error,
+        }),
       };
     case 'provision-failed': {
       const msg = err.message;
-      // Try to extract a meaningful title from the error message
       if (msg.includes('worktree')) {
         return {
-          title: 'Worktree setup failed',
-          detail: msg,
+          title: t('createTaskError:worktreeSetupFailed.title'),
+          detail: t('createTaskError:worktreeSetupFailed.detail', { message: msg }),
         };
       }
       if (msg.includes('branch') && msg.includes('not found')) {
         return {
-          title: 'Branch not found',
-          detail: msg,
+          title: t('createTaskError:branchNotFound.title'),
+          detail: t('createTaskError:branchNotFound.detail', { message: msg }),
         };
       }
       if (msg.includes('already exists')) {
         return {
-          title: 'Worktree already exists',
-          detail: msg,
+          title: t('createTaskError:worktreeAlreadyExists.title'),
+          detail: t('createTaskError:worktreeAlreadyExists.detail', { message: msg }),
         };
       }
       if (msg.includes('ENOENT') || msg.includes('no such file')) {
         return {
-          title: 'Path not found',
-          detail: msg,
+          title: t('createTaskError:pathNotFound.title'),
+          detail: t('createTaskError:pathNotFound.detail', { message: msg }),
         };
       }
       if (msg.includes('EACCES') || msg.includes('permission')) {
         return {
-          title: 'Permission denied',
-          detail: msg,
+          title: t('createTaskError:permissionDenied.title'),
+          detail: t('createTaskError:permissionDenied.detail', { message: msg }),
         };
       }
       return {
-        title: 'Task creation failed',
-        detail: msg,
+        title: t('createTaskError:generic.title'),
+        detail: t('createTaskError:generic.detail', { message: msg }),
       };
     }
   }
@@ -305,7 +314,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
       });
 
       if (!result.success) {
-        const formatted = formatCreateTaskError(result.error);
+        const formatted = formatCreateTaskError(result.error, t);
         setError(formatted.detail ? `${formatted.title}: ${formatted.detail}` : formatted.title);
         return;
       }
@@ -334,7 +343,7 @@ export const CreateTaskModal = observer(function CreateTaskModal({
       const message = err instanceof Error ? err.message : String(err);
       const innerMatch = message.match(/Failed to provision task: (.+)/);
       const innerMessage = innerMatch ? innerMatch[1] : message;
-      setError(`Task creation failed: ${innerMessage}`);
+      setError(`${t('createTaskError:generic.title')}: ${innerMessage}`);
     } finally {
       setLoading(false);
     }

@@ -229,7 +229,13 @@ export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal
                       <div className="flex items-center gap-1 text-xs text-foreground-passive">
                         <GitBranch className="size-3" />
                         <span>
-                          {project.sourceBranch} → {project.taskBranch}
+                          {project.taskBranch ? (
+                            <>
+                              {project.sourceBranch} → {project.taskBranch}
+                            </>
+                          ) : (
+                            project.sourceBranch
+                          )}
                         </span>
                       </div>
                     )}

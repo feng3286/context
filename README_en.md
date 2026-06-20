@@ -45,9 +45,19 @@ Pass tickets directly from Linear, GitHub, or Jira to your coding agent. Review 
 
 ## Custom Development
 
-Beyond the upstream Emdash project, the following additions have been made across the `v1.2` through `v2.1` development branches:
+Beyond the upstream Emdash project, the following additions have been made across the `v1.2` through `v2.2` development branches:
 
-### v2.1 (Latest)
+### v2.2 (Latest)
+
+- **Multi-project Task Creation & Orchestration**: Three-phase `createMultiProjectTask` architecture (branch creation → worktree provisioning → DB insert), supporting adding multiple projects to a Task at once, each with independent branch and worktree
+- **Task-Project Management Modal**: UI for dynamically adding/removing projects to existing Tasks, with real-time binding status
+- **Auto-generated AGENTS.md**: Multi-project Tasks automatically generate AGENTS.md in the worktree with context from all bound projects
+- **taskBranch null handling**: Support for branchless Task mode, using sourceBranch directly for worktree provisioning
+- **CI/CD Reliability**: Release workflow with existence check, 30-minute build timeout, `--latest` auto-publish
+- **Update channel fix**: `UPDATE_CHANNEL` aligned with electron-builder publish config as `latest`
+- **Telemetry setting removed**: Privacy & Telemetry toggle removed from Settings page
+
+### v2.1
 
 - **Flexible context management**: Full workspace-centric data model with `workspaces`, `workspace_projects`, and `task_projects` tables — decoupling projects, tasks, and sessions into a many-to-many relationship
 - **Multi-project workspace orchestration**: Add/remove projects from a workspace dynamically; each project maintains its own git context, worktree, and PTY session while sharing the workspace boundary
@@ -76,8 +86,8 @@ Downloads are available from the [GitHub Releases](https://github.com/feng3286/c
 
 ### Windows
 
-- Installer (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.msi
-- Portable (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.exe
+- Installer (x64): https://github.com/feng3286/context/releases/latest/download/context-x64.msi
+- Portable (x64): https://github.com/feng3286/context/releases/latest/download/context-x64.exe
 
 ### Build from Source
 

@@ -43,43 +43,6 @@ Connect to remote machines via SSH to work with remote codebases. Supports SSH a
 
 Pass tickets directly from Linear, GitHub, or Jira to your coding agent. Review diffs, test changes, create PRs, and merge — all from one place.
 
-## Custom Development
-
-Beyond the upstream Emdash project, the following additions have been made across the `v1.2` through `v2.2` development branches:
-
-### v2.2 (Latest)
-
-- **Multi-project Task Creation & Orchestration**: Three-phase `createMultiProjectTask` architecture (branch creation → worktree provisioning → DB insert), supporting adding multiple projects to a Task at once, each with independent branch and worktree
-- **Task-Project Management Modal**: UI for dynamically adding/removing projects to existing Tasks, with real-time binding status
-- **Auto-generated AGENTS.md**: Multi-project Tasks automatically generate AGENTS.md in the worktree with context from all bound projects
-- **taskBranch null handling**: Support for branchless Task mode, using sourceBranch directly for worktree provisioning
-- **CI/CD Reliability**: Release workflow with existence check, 30-minute build timeout, `--latest` auto-publish
-- **Update channel fix**: `UPDATE_CHANNEL` aligned with electron-builder publish config as `latest`
-- **Telemetry setting removed**: Privacy & Telemetry toggle removed from Settings page
-
-### v2.1
-
-- **Flexible context management**: Full workspace-centric data model with `workspaces`, `workspace_projects`, and `task_projects` tables — decoupling projects, tasks, and sessions into a many-to-many relationship
-- **Multi-project workspace orchestration**: Add/remove projects from a workspace dynamically; each project maintains its own git context, worktree, and PTY session while sharing the workspace boundary
-- **Task-project free binding**: Tasks can span multiple projects (each with independent source branches) or coexist in multiple workspaces — no longer locked to a single project
-- **Workspace isolation**: Reference-counted workspace instances with isolated filesystem, git, settings, and lifecycle providers; branch-based keying ensures cross-task state safety
-- **Single-project task cleanup**: Removed legacy task creation paths, fixed task deletion crash, use project subdirectory as cwd for single-project task sessions
-- **Windows code signing**: Restored Azure TrustedSigning configuration for CI builds
-
-### v2.0
-
-- **Workspace infrastructure**: Full workspace database schema (`workspaces`, `workspace_projects`, `task_projects` tables)
-- **Workspace UI**: Workspace list, detail view, and sidebar navigation
-- **Workspace RPC**: Dedicated workspace controller and operations in the main process
-- **Dev database**: Separate development database configuration via `cross-env`
-
-### v1.2
-
-- **Windows compatibility**: PTY session spawn, worktree checkout, and IDE integration fixes for Windows desktop
-- **IDE integration**: Open files from editor/diff view in VS Code, Cursor, and Windsurf
-- **Worktree config**: Customizable branch names, skip-new-branch option, configurable worktree directory
-- **Code signing**: Azure TrustedSigning setup for Windows builds
-
 ## Installation
 
 Downloads are available from the [GitHub Releases](https://github.com/feng3286/context/releases) page.
@@ -88,6 +51,17 @@ Downloads are available from the [GitHub Releases](https://github.com/feng3286/c
 
 - Installer (x64): https://github.com/feng3286/context/releases/latest/download/context-x64.msi
 - Portable (x64): https://github.com/feng3286/context/releases/latest/download/context-x64.exe
+
+### macOS (arm64)
+
+- DMG: https://github.com/feng3286/context/releases/latest/download/context-arm64.dmg
+- ZIP: https://github.com/feng3286/context/releases/latest/download/context-arm64.zip
+
+### Linux (x64)
+
+- AppImage: https://github.com/feng3286/context/releases/latest/download/context-x64.AppImage
+- deb: https://github.com/feng3286/context/releases/latest/download/context-x64.deb
+- RPM: https://github.com/feng3286/context/releases/latest/download/context-x64.rpm
 
 ### Build from Source
 

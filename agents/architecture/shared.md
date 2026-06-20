@@ -13,12 +13,20 @@
   - `src/shared/mcp/`
 - Skills types and validation:
   - `src/shared/skills/`
+- Marketplace types:
+  - `src/shared/marketplace/`
 - Domain type modules (flat files):
-  - `conversations.ts`, `fs.ts`, `git.ts`, `github.ts`, `hostPreview.ts`, `lifecycle.ts`, `projects.ts`, `pull-requests.ts`, `ssh.ts`, `tasks.ts`, `terminals.ts`, `urls.ts`, `utils.ts`
+  - `conversations.ts`, `fs.ts`, `git.ts`, `github.ts`, `hostPreview.ts`, `lifecycle.ts`, `projects.ts`, `pull-requests.ts`, `ssh.ts`, `task-projects.ts`, `tasks.ts`, `terminals.ts`, `urls.ts`, `utils.ts`, `view-state.ts`, `workspaces.ts`
 - PTY helpers:
   - `ptyId.ts`, `ptySessionId.ts`
 - App settings types:
   - `app-settings.ts`
+- App identity:
+  - `app-identity.ts` — product name, update channel, artifact prefix
+- Result type:
+  - `result.ts` — discriminated union for error handling
+- Telemetry:
+  - `telemetry.ts` — telemetry event definitions and consent types
 
 ## Path Aliases
 
@@ -38,8 +46,8 @@ Aliases are resolved at build time by electron-vite. No runtime monkey-patching 
 
 When adding a provider:
 
-1. update `src/shared/agent-provider-registry.ts`
-2. add any required env passthrough in `src/main/core/pty/pty-env.ts`
-3. add an agent event classifier in `src/main/core/conversations/impl/agent-event-classifiers/`
-4. update renderer surfaces that assume provider metadata
-5. add tests for non-standard spawn or detection behavior
+1. Update `src/shared/agent-provider-registry.ts`
+2. Add any required env passthrough in `src/main/core/pty/pty-env.ts`
+3. Add an agent event classifier in `src/main/core/conversations/impl/agent-event-classifiers/`
+4. Update renderer surfaces that assume provider metadata
+5. Add tests for non-standard spawn or detection behavior

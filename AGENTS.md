@@ -15,7 +15,6 @@ ports:
   dev: 3000
 required_env: []
 optional_env:
-  - TELEMETRY_ENABLED
   - EMDASH_DB_FILE
   - EMDASH_DISABLE_NATIVE_DB
   - EMDASH_DISABLE_CLONE_CACHE
@@ -24,7 +23,7 @@ optional_env:
   - CODEX_APPROVAL_POLICY
 ---
 
-# Emdash Agent Guide
+# Context Agent Guide
 
 Start here. Load only the linked `agents/` docs that are relevant to the task.
 
@@ -40,10 +39,12 @@ Start here. Load only the linked `agents/` docs that are relevant to the task.
 - Main-process changes: `agents/architecture/main-process.md`
 - Renderer/UI changes: `agents/architecture/renderer.md`
 - Shared types or provider metadata: `agents/architecture/shared.md`
-- Worktree behavior or `.emdash.json`: `agents/workflows/worktrees.md`
+- Worktree behavior: `agents/workflows/worktrees.md`
 - SSH or remote project work: `agents/workflows/remote-development.md`
 - Provider integration or CLI behavior: `agents/integrations/providers.md`
 - MCP changes: `agents/integrations/mcp.md`
+- Task orchestration (multi-project, worktree provisioning): `agents/workflows/tasks.md`
+- Workspace orchestration: `agents/workflows/workspaces.md`
 
 ## High-Risk Areas
 
@@ -59,7 +60,7 @@ Start here. Load only the linked `agents/` docs that are relevant to the task.
 - Renderer patterns (modals, views, PTY frontend, React Query contexts): `agents/conventions/renderer-patterns.md`
 - TypeScript and React norms: `agents/conventions/typescript.md`
 - Config files and repo rules: `agents/conventions/config-files.md`
-- Never do re exports always import from the original source
+- Never do re-exports — always import from the original source
 
 ### State Guard Conventions (renderer stores)
 

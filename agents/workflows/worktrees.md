@@ -9,10 +9,11 @@
 
 ## Current Behavior
 
-- task worktrees are created under `../worktrees/`
-- branch prefix defaults to `emdash` and is configurable in app settings
-- selected gitignored files are preserved into worktrees
-- worktree creation is managed by the project provider pattern
+- Task worktrees are created under the project's `.emdash/worktrees/` directory
+- Branch prefix defaults to `task` and is configurable in app settings
+- Selected gitignored files are preserved into worktrees
+- Worktree creation is managed by the project provider pattern
+- Multi-project tasks create worktrees for each project, each with its own branch
 
 ## `.emdash.json`
 
@@ -27,7 +28,8 @@ Current supported keys:
 
 ## Rules
 
-- do not hardcode worktree paths; use service helpers
-- use lifecycle config for repo-specific bootstrap and teardown behavior
+- Do not hardcode worktree paths; use service helpers
+- Use lifecycle config for repo-specific bootstrap and teardown behavior
 - `shellSetup` runs inside each PTY before the interactive shell starts
 - tmux wrapping is project-configurable and affects PTY lifecycle behavior
+- Multi-project task worktrees must be provisioned atomically — failure in any project triggers rollback of all created worktrees and branches

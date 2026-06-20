@@ -6,20 +6,20 @@
 - `src/main/core/dependencies/dependency-manager.ts`
 - `src/main/core/pty/`
 
-## Current Providers (22)
+## Current Providers (27)
 
-codex, claude, qwen, droid, gemini, cursor, copilot, amp, opencode, charm, auggie, goose, kimi, kilocode, kiro, rovo, cline, continue, codebuff, mistral, pi, autohand
+codex, claude, cursor, gemini, qwen, droid, amp, opencode, copilot, charm, auggie, goose, kimi, kilocode, kiro, rovo, cline, continue, codebuff, mistral, pi, autohand
 
 ## Provider Metadata Includes
 
 - CLI and detection commands
-- version args
-- install command and docs URL
-- auto-approve flags
-- initial prompt handling
-- keystroke injection behavior
-- resume and session flags
-- optional plan activation and auto-start commands
+- Version args
+- Install command and docs URL
+- Auto-approve flags
+- Initial prompt handling
+- Keystroke injection behavior
+- Resume and session flags
+- Optional plan activation and auto-start commands
 
 ## Agent Event Classifiers
 
@@ -28,13 +28,13 @@ Each provider has a terminal output classifier in `src/main/core/conversations/i
 ## Provider Runtime Notes
 
 - Claude uses deterministic `--session-id` values for conversation isolation.
-- Agents with no CLI prompt flag (e.g., Amp, OpenCode) use keystroke injection — Emdash types the prompt into the TUI after startup.
+- Agents with no CLI prompt flag (e.g., Amp, OpenCode) use keystroke injection — Context types the prompt into the TUI after startup.
 - `src/main/core/agent-hooks/service.ts` forwards hook events to renderer windows and can show OS notifications. Also writes hook config files (`.claude/settings.local.json`, `.codex/config.toml`) into worktrees.
 
 ## Adding Or Changing A Provider
 
-1. update `src/shared/agent-provider-registry.ts`
-2. update allowlisted agent env vars in `src/main/core/pty/pty-env.ts` if needed
-3. add an agent event classifier in `src/main/core/conversations/impl/agent-event-classifiers/`
-4. validate detection behavior in `src/main/core/dependencies/`
-5. add or update tests for any non-standard behavior
+1. Update `src/shared/agent-provider-registry.ts`
+2. Update allowlisted agent env vars in `src/main/core/pty/pty-env.ts` if needed
+3. Add an agent event classifier in `src/main/core/conversations/impl/agent-event-classifiers/`
+4. Validate detection behavior in `src/main/core/dependencies/`
+5. Add or update tests for any non-standard behavior

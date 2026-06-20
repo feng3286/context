@@ -10,16 +10,11 @@ This directory is the system of record for agent-facing repo guidance. Keep topi
 
 ## Directory Layout
 
-- `architecture/`
-  - system structure and major code ownership boundaries
-- `workflows/`
-  - task-oriented procedures like testing, worktrees, and remote development
-- `integrations/`
-  - provider, MCP, and external service guidance
-- `risky-areas/`
-  - places where incorrect changes are expensive
-- `conventions/`
-  - coding contracts and repo rules
+- `architecture/` — system structure and major code ownership boundaries
+- `workflows/` — task-oriented procedures (testing, worktrees, tasks, workspaces, remote development)
+- `integrations/` — provider, MCP, and external service guidance
+- `risky-areas/` — places where incorrect changes are expensive
+- `conventions/` — coding contracts and repo rules
 
 ## Maintenance Rules
 

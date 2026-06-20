@@ -1,150 +1,138 @@
-<img alt="Emdash banner" src="https://github.com/user-attachments/assets/a2ecaf3c-9d84-40ca-9a8e-d4f612cc1c6f" />
+# Context
 
+> [English](README_en.md) | 中文
 
-<div align="center" style="margin:24px 0;">
-  
-<br />
+---
 
-[![Apache 2.0 License](https://img.shields.io/badge/License-Apache_2.0-555555.svg?labelColor=333333&color=666666)](./LICENSE.md)
-[![Downloads](https://img.shields.io/github/downloads/generalaction/emdash/total?labelColor=333333&color=666666)](https://github.com/generalaction/emdash/releases)
-[![GitHub Stars](https://img.shields.io/github/stars/generalaction/emdash?labelColor=333333&color=666666)](https://github.com/generalaction/emdash)
-[![Last Commit](https://img.shields.io/github/last-commit/generalaction/emdash?labelColor=333333&color=666666)](https://github.com/generalaction/emdash/commits/main)
-[![Commit Activity](https://img.shields.io/github/commit-activity/m/generalaction/emdash?labelColor=333333&color=666666)](https://github.com/generalaction/emdash/graphs/commit-activity)
-<br>
-[![Discord](https://img.shields.io/badge/Discord-join-%235462eb?labelColor=%235462eb&logo=discord&logoColor=%23f5f5f5)](https://discord.gg/f2fv7YxuR2)
-<a href="https://www.ycombinator.com"><img src="https://img.shields.io/badge/Y%20Combinator-W26-orange" alt="Y Combinator W26"></a>
-[![Follow @emdashsh on X](https://img.shields.io/twitter/follow/emdashsh?logo=X&color=%23f5f5f5)](https://twitter.com/intent/follow?screen_name=emdashsh)
+> **本项目是 [Emdash](https://github.com/generalaction/emdash) 的衍生作品** — Emdash 是由 [General Action, Inc.](https://github.com/generalaction) 开发的智能开发环境，支持并行运行多个编码助手，每个助手隔离在独立的 git worktree 中，可在本地或远程 SSH 上运行。
+>
+> Context 基于上游 Emdash 项目（Apache License 2.0）构建，在此基础上增加了工作空间编排、多项目任务管理、UI 优化以及 Windows 兼容性修复等功能。
 
-<br />
+## 上游项目声明
 
-  <a href="https://emdash.sh/download" style="display:inline-block; margin-right:8px; text-decoration:none; outline:none; border:none;">
-    <img src="https://emdash.sh/media/readme/downloadforwindows.png" alt="Download for Windows" height="40">
-  </a>
-  <a href="https://emdash.sh/download" style="display:inline-block; margin-right:8px; text-decoration:none; outline:none; border:none;">
-    <img src="https://emdash.sh/media/readme/downloadformacos.png" alt="Download for macOS" height="40">
-  </a>
-  <a href="https://emdash.sh/download" style="display:inline-block; text-decoration:none; outline:none; border:none;">
-    <img src="https://emdash.sh/media/readme/downloadforlinux.png" alt="Download for Linux" height="40">
-  </a>
+本项目起源于 [Emdash](https://github.com/generalaction/emdash)，由 General Action, Inc. 根据 [Apache License 2.0](https://github.com/generalaction/emdash/blob/main/LICENSE) 开源。
 
-  <h3>
-    <a href="https://emdash.sh/download">Download Emdash v1</a>
-  </h3>
-  <p>
-    Stable v1 is now available for macOS, Windows, and Linux ·
-    <a href="https://emdash.sh/blog/emdash-v1-stable">Read the launch post</a>
-  </p>
+本仓库是从上游 Emdash 仓库独立克隆而来，后续所有开发均跟踪本地分支（`v1.2`、`v2.0`、`v2.1`）。
 
-</div>
+所有上游版权和许可条款均保留在 [LICENSE.md](LICENSE.md) 中。
 
-<br />
+## 功能特性
 
-Emdash is a provider-agnostic desktop app that lets you run multiple coding agents in parallel, each isolated in its own git worktree, either locally or over SSH on a remote machine. We call it an Agentic Development Environment (ADE).
+### 灵活的上下文管理
 
-Emdash supports 23 CLI agents, including Claude Code, Qwen Code, Hermes Agent, Amp, and Codex. Users can directly pass Linear, GitHub, or Jira tickets to an agent, review diffs, test changes, create PRs, see CI/CD checks, and merge. 
+Context 的核心创新是将 git worktree 作为桥梁 — **将不同的 git 项目从物理边界中解放出来，自由组合到编码助手的统一上下文中**。
 
-**Develop on remote servers via SSH**
+**通过 Worktree 实现统一代理上下文** — 任意选择多个 git 项目，将它们注入到同一个编码助手会话中（Claude Code、Codex、Qwen Code 等）。代理将工作空间中的所有项目视为一个统一的工作上下文：它可以跨仓库读取文件、协调前端和后端的修改，并在一个 PTY 会话中管理所有项目。每个项目检出到独立的 worktree 子目录，保持各自的 git 历史和分支状态，而代理将它们作为一个逻辑工作区来操作。
 
-Connect to remote machines via SSH/SFTP to work with remote codebases. Emdash supports SSH agent and key authentication, with secure credential storage in your OS keychain. Run agents on remote projects using the same parallel workflow as local development. [Learn more](https://www.emdash.sh/cloud)
+**工作空间隔离** — 每个工作空间是一个完全隔离的上下文，拥有独立的文件系统提供者、git 操作、项目设置和生命周期脚本。工作空间采用引用计数管理，独立释放，同时运行多个工作空间不会泄漏状态或资源。基于分支的工作空间 key 机制确保不同任务分支在完全隔离的环境中运行。
 
-<div align="center" style="margin:24px 0;">
+**Task 与 Project 自由绑定** — Task 不再绑定到单一项目。一个 Task 可以跨越多个项目，每个项目有独立的源分支和 worktree。反过来，一个项目也可以参与多个不同工作空间中的 Task。这种多对多的关系意味着你可以：
+- 创建一个同时涉及 `web-app` 和 `api-server` 的 Task，在一个视图中跟踪两个项目的变更
+- 为同一个项目分别创建不同任务 — 一个做功能分支，一个做热修复 — 互不冲突
+- 随着工作范围的演变，动态向工作空间添加或移除项目
 
-[Installation](#installation) • [Providers](#providers) • [Contributing](#contributing) • [FAQ](#faq)
+### 并行代理执行
 
-</div>
+并行运行多个编码助手（Claude Code、Codex、Qwen Code 等），每个代理隔离在独立的 git worktree 中。代理在工作空间的上下文中运行，每个项目有独立的 PTY 会话和文件监视。
 
-<img alt="Emdash product" src="https://emdash.sh/media/blog/public-v1-beta/v1beta.jpg" />
+### 远程开发
 
-# Installation
+通过 SSH 连接到远程机器，在远程代码库上工作。支持 SSH Agent 和密钥认证，凭据安全存储在系统密钥链中。
 
-### macOS
-- Apple Silicon: https://github.com/generalaction/emdash/releases/latest/download/emdash-arm64.dmg
-- Intel x64: https://github.com/generalaction/emdash/releases/latest/download/emdash-x64.dmg
+### 工单集成
+
+将 Linear、GitHub 或 Jira 工单直接传递给编码助手。在同一个界面中审查差异、测试变更、创建 PR 和合并。
+
+## 自主开发
+
+在 Emdash 上游项目的基础上，`v1.2` 到 `v2.1` 开发分支中新增了以下内容：
+
+### v2.1（最新）
+
+- **灵活的上下文管理**：以工作空间为中心的数据模型，包含 `workspaces`、`workspace_projects` 和 `task_projects` 表 — 将项目、任务、会话解耦为多对多关系
+- **多项目工作空间编排**：动态添加/移除工作空间中的项目；每个项目保持独立的 git 上下文、worktree 和 PTY 会话，同时共享工作空间边界
+- **Task-Project 自由绑定**：Task 可跨多个项目（每个项目有独立的源分支），也可存在于多个工作空间中 — 不再锁定到单一项目
+- **工作空间隔离**：引用计数的工作空间实例，隔离的文件系统、git、设置和生命周期提供者；基于分支的 keying 确保跨任务状态安全
+- **单项目 Task 清理**：移除旧版 Task 创建路径，修复 Task 删除崩溃，单项目 Task 使用项目子目录作为工作目录
+- **Windows 代码签名**：恢复 Azure TrustedSigning 配置用于 CI 构建
+
+### v2.0
+
+- **工作空间基础设施**：完整的工作空间数据库 schema（`workspaces`、`workspace_projects`、`task_projects` 表）
+- **工作空间 UI**：工作空间列表、详情视图和侧边栏导航
+- **工作空间 RPC**：主进程中专用的工作空间控制器和操作
+- **开发数据库**：通过 `cross-env` 配置独立的开发数据库
+
+### v1.2
+
+- **Windows 兼容性**：PTY 会话生成、worktree 检出和 IDE 集成的 Windows 桌面修复
+- **IDE 集成**：从编辑器/差异视图在 VS Code、Cursor 和 Windsurf 中打开文件
+- **Worktree 配置**：可自定义分支名、跳过新建分支选项、可配置 worktree 目录
+- **代码签名**：Windows 构建的 Azure TrustedSigning 配置
+
+## 安装
+
+可从 [GitHub Releases](https://github.com/feng3286/context/releases) 页面下载。
 
 ### Windows
-- Installer (x64): https://github.com/generalaction/emdash/releases/latest/download/emdash-x64.msi
-- Portable (x64): https://github.com/generalaction/emdash/releases/latest/download/emdash-x64.exe
 
-### Linux
-- AppImage (x64): https://github.com/generalaction/emdash/releases/latest/download/emdash-x86_64.AppImage
-- Debian package (x64): https://github.com/generalaction/emdash/releases/latest/download/emdash-amd64.deb
+- 安装程序 (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.msi
+- 便携版 (x64): https://github.com/feng3286/context/releases/latest/download/emdash-x64.exe
 
-### Release Overview
+### 从源码构建
 
-**[Latest Releases (macOS • Windows • Linux)](https://github.com/generalaction/emdash/releases/latest)**
+```bash
+pnpm install
+pnpm run dev
+```
 
-# Providers
+## 开发
 
-<img alt="Providers banner" src="https://github.com/user-attachments/assets/c7b32a3e-452c-4209-91ef-71bcd895e2df" />
+```bash
+# 安装依赖
+pnpm install
 
-### Supported CLI Providers
+# 启动开发服务器
+pnpm run dev
 
-Emdash currently supports 23 CLI providers, and we are adding new ones regularly. If you miss one, let us know or create a PR.
+# 构建生产版本
+pnpm run build
 
-| CLI Provider | Status | Install |
-| ----------- | ------ | ----------- |
-| [Amp](https://ampcode.com/manual#install) | ✅ Supported | <code>npm install -g @sourcegraph/amp@latest</code> |
-| [Auggie](https://docs.augmentcode.com/cli/overview) | ✅ Supported | <code>npm install -g @augmentcode/auggie</code> |
-| [Autohand Code](https://autohand.ai/code/) | ✅ Supported | <code>npm install -g autohand-cli</code> |
-| [Charm](https://github.com/charmbracelet/crush) | ✅ Supported | <code>npm install -g @charmland/crush</code> |
-| [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) | ✅ Supported | <code>curl -fsSL https://claude.ai/install.sh &#124; bash</code> |
-| [Cline](https://docs.cline.bot/cline-cli/overview) | ✅ Supported | <code>npm install -g cline</code> |
-| [Codebuff](https://www.codebuff.com/docs/help/quick-start) | ✅ Supported | <code>npm install -g codebuff</code> |
-| [Codex](https://github.com/openai/codex) | ✅ Supported | <code>npm install -g @openai/codex</code> |
-| [Continue](https://docs.continue.dev/guides/cli) | ✅ Supported | <code>npm i -g @continuedev/cli</code> |
-| [Cursor](https://cursor.com/cli) | ✅ Supported | <code>curl https://cursor.com/install -fsS &#124; bash</code> |
-| [Droid](https://docs.factory.ai/cli/getting-started/quickstart) | ✅ Supported | <code>curl -fsSL https://app.factory.ai/cli &#124; sh</code> |
-| [Gemini](https://github.com/google-gemini/gemini-cli) | ✅ Supported | <code>npm install -g @google/gemini-cli</code> |
-| [GitHub Copilot](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli) | ✅ Supported | <code>npm install -g @github/copilot</code> |
-| [Goose](https://block.github.io/goose/docs/quickstart/) | ✅ Supported | <code>curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh &#124; bash</code> |
-| [Hermes Agent](https://hermes-agent.nousresearch.com/docs/) | ✅ Supported | <code>curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh &#124; bash</code> |
-| [Kilocode](https://kilo.ai/docs/cli) | ✅ Supported | <code>npm install -g @kilocode/cli</code> |
-| [Kimi](https://www.kimi.com/code/docs/en/kimi-cli/guides/getting-started.html) | ✅ Supported | <code>uv tool install kimi-cli</code> |
-| [Kiro (AWS)](https://kiro.dev/docs/cli/) | ✅ Supported | <code>curl -fsSL https://cli.kiro.dev/install &#124; bash</code> |
-| [Mistral Vibe](https://github.com/mistralai/mistral-vibe) | ✅ Supported | <code>curl -LsSf https://mistral.ai/vibe/install.sh &#124; bash</code> |
-| [OpenCode](https://opencode.ai/docs/cli/) | ✅ Supported | <code>npm install -g opencode-ai</code> |
-| [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) | ✅ Supported | <code>npm install -g @mariozechner/pi-coding-agent</code> |
-| [Qwen Code](https://github.com/QwenLM/qwen-code) | ✅ Supported | <code>npm install -g @qwen-code/qwen-code</code> |
-| [Rovo Dev](https://support.atlassian.com/rovo/docs/install-and-run-rovo-dev-cli-on-your-device/) | ✅ Supported | <code>acli rovodev auth login</code> |
+# 打包
+pnpm run package:win   # Windows
+```
 
-### Issues
+## 贡献
 
-Emdash allows you to pass tickets straight from Linear, GitHub, or Jira to your coding agent. 
+欢迎提交贡献！请先阅读 `AGENTS.md` 中的代码规范，然后提交 PR。
 
-| Tool | Status | Authentication |
-| ----------- | ------ | ----------- |
-| [Linear](https://linear.app) | ✅ Supported | Connect with a Linear API key. |
-| [Jira](https://www.atlassian.com/software/jira) | ✅ Supported | Provide your site URL, email, and Atlassian API token. |
-| [GitHub Issues](https://docs.github.com/en/issues) | ✅ Supported | Authenticate via GitHub CLI (`gh auth login`). |
+## 许可证
 
-# Contributing
+本项目采用 [Apache License 2.0](LICENSE.md) 许可。
 
-Contributions welcome! See the [Contributing Guide](CONTRIBUTING.md) to get started, and join our [Discord](https://discord.gg/f2fv7YxuR2) to discuss.
+Context 是 [Emdash](https://github.com/generalaction/emdash) 的衍生作品，原始项目由 General Action, Inc. 开发并根据 Apache License 2.0 许可。本仓库中的修改和补充版权归 maofeng 和贡献者所有，Copyright 2026。
 
-# FAQ
+详见 [LICENSE.md](LICENSE.md) 中的完整条款。
+
+## 常见问题
 
 <details>
-<summary><b>What telemetry do you collect and can I disable it?</b></summary>
+<summary><b>你们收集什么遥测数据？可以禁用吗？</b></summary>
 
-> We send **anonymous, allow‑listed events** (app start/close, feature usage names, app/platform versions) to PostHog.  
-> We **do not** send code, file paths, repo names, prompts, or PII.
+> 匿名、白名单事件（应用启动/关闭、功能使用名称、应用/平台版本）会发送到 PostHog。
+> 我们不会发送代码、文件路径、仓库名、提示词或个人信息。
 >
-> **Disable telemetry:**
+> **禁用遥测：**
 >
-> - In the app: **Settings → General → Privacy & Telemetry** (toggle off)
-> - Or via env var before launch:
->
-> ```bash
-> TELEMETRY_ENABLED=false
-> ```
->
-> Full details: see [Telemetry](https://emdash.sh/docs/telemetry).
+> - 在应用内：**Settings → General → Privacy & Telemetry**（关闭开关）
+> - 或在启动前设置环境变量：`TELEMETRY_ENABLED=false`
+
 </details>
 
 <details>
-<summary><b>Where is my data stored?</b></summary>
+<summary><b>我的数据存储在哪里？</b></summary>
 
-> **App data is local‑first**. We store app state in a local **SQLite** database:
+> **应用数据本地优先**。我们将应用状态存储在本地 SQLite 数据库中：
 >
 > ```
 > macOS:   ~/Library/Application Support/emdash/emdash.db
@@ -152,52 +140,19 @@ Contributions welcome! See the [Contributing Guide](CONTRIBUTING.md) to get star
 > Linux:   ~/.config/emdash/emdash.db
 > ```
 >
-> **Privacy Note:** While Emdash itself stores data locally, **when you use any coding agent (Claude Code, Codex, Qwen, etc.), your code and prompts are sent to that provider's cloud API servers** for processing. Each provider has their own data handling and retention policies.
+> 隐私说明：使用任何编码助手（Claude Code、Codex、Qwen 等）时，你的代码和提示词会发送到该提供商的云端 API 服务器进行处理。每个提供商都有自己的数据处理和保留政策。
 >
-> You can reset the local DB by deleting it (quit the app first). The file is recreated on next launch.
+> 你可以通过删除本地数据库来重置（请先退出应用）。文件会在下次启动时重新创建。
+
 </details>
 
 <details>
-<summary><b>How do I add a new provider?</b></summary>
+<summary><b>可以通过 SSH 处理远程项目吗？</b></summary>
 
-> Emdash is **provider‑agnostic** and built to add CLIs quickly.
+> 可以！前往 **Settings → SSH Connections** 添加你的服务器详情。
+> 选择认证方式：SSH Agent（推荐）、私钥或密码。
+> 添加远程项目并指定服务器上的路径。
 >
-> - Open a PR following the **Contributing Guide** (`CONTRIBUTING.md`).
-> - Include: provider name, how it’s invoked (CLI command), auth notes, and minimal setup steps.
-> - We’ll add it to the **Providers table** and wire up provider selection in the UI.
->
-> If you’re unsure where to start, open an issue with the CLI’s link and typical commands.
+> 要求：能够 SSH 访问远程服务器，远程服务器上已安装 Git。
+
 </details>
-
-<details>
-<summary><b>What permissions does Emdash need?</b></summary>
-
-> - **Filesystem/Git:** to read/write your repo and create **Git worktrees** for isolation.  
-> - **Network:** only for provider CLIs you choose to use (e.g., Codex, Claude) and optional GitHub actions.  
-> - **Local DB:** to store your app state in SQLite on your machine.
->
-> Emdash itself does **not** send your code or chats to any servers. Third‑party CLIs may transmit data per their policies.
-</details>
-
-
-<details>
-<summary><b>Can I work with remote projects over SSH?</b></summary>
-
-> **Yes!** Emdash supports remote development via SSH.
->
-> **Setup:**
-> 1. Go to **Settings → SSH Connections** and add your server details
-> 2. Choose authentication: SSH agent (recommended), private key, or password
-> 3. Add a remote project and specify the path on the server
->
-> **Requirements:**
-> - SSH access to the remote server
-> - Git installed on the remote server
-> - For agent auth: SSH agent running with your key loaded (`ssh-add -l`)
->
-> See [Remote Projects](https://emdash.sh/docs/remote-projects) for detailed setup instructions and [Bring Your Own Infrastructure](https://emdash.sh/docs/bring-your-own-infrastructure) for technical details.
-</details>
-
-[![Follow @emdashsh](https://img.shields.io/twitter/follow/emdashsh?style=social&label=Follow%20%40emdashsh)](https://x.com/emdashsh)
-[![Follow @rabanspiegel](https://img.shields.io/twitter/follow/rabanspiegel?style=social&label=Follow%20%40rabanspiegel)](https://x.com/rabanspiegel)
-[![Follow @arnestrickmann](https://img.shields.io/twitter/follow/arnestrickmann?style=social&label=Follow%20%40arnestrickmann)](https://x.com/arnestrickmann)

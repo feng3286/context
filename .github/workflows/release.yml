@@ -63,6 +63,7 @@ jobs:
         run: iconutil -c icns src/assets/images/emdash/emdash-beta.iconset -o src/assets/images/emdash/emdash-beta.icns
 
       - name: Build unsigned DMGs
+        timeout-minutes: 30
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: >
@@ -106,6 +107,7 @@ jobs:
         run: node --experimental-strip-types scripts/release/inject-telemetry.ts
 
       - name: Build Linux packages
+        timeout-minutes: 30
         run: >
           node --experimental-strip-types scripts/release/build.ts
           --platform linux --arch x64
@@ -223,6 +225,7 @@ jobs:
           fi
 
       - name: Build Windows packages
+        timeout-minutes: 30
         shell: bash
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -339,6 +342,7 @@ jobs:
         run: node --experimental-strip-types scripts/release/inject-telemetry.ts
 
       - name: Build DMGs + ZIPs
+        timeout-minutes: 30
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.mac-signing.outputs.has_signing == 'true' && 'true' || 'false' }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

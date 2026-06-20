@@ -22,6 +22,23 @@ import { mapTaskRowToTask } from './core';
 import { generateAgentsMd } from './generateAgentsMd';
 import { resolveTaskBranchName } from './resolveTaskBranchName';
 
+/**
+ * 创建多项目任务：一次性将多个项目关联到一个新任务中。
+ *
+ * 整体流程分为三个阶段：
+ * - Phase 1（并行创建分支）：为每个项目在 git 中创建 taskBranch，
+ *   如果启用了 pushBranch 则推送到远程。任一项目失败则回滚已创建的分支。
+ * - Phase 2（并行配置 worktree）：为每个项目 provisionTask（worktree + 终端等）。
+ *   任一项目失败则回滚已创建的 worktree 和分支，并清理 taskBaseDir。
+ * - Phase 3（DB 写入）：将任务及项目关联写入数据库。
+ *   写入失败则回滚分支、worktree 并清理 taskBaseDir。
+ *
+ * taskBranch 分支逻辑：
+ * - createBranch=true 时：使用 resolveTaskBranchName 生成带前缀和随机后缀的分支名，
+ *   并在 Phase 1 中为每个项目创建该分支。
+ * - createBranch=false 时：不创建分支，直接使用各项目的 sourceBranch 进行 provision。
+ */
+
 function generateBranchSuffix(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz';
   let result = '';
@@ -35,13 +52,17 @@ function mapProvisionError(message: string): CreateTaskError {
   return { type: 'provision-failed', message };
 }
 
-/** Track a provisioned project so we can roll it back on failure. */
+/** 跟踪已配置的项目，用于失败时回滚。 */
 type ProvisionedProject = {
   projectId: string;
   branchName: string;
   worktreePath?: string;
 };
 
+/**
+ * 回滚已配置的项目：按逆序移除 worktree 和删除分支。
+ * 逆序回滚确保先创建的资源后被清理，符合依赖顺序。
+ */
 async function rollbackProjects(provisioned: ProvisionedProject[]): Promise<void> {
   for (let i = provisioned.length - 1; i >= 0; i--) {
     const p = provisioned[i];
@@ -169,6 +190,15 @@ export async function createMultiProjectTask(
         warning ??= r.warning;
       }
     }
+
+    // If any Phase 1 project failed, rollback successful branches and return error
+    const firstError = phase1Results.find(
+      (r): r is Extract<Phase1Result, { type: 'error' }> => r.type === 'error'
+    );
+    if (firstError) {
+      await rollbackProjects(provisioned);
+      return err(firstError.error);
+    }
   }
 
   // Phase 2: Provision worktrees + terminals for all projects
@@ -204,11 +234,6 @@ export async function createMultiProjectTask(
 
     for (const r of phase2Results) {
       if (!r.success) {
-        log.warn('createMultiProjectTask: Phase 2 failure, rolling back', {
-          failedProjectId: r.projectId,
-          error: r.error,
-          worktreesToRollback: phase2Worktrees.length,
-        });
         // Rollback Phase 2 worktrees created in this phase
         for (let i = phase2Worktrees.length - 1; i >= 0; i--) {
           const wt = phase2Worktrees[i];
@@ -216,18 +241,9 @@ export async function createMultiProjectTask(
             const proj = projectManager.getProject(wt.projectId);
             if (proj) {
               await proj.removeWorktreeAtPath(wt.worktreePath);
-              log.info('createMultiProjectTask: Phase 2 rollback succeeded', {
-                projectId: wt.projectId,
-                worktreePath: wt.worktreePath,
-              });
-            } else {
-              log.warn('createMultiProjectTask: Phase 2 rollback skipped, project not in manager', {
-                projectId: wt.projectId,
-                worktreePath: wt.worktreePath,
-              });
             }
           } catch (e) {
-            log.error('createMultiProjectTask: Phase 2 rollback failed', {
+            log.warn('createMultiProjectTask: Phase 2 rollback failed', {
               projectId: wt.projectId,
               worktreePath: wt.worktreePath,
               error: e,
@@ -241,13 +257,8 @@ export async function createMultiProjectTask(
       // Attach worktree path to the matching provisioned entry for rollback
       const lastP = provisioned.find((p) => p.projectId === r.projectId && !p.worktreePath);
       if (lastP) lastP.worktreePath = r.worktreePath;
-      // Also track for Phase 2-only rollback (when createBranch=false)
       if (r.worktreePath) {
         phase2Worktrees.push({ projectId: r.projectId, worktreePath: r.worktreePath });
-        log.info('createMultiProjectTask: Phase 2 worktree tracked for rollback', {
-          projectId: r.projectId,
-          worktreePath: r.worktreePath,
-        });
       }
     }
   } catch (error) {

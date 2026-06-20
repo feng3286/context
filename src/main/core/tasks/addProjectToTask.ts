@@ -8,6 +8,15 @@ import { projects, taskProjects, tasks, workspaceProjects } from '@main/db/schem
 import { log } from '@main/lib/logger';
 import { generateAgentsMd } from './generateAgentsMd';
 
+/**
+ * 将已有项目添加到现有任务中。
+ *
+ * 核心逻辑：
+ * - 如果任务已有 taskBranch，则为该项目创建同名分支并 provision。
+ * - 如果任务没有 taskBranch（创建时未勾选"创建分支"），则直接使用 sourceBranch 进行 provision。
+ * - 失败时回滚已创建的分支和 worktree。
+ */
+
 type AddProjectToTaskParams = {
   taskId: string;
   projectId: string;
@@ -24,6 +33,10 @@ type AddProjectError =
   | { type: 'provision-failed'; message: string }
   | { type: 'db-error'; message: string };
 
+/**
+ * 回滚单个已配置的项目：先移除 worktree，再删除分支。
+ * 两个操作均使用 force 模式，确保即使资源处于中间状态也能清理。
+ */
 async function rollbackProject(
   projectId: string,
   branchName: string,
@@ -152,7 +165,7 @@ export async function addProjectToTask(
     }
 
     // Phase 2: Provision worktree
-    // When no taskBranch, use sourceBranch for provisioning
+    // 关键分支：无 taskBranch 时，使用 sourceBranch 构建临时 Task 进行 provision
     const effectiveTaskBranch = hasTaskBranch ? resolvedTaskBranch : sourceBranch;
     const temporaryTask: Task = {
       id: taskId,
@@ -182,6 +195,8 @@ export async function addProjectToTask(
       true // forceCreateWorktree: always create worktree at customWorkDir
     );
     if (!provisionResult.success) {
+      // 有分支时：回滚分支（worktree 由 provisionTask 原子管理，无需清理）
+      // 无分支时：worktree 也已原子清理，无需任何回滚
       if (hasTaskBranch) {
         await rollbackProject(projectId, resolvedTaskBranch);
       }

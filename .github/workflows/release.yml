@@ -139,7 +139,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --generate-notes --draft || true
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --generate-notes --draft || true
+          fi
           for f in release/latest*.yml release/context-*.AppImage release/context-*.deb release/context-*.rpm release/*.blockmap; do
             [ -f "$f" ] || continue
             gh release upload "$GITHUB_REF_NAME" "$f" --clobber
@@ -268,7 +270,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --generate-notes --draft || true
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --generate-notes --draft || true
+          fi
           for f in release/latest*.yml release/context-*.exe release/context-*.msi release/*.blockmap; do
             [ -f "$f" ] || continue
             gh release upload "$GITHUB_REF_NAME" "$f" --clobber
@@ -392,7 +396,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --generate-notes --draft || true
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --generate-notes --draft || true
+          fi
           for f in release/latest*.yml release/context-arm64.dmg release/context-arm64.zip release/*.blockmap; do
             [ -f "$f" ] || continue
             gh release upload "$GITHUB_REF_NAME" "$f" --clobber

@@ -147,15 +147,19 @@ export class FrontendPty {
     }
     mountTarget.appendChild(this.ownedContainer);
     // Force a Canvas2D repaint after reparenting in the DOM.
-    // refresh() must run after the terminal has been fully laid out in the real
-    // DOM so the canvas buffer dimensions match the actual container — otherwise
-    // mouse-wheel scrolling produces garbled text due to stale canvas offsets.
+    // Nested requestAnimationFrame ensures refresh() runs after the DOM has fully
+    // laid out and measureAndResize() (use-pty.ts) has resized the terminal, so
+    // the canvas buffer matches the actual container dimensions — otherwise
+    // mouse-wheel scrolling produces garbled/misaligned text due to stale
+    // canvas offsets from the 1×1px off-screen host.
     const t = this.terminal;
     requestAnimationFrame(() => {
-      try {
-        if ((t as unknown as { _isDisposed?: boolean })._isDisposed) return;
-        t.refresh(0, t.rows - 1);
-      } catch {}
+      requestAnimationFrame(() => {
+        try {
+          if ((t as unknown as { _isDisposed?: boolean })._isDisposed) return;
+          t.refresh(0, t.rows - 1);
+        } catch {}
+      });
     });
   }
 

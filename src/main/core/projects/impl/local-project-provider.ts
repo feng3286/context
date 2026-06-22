@@ -572,15 +572,6 @@ export class LocalProjectProvider implements ProjectProvider {
 
     // If task has a branch, try to find or create its worktree
     if (task.taskBranch) {
-      // Only look up existing worktree during re-provisioning (allowExisting=true).
-      // During initial provisioning, always create a fresh worktree.
-      if (allowExisting) {
-        const existing = await this.worktreeService.getWorktree(task.taskBranch);
-        if (existing) {
-          return existing;
-        }
-      }
-
       // Check if worktree already exists at the expected custom path (re-provisioning case)
       if (customWorkDir) {
         try {

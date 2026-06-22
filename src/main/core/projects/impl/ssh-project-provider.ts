@@ -629,15 +629,6 @@ export class SshProjectProvider implements ProjectProvider {
   private async resolveTaskWorkDir(task: Task, allowExisting?: boolean): Promise<string> {
     // If task has a branch, try to find or create its worktree
     if (task.taskBranch) {
-      // Only look up existing worktree during re-provisioning (allowExisting=true).
-      // During initial provisioning, always create a fresh worktree.
-      if (allowExisting) {
-        const existing = await this.worktreeService.getWorktree(task.taskBranch);
-        if (existing) {
-          return existing;
-        }
-      }
-
       // Get sourceBranch from taskProjects (per-project source branch)
       const sourceBranchName = await this.getSourceBranchForTask(task.id);
 

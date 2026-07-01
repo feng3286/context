@@ -13,8 +13,12 @@ export const customAgentController = createRPCController({
       });
       let stdout = '';
       let stderr = '';
-      proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
-      proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+      proc.stdout?.on('data', (d: Buffer) => {
+        stdout += d.toString();
+      });
+      proc.stderr?.on('data', (d: Buffer) => {
+        stderr += d.toString();
+      });
       proc.on('close', (code) => {
         const hasOutput = stdout.trim() || stderr.trim();
         resolve(code === 0 && !!hasOutput);

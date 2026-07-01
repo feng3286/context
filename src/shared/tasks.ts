@@ -78,6 +78,19 @@ export type ProvisionTaskResult = {
   workspaceId: string;
 };
 
+export type BranchMismatchInfo = {
+  projectId: string;
+  projectName: string;
+  expectedBranch: string;
+  actualBranch: string | null;
+};
+
+export type OpenTaskResult = {
+  path: string;
+  workspaceId: string;
+  branchMismatches: BranchMismatchInfo[];
+};
+
 export function formatIssueAsPrompt(issue: Issue, initialPrompt?: string): string {
   const parts = [`[${issue.identifier}] ${issue.title}`, issue.url, issue.description].filter(
     Boolean

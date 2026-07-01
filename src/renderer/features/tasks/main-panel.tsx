@@ -1,12 +1,13 @@
 import { Loader2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { Activity } from 'react';
+import { Activity, useEffect, useState } from 'react';
 import {
   getTaskStore,
   taskErrorMessage,
   taskViewKind,
 } from '@renderer/features/tasks/stores/task-selectors';
 import { useProvisionedTask, useTaskViewContext } from '@renderer/features/tasks/task-view-context';
+import { BranchMismatchBanner } from './components/branch-mismatch-banner';
 import { ConversationsPanel } from './conversations/conversations-panel';
 import { DiffView } from './diff-view/main-panel/diff-view';
 import { EditorMainPanel } from './editor/editor-main-panel';
@@ -90,17 +91,24 @@ export const TaskMainPanel = observer(function TaskMainPanel() {
 });
 
 const ReadyTaskMainPanel = observer(function ReadyTaskMainPanel() {
-  const { taskView } = useProvisionedTask();
+  const pt = useProvisionedTask();
+  const [dismissed, setDismissed] = useState(false);
 
   return (
     <>
-      <Activity mode={taskView.view === 'agents' ? 'visible' : 'hidden'}>
+      {!dismissed && pt.branchMismatches.length > 0 && (
+        <BranchMismatchBanner
+          mismatches={pt.branchMismatches}
+          onDismiss={() => setDismissed(true)}
+        />
+      )}
+      <Activity mode={pt.taskView.view === 'agents' ? 'visible' : 'hidden'}>
         <ConversationsPanel />
       </Activity>
-      <Activity mode={taskView.view === 'editor' ? 'visible' : 'hidden'}>
+      <Activity mode={pt.taskView.view === 'editor' ? 'visible' : 'hidden'}>
         <EditorMainPanel />
       </Activity>
-      <Activity mode={taskView.view === 'diff' ? 'visible' : 'hidden'}>
+      <Activity mode={pt.taskView.view === 'diff' ? 'visible' : 'hidden'}>
         <DiffView />
       </Activity>
     </>

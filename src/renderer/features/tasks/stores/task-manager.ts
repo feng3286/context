@@ -212,6 +212,75 @@ export class TaskManagerStore {
     return promise;
   }
 
+  async openTask(taskId: string): Promise<void> {
+    await getProjectManagerStore().mountProject(this.projectId);
+    await this.loadTasks();
+
+    const inFlight = this._provisionPromises.get(taskId);
+    if (inFlight) return inFlight;
+
+    const task = this.tasks.get(taskId);
+    if (!task || !isUnprovisioned(task)) return;
+
+    runInAction(() => {
+      task.phase = 'provision';
+    });
+
+    const promise = Promise.all([rpc.tasks.openTask(taskId), rpc.viewState.get(`task:${taskId}`)])
+      .then(([result, savedSnapshot]) => {
+        runInAction(() => {
+          const current = this.tasks.get(taskId);
+          if (current && isUnprovisioned(current)) {
+            const updatedData = {
+              ...current.data,
+              lastInteractedAt: new Date().toISOString(),
+            } as Task;
+            current.transitionToProvisioned(
+              updatedData,
+              result.path,
+              this._repository,
+              this.projectId,
+              savedSnapshot as TaskViewSnapshot | undefined
+            );
+            // Store branch mismatch info from the RPC result
+            if (current.provisionedTask) {
+              current.provisionedTask.branchMismatches = result.branchMismatches ?? [];
+            }
+            current.activate();
+
+            // Sync provisioning to other projects for multi-project tasks
+            const pt = current.provisionedTask;
+            if (pt && (current.data as Task).workspaceId) {
+              const projectManager = getProjectManagerStore();
+              for (const [pid, project] of projectManager.projects) {
+                if (pid === this.projectId) continue;
+                const otherStore = project.mountedProject?.taskManager.tasks.get(taskId);
+                if (otherStore && isUnprovisioned(otherStore)) {
+                  otherStore.transitionToSharedProvisioned(updatedData, pt);
+                }
+              }
+            }
+          }
+        });
+      })
+      .catch((err: unknown) => {
+        runInAction(() => {
+          const current = this.tasks.get(taskId);
+          if (current && isUnprovisioned(current)) {
+            current.phase = 'provision-error';
+            current.errorMessage = err instanceof Error ? err.message : String(err);
+          }
+        });
+        throw err;
+      })
+      .finally(() => {
+        this._provisionPromises.delete(taskId);
+      });
+
+    this._provisionPromises.set(taskId, promise);
+    return promise;
+  }
+
   async teardownTask(taskId: string): Promise<void> {
     const inFlight = this._teardownPromises.get(taskId);
     if (inFlight) return inFlight;

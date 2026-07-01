@@ -204,6 +204,195 @@ export class SshProjectProvider implements ProjectProvider {
     return promise;
   }
 
+  async openTask(
+    task: Task,
+    conversations: Conversation[],
+    terminals: Terminal[],
+    workDir: string
+  ): Promise<Result<TaskProvider, ProvisionTaskError>> {
+    const existing = this.tasks.get(task.id);
+    if (existing) return ok(existing);
+    if (this.provisioningTasks.has(task.id)) return this.provisioningTasks.get(task.id)!;
+
+    const promise = withTimeout(
+      this.doOpenTask(task, conversations, terminals, workDir),
+      TASK_TIMEOUT_MS
+    )
+      .then((taskEnv) => {
+        this.tasks.set(task.id, taskEnv);
+        this.provisioningTasks.delete(task.id);
+        return ok(taskEnv);
+      })
+      .catch((e) => {
+        const provisionError = toProvisionError(e);
+        this.bootstrapErrors.set(task.id, provisionError);
+        this.provisioningTasks.delete(task.id);
+        log.error('SshProjectProvider: failed to open task', {
+          taskId: task.id,
+          error: String(e),
+        });
+        return err(provisionError);
+      });
+
+    this.provisioningTasks.set(task.id, promise);
+    return promise;
+  }
+
+  private async doOpenTask(
+    task: Task,
+    conversations: Conversation[],
+    terminals: Terminal[],
+    workDir: string
+  ): Promise<TaskProvider> {
+    log.debug('SshProjectProvider: doOpenTask START', {
+      taskId: task.id,
+      workDir,
+    });
+
+    void this._gitFetchService.fetch();
+    void prSyncScheduler.onTaskProvisioned(this.project.id, task.taskBranch);
+
+    const workspaceId = task.id;
+    const workspaceFs = new SshFileSystem(this.proxy, workDir);
+    const projectSettings = await this.settings.get();
+    const defaultBranch = await this.settings.getDefaultBranch();
+    const bootstrapTaskEnvVars = getTaskEnvVars({
+      taskId: task.id,
+      taskName: task.name,
+      taskPath: workDir,
+      projectPath: this.project.path,
+      defaultBranch,
+      portSeed: workDir,
+    });
+    const tmuxEnabled = projectSettings.tmux ?? false;
+    const taskLevelSettings = await getEffectiveTaskSettings({
+      projectSettings: this.settings,
+      taskFs: workspaceFs,
+    });
+    const shellSetup = taskLevelSettings.shellSetup ?? projectSettings.shellSetup;
+    const scripts = taskLevelSettings.scripts;
+    const proxy = this.proxy;
+    const exec = getSshExec(proxy);
+
+    const workspaceTerminals = new SshTerminalProvider({
+      taskWorkDir: workDir,
+      taskId: workspaceId,
+      tmux: tmuxEnabled,
+      shellSetup,
+      exec,
+      proxy,
+      taskEnvVars: bootstrapTaskEnvVars,
+    });
+    const lifecycleService = new WorkspaceLifecycleService({
+      workspaceId,
+      terminals: workspaceTerminals,
+    });
+    const workspaceGitExec = getGitSshExec(proxy, () => githubConnectionService.getToken());
+    const createdWorkspace: Workspace = {
+      id: workspaceId,
+      path: workDir,
+      fs: workspaceFs,
+      git: new GitService(workDir, workspaceGitExec, workspaceFs, false),
+      settings: this.settings,
+      lifecycleService,
+    };
+
+    if (scripts?.setup) {
+      void lifecycleService.prepareAndRunLifecycleScript({
+        type: 'setup',
+        script: scripts.setup,
+      });
+    }
+    if (scripts?.run) {
+      void lifecycleService.prepareLifecycleScript({
+        type: 'run',
+        script: scripts.run,
+      });
+    }
+    if (scripts?.teardown) {
+      void lifecycleService.prepareLifecycleScript({
+        type: 'teardown',
+        script: scripts.teardown,
+      });
+    }
+
+    this.taskWorkspaces.set(workspaceId, createdWorkspace);
+
+    let provisionSucceeded = false;
+    try {
+      const taskEnvVars = getTaskEnvVars({
+        taskId: task.id,
+        taskName: task.name,
+        taskPath: createdWorkspace.path,
+        projectPath: this.project.path,
+        defaultBranch,
+        portSeed: createdWorkspace.path,
+      });
+
+      const conversationProvider = new SshConversationProvider({
+        taskWorkDir: createdWorkspace.path,
+        taskId: task.id,
+        tmux: tmuxEnabled,
+        shellSetup,
+        exec,
+        proxy,
+        taskEnvVars,
+      });
+
+      const terminalProvider = new SshTerminalProvider({
+        taskWorkDir: createdWorkspace.path,
+        taskId: task.id,
+        tmux: tmuxEnabled,
+        shellSetup,
+        exec,
+        proxy,
+        taskEnvVars,
+      });
+
+      const taskEnv: TaskProvider = {
+        taskId: task.id,
+        taskBranch: task.taskBranch,
+        taskEnvVars,
+        conversations: conversationProvider,
+        terminals: terminalProvider,
+      };
+
+      Promise.all(
+        terminals.map((term) =>
+          terminalProvider.spawnTerminal(term).catch((e) => {
+            log.error('SshEnvironmentProvider: failed to hydrate terminal', {
+              terminalId: term.id,
+              error: String(e),
+            });
+          })
+        )
+      );
+
+      Promise.all(
+        conversations.map((conv) =>
+          conversationProvider.startSession(conv, undefined, true).catch((e) => {
+            log.error('SshEnvironmentProvider: failed to hydrate conversation', {
+              conversationId: conv.id,
+              error: String(e),
+            });
+          })
+        )
+      );
+
+      this.terminalProviders.set(task.id, terminalProvider);
+      this.conversationProviders.set(task.id, conversationProvider);
+      log.debug('SshProjectProvider: doOpenTask DONE', {
+        taskId: task.id,
+      });
+      provisionSucceeded = true;
+      return taskEnv;
+    } finally {
+      if (!provisionSucceeded) {
+        await this.disposeWorkspace(workspaceId);
+      }
+    }
+  }
+
   private async doProvisionTask(
     task: Task,
     conversations: Conversation[],
@@ -670,6 +859,42 @@ export class SshProjectProvider implements ProjectProvider {
       throw mapWorktreeErrorToProvisionError(sourceBranchName, result.error);
     }
     return result.data;
+  }
+
+  async validateWorktreeBranch(
+    task: Task,
+    worktreePath: string
+  ): Promise<{
+    exists: boolean;
+    isValid: boolean;
+    mismatch?: { expected: string; actual: string | null };
+  }> {
+    try {
+      await this.fs.stat(worktreePath);
+    } catch {
+      return { exists: false, isValid: false };
+    }
+
+    if (!(await this.isValidWorktree(worktreePath))) {
+      return { exists: true, isValid: false };
+    }
+
+    const actualBranch = await this.worktreeService.getCurrentBranch(worktreePath);
+    const expectedBranch = task.taskBranch ?? (await this.getSourceBranchForTask(task.id));
+
+    if (!expectedBranch) {
+      return { exists: true, isValid: true };
+    }
+
+    if (actualBranch !== expectedBranch) {
+      return {
+        exists: true,
+        isValid: true,
+        mismatch: { expected: expectedBranch, actual: actualBranch },
+      };
+    }
+
+    return { exists: true, isValid: true };
   }
 
   private async isValidWorktree(worktreePath: string): Promise<boolean> {

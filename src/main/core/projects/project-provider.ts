@@ -49,6 +49,15 @@ export interface ProjectProvider {
   getWorkspace(workspaceId: string): Workspace | undefined;
   /** Ensure a workspace is provisioned for the given worktree path. Used for multi-project tasks. */
   ensureWorkspace(workspaceId: string, worktreePath: string): Promise<Workspace>;
+  /** Validate that a worktree at the given path exists and is on the expected branch. */
+  validateWorktreeBranch(
+    task: Task,
+    worktreePath: string
+  ): Promise<{
+    exists: boolean;
+    isValid: boolean;
+    mismatch?: { expected: string; actual: string | null };
+  }>;
   provisionTask(
     args: Task,
     conversations: Conversation[],
@@ -57,6 +66,13 @@ export interface ProjectProvider {
     taskBaseDir?: string,
     projectCount?: number,
     forceCreateWorktree?: boolean
+  ): Promise<Result<TaskProvider, ProvisionTaskError>>;
+  /** Open an existing task without creating/recreating worktrees. Validates worktree exists and matches. */
+  openTask(
+    args: Task,
+    conversations: Conversation[],
+    terminals: Terminal[],
+    workDir: string
   ): Promise<Result<TaskProvider, ProvisionTaskError>>;
   getTask(taskId: string): TaskProvider | undefined;
   getTaskBootstrapStatus(taskId: string): TaskBootstrapStatus;

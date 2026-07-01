@@ -57,6 +57,18 @@ export class WorktreeService {
     }
   }
 
+  async getCurrentBranch(worktreePath: string): Promise<string | null> {
+    try {
+      const { stdout } = await this.exec('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+        cwd: worktreePath,
+      });
+      const branch = stdout.trim();
+      return branch === 'HEAD' ? null : branch;
+    } catch {
+      return null;
+    }
+  }
+
   async syncWorktreePoolPath(): Promise<void> {
     const dir = await this.projectSettings.getWorktreeDirectory();
     this.worktreePoolPath = path.join(dir, path.basename(this.repoPath));

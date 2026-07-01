@@ -35,7 +35,7 @@ const TaskViewWrapperWithProviders = observer(function TaskViewWrapperWithProvid
     if (taskStore && 'archivedAt' in taskStore.data && taskStore.data.archivedAt) return;
 
     getTaskManagerStore(projectId)
-      ?.provisionTask(taskId)
+      ?.openTask(taskId)
       .catch(() => {});
   }, [kind, projectId, taskId, taskStore]);
 

@@ -96,7 +96,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
   const providerSelection = useMemo(() => {
     // Check if user explicitly selected a custom agent
     if (providerOverride && !isValidProviderId(providerOverride)) {
-      const custom = customAgents.find(e => e.id === providerOverride);
+      const custom = customAgents.find((e) => e.id === providerOverride);
       if (custom && customConnectedIds.has(custom.id)) {
         return { providerId: custom.id, createDisabled: false };
       }

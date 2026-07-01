@@ -5,17 +5,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Branch } from '@shared/git';
 import type { CreateTaskError } from '@shared/tasks';
-import { BranchSelector } from '@renderer/lib/components/branch-selector';
-import { ComboboxTrigger, ComboboxValue } from '@renderer/lib/ui/combobox';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
 import { WorkspaceStoreClass } from '@renderer/features/workspaces/stores/workspace-store';
+import { BranchSelector } from '@renderer/lib/components/branch-selector';
 import { rpc } from '@renderer/lib/ipc';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
+import { ComboboxTrigger, ComboboxValue } from '@renderer/lib/ui/combobox';
 import { ConfirmButton } from '@renderer/lib/ui/confirm-button';
 import {
   DialogContentArea,

@@ -51,7 +51,7 @@ export const SidebarTaskItem = observer(function SidebarTaskItem({
 
   const handleProvision = () => {
     if (task.state !== 'unprovisioned' || task.phase !== 'idle') return;
-    taskManager?.provisionTask(taskId);
+    taskManager?.openTask(taskId);
   };
 
   const handleWorkspaceNavigation = async () => {

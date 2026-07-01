@@ -7,6 +7,7 @@ import { generateTaskName } from './generateTaskName';
 import { getBootstrapStatus } from './getBootstrapStatus';
 import { getTasks, getTasksByWorkspace } from './getTasks';
 import { getWorkspaceSettings } from './getWorkspaceSettings';
+import { openTask } from './openTask';
 import { getTaskProjectContexts, getTaskProjects } from './operations/getTaskProjects';
 import { setTaskProjects } from './operations/setTaskProjects';
 import { provisionTask } from './provisionTask';
@@ -27,6 +28,7 @@ export const taskController = createRPCController({
   archiveTask,
   restoreTask,
   renameTask,
+  openTask,
   provisionTask,
   teardownTask,
   getBootstrapStatus,

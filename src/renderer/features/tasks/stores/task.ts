@@ -1,5 +1,5 @@
 import { makeAutoObservable, observable, runInAction } from 'mobx';
-import { Issue, Task, TaskLifecycleStatus } from '@shared/tasks';
+import { BranchMismatchInfo, Issue, Task, TaskLifecycleStatus } from '@shared/tasks';
 import type { TaskViewSnapshot } from '@shared/view-state';
 import type { RepositoryStore } from '@renderer/features/projects/stores/repository-store';
 import { ConversationManagerStore } from '@renderer/features/tasks/conversations/conversation-manager';
@@ -48,6 +48,7 @@ export class ProvisionedTask {
   readonly workspaceId: string;
   readonly isMultiProject: boolean;
   readonly projectContexts?: ProjectContextStore;
+  branchMismatches: BranchMismatchInfo[] = [];
 
   private readonly _taskStore: TaskStore;
   private _snapshotDisposer: (() => void) | null = null;

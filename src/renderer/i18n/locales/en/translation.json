@@ -1051,5 +1051,13 @@
       "title": "Task creation failed",
       "detail": "{{message}}"
     }
+  },
+  "branchMismatch": {
+    "title": "Working branch mismatch detected",
+    "description": "The worktree for {{projectName}} is on an unexpected branch",
+    "descriptionPlural": "The worktrees for {{projectNames}} are on unexpected branches",
+    "expected": "expected",
+    "actual": "actual",
+    "detachedHead": "(detached HEAD)"
   }
 }

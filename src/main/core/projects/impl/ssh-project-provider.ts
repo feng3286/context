@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { SFTPWrapper } from 'ssh2';
 import { Conversation } from '@shared/conversations';
 import type { FetchError } from '@shared/git';
@@ -863,7 +863,8 @@ export class SshProjectProvider implements ProjectProvider {
 
   async validateWorktreeBranch(
     task: Task,
-    worktreePath: string
+    worktreePath: string,
+    projectId: string
   ): Promise<{
     exists: boolean;
     isValid: boolean;
@@ -880,9 +881,10 @@ export class SshProjectProvider implements ProjectProvider {
     }
 
     const actualBranch = await this.worktreeService.getCurrentBranch(worktreePath);
-    const expectedBranch = task.taskBranch ?? (await this.getSourceBranchForTask(task.id));
+    const sourceBranch = await this.getSourceBranchForTask(task.id, projectId);
+    const expectedBranch = task.taskBranch || sourceBranch;
 
-    if (!expectedBranch) {
+    if (!expectedBranch || expectedBranch === '') {
       return { exists: true, isValid: true };
     }
 
@@ -907,12 +909,21 @@ export class SshProjectProvider implements ProjectProvider {
     }
   }
 
-  private async getSourceBranchForTask(taskId: string): Promise<string | undefined> {
-    const row = await db
+  private async getSourceBranchForTask(
+    taskId: string,
+    projectId?: string
+  ): Promise<string | undefined> {
+    if (projectId) {
+      const [result] = await db
+        .select({ sourceBranch: taskProjects.sourceBranch })
+        .from(taskProjects)
+        .where(and(eq(taskProjects.taskId, taskId), eq(taskProjects.projectId, projectId)));
+      return result?.sourceBranch ?? undefined;
+    }
+    const [row] = await db
       .select({ sourceBranch: taskProjects.sourceBranch })
       .from(taskProjects)
-      .where(eq(taskProjects.taskId, taskId))
-      .limit(1);
-    return row[0]?.sourceBranch ?? undefined;
+      .where(eq(taskProjects.taskId, taskId));
+    return row?.sourceBranch ?? undefined;
   }
 }

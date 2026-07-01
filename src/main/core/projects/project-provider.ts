@@ -52,7 +52,8 @@ export interface ProjectProvider {
   /** Validate that a worktree at the given path exists and is on the expected branch. */
   validateWorktreeBranch(
     task: Task,
-    worktreePath: string
+    worktreePath: string,
+    projectId: string
   ): Promise<{
     exists: boolean;
     isValid: boolean;

@@ -51,7 +51,11 @@ export async function openTask(taskId: string): Promise<OpenTaskResult> {
     const projectName = nameById.get(tpRow.projectId) ?? tpRow.projectId;
     const worktreePath = path.join(task.workDir!, projectName);
 
-    const result = await rowProject.validateWorktreeBranch(task, worktreePath);
+    const result = await rowProject.validateWorktreeBranch(
+      task,
+      worktreePath,
+      tpRow.projectId
+    );
 
     if (result.mismatch) {
       branchMismatches.push({

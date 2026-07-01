@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Conversation } from '@shared/conversations';
 import { gitRefChangedChannel } from '@shared/events/gitEvents';
 import type { FetchError } from '@shared/git';
@@ -830,7 +830,8 @@ export class LocalProjectProvider implements ProjectProvider {
 
   async validateWorktreeBranch(
     task: Task,
-    worktreePath: string
+    worktreePath: string,
+    projectId: string
   ): Promise<{
     exists: boolean;
     isValid: boolean;
@@ -847,7 +848,10 @@ export class LocalProjectProvider implements ProjectProvider {
     }
 
     const actualBranch = await this.worktreeService.getCurrentBranch(worktreePath);
-    const expectedBranch = task.taskBranch ?? (await this.getSourceBranchForTask(task.id));
+    // Get the sourceBranch specific to THIS project (not the first one found)
+    const sourceBranch = await this.getSourceBranchForTask(task.id, projectId);
+    // taskBranch can be empty string ('') or undefined — treat both as "no branch recorded"
+    const expectedBranch = task.taskBranch || sourceBranch;
 
     if (!expectedBranch) {
       // No expected branch recorded — can't validate
@@ -874,13 +878,22 @@ export class LocalProjectProvider implements ProjectProvider {
     }
   }
 
-  private async getSourceBranchForTask(taskId: string): Promise<string | undefined> {
-    const row = await db
+  private async getSourceBranchForTask(
+    taskId: string,
+    projectId?: string
+  ): Promise<string | undefined> {
+    if (projectId) {
+      const [result] = await db
+        .select({ sourceBranch: taskProjects.sourceBranch })
+        .from(taskProjects)
+        .where(and(eq(taskProjects.taskId, taskId), eq(taskProjects.projectId, projectId)));
+      return result?.sourceBranch ?? undefined;
+    }
+    const [row] = await db
       .select({ sourceBranch: taskProjects.sourceBranch })
       .from(taskProjects)
-      .where(eq(taskProjects.taskId, taskId))
-      .limit(1);
-    return row[0]?.sourceBranch ?? undefined;
+      .where(eq(taskProjects.taskId, taskId));
+    return row?.sourceBranch ?? undefined;
   }
 
   async getRemoteState(): Promise<ProjectRemoteState> {

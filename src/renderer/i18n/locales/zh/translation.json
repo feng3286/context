@@ -1051,5 +1051,13 @@
       "title": "任务创建失败",
       "detail": "{{message}}"
     }
+  },
+  "branchMismatch": {
+    "title": "工作分支不匹配",
+    "description": "项目 {{projectName}} 的工作分支与预期不一致",
+    "descriptionPlural": "项目 {{projectNames}} 的工作分支与预期不一致",
+    "expected": "预期",
+    "actual": "实际",
+    "detachedHead": "(游离 HEAD)"
   }
 }

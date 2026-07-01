@@ -3,7 +3,10 @@ import { Check, ChevronRight, FolderOpen, GitBranch } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { Branch } from '@shared/git';
 import type { CreateTaskError } from '@shared/tasks';
+import { BranchSelector } from '@renderer/lib/components/branch-selector';
+import { ComboboxTrigger, ComboboxValue } from '@renderer/lib/ui/combobox';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
@@ -99,6 +102,74 @@ function formatCreateTaskError(
   }
 }
 
+interface ProjectBranchRowProps {
+  project: { id: string; name: string };
+  isSelected: boolean;
+  config: ProjectBranchConfig | undefined;
+  repo: ReturnType<typeof getRepositoryStore>;
+  onProjectToggle: (projectId: string) => void;
+  onBranchChange: (projectId: string, branch: string) => void;
+}
+
+const ProjectBranchRow = observer(function ProjectBranchRow({
+  project,
+  isSelected,
+  config,
+  repo,
+  onProjectToggle,
+  onBranchChange,
+}: ProjectBranchRowProps) {
+  const branches = repo?.branches ?? [];
+  const defaultBranchName = repo?.defaultBranch?.branch ?? 'main';
+
+  // Find the Branch object matching the currently selected sourceBranch string
+  const selectedBranch: Branch | undefined = useMemo(
+    () => branches.find((b) => b.branch === (config?.sourceBranch ?? defaultBranchName)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [branches, config?.sourceBranch, defaultBranchName]
+  );
+
+  return (
+    <div className="px-3 py-2">
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => onProjectToggle(project.id)}
+      >
+        <div
+          className={`h-4 w-4 rounded border border-border flex items-center justify-center ${
+            isSelected ? 'bg-primary border-primary' : ''
+          }`}
+        >
+          {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+        </div>
+        <span className="truncate text-sm flex-1">{project.name}</span>
+      </div>
+      {isSelected && (
+        <div className="mt-2 ml-6 flex items-center gap-2">
+          <GitBranch className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <div className="flex-1 min-w-0">
+            <BranchSelector
+              branches={branches}
+              value={selectedBranch}
+              onValueChange={(b: Branch) => onBranchChange(project.id, b.branch)}
+              onRefresh={() => repo?.refresh()}
+              isRefreshing={repo?.loading ?? false}
+              trigger={
+                <ComboboxTrigger className="min-w-[240px] border flex border-border h-9 hover:bg-muted/30 rounded-md px-2.5 py-1 text-left text-sm outline-none items-center justify-between">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <GitBranch className="h-4 w-4" />
+                    <ComboboxValue placeholder="Select a branch" />
+                  </div>
+                </ComboboxTrigger>
+              }
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
 const ProjectBranchSelector = observer(function ProjectBranchSelector({
   workspaceId,
   selectedProjectIds,
@@ -118,47 +189,17 @@ const ProjectBranchSelector = observer(function ProjectBranchSelector({
     <div className="space-y-2">
       <label className="text-sm font-medium">{t('createTask:selectProjectsBranches')}</label>
       <div className="border border-border rounded-md divide-y divide-border">
-        {projects.map((project) => {
-          const isSelected = selectedProjectIds.has(project.id);
-          const config = branchConfigs.get(project.id);
-          const repo = getRepositoryStore(project.id);
-          const branches = repo?.branches ?? [];
-          const defaultBranchName = repo?.defaultBranch?.branch ?? 'main';
-
-          return (
-            <div key={project.id} className="px-3 py-2">
-              <div
-                className="flex items-center gap-2 cursor-pointer"
-                onClick={() => onProjectToggle(project.id)}
-              >
-                <div
-                  className={`h-4 w-4 rounded border border-border flex items-center justify-center ${
-                    isSelected ? 'bg-primary border-primary' : ''
-                  }`}
-                >
-                  {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
-                </div>
-                <span className="truncate text-sm flex-1">{project.name}</span>
-              </div>
-              {isSelected && (
-                <div className="mt-2 ml-6 flex items-center gap-2">
-                  <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
-                  <select
-                    className="flex-1 px-2 py-1 text-sm border border-border rounded bg-background"
-                    value={config?.sourceBranch ?? defaultBranchName}
-                    onChange={(e) => onBranchChange(project.id, e.target.value)}
-                  >
-                    {branches.map((b) => (
-                      <option key={b.branch} value={b.branch}>
-                        {b.branch}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {projects.map((project) => (
+          <ProjectBranchRow
+            key={project.id}
+            project={project}
+            isSelected={selectedProjectIds.has(project.id)}
+            config={branchConfigs.get(project.id)}
+            repo={getRepositoryStore(project.id)}
+            onProjectToggle={onProjectToggle}
+            onBranchChange={onBranchChange}
+          />
+        ))}
       </div>
     </div>
   );

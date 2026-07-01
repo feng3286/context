@@ -69,6 +69,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
   // Track connection status of custom agents
   const [customConnectedIds, setCustomConnectedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
+    if (!customAgents.length) return;
     let cancelled = false;
     const check = async () => {
       const connected = new Set<string>();
@@ -93,6 +94,14 @@ export const CreateConversationModal = observer(function CreateConversationModal
 
   // Resolve provider selection including custom agents
   const providerSelection = useMemo(() => {
+    // Check if user explicitly selected a custom agent
+    if (providerOverride && !isValidProviderId(providerOverride)) {
+      const custom = customAgents.find(e => e.id === providerOverride);
+      if (custom && customConnectedIds.has(custom.id)) {
+        return { providerId: custom.id, createDisabled: false };
+      }
+    }
+
     // First try built-in resolution
     const builtInResult = resolveConversationProviderSelection({
       defaultProviderId: isValidProviderId(defaultProviderId)
@@ -122,6 +131,8 @@ export const CreateConversationModal = observer(function CreateConversationModal
     installedProviderIds,
     availabilityKnown,
     connectedCustomAgents,
+    customAgents,
+    customConnectedIds,
   ]);
 
   const { providerId, createDisabled } = providerSelection;

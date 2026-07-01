@@ -19,11 +19,15 @@ export interface AgentGroup {
 
 export function buildAgentGroups(
   installedAgents: string[],
-  assumedInstalledAgents: string[] = []
+  assumedInstalledAgents: string[] = [],
+  /** Number of connected custom agents — ensures 'Installed' group is created even when
+   *  no built-in agents are detected, so connected custom agents have a group to merge into. */
+  customConnectedCount: number = 0
 ): AgentGroup[] {
   const installedSet = new Set(
     [...installedAgents, ...assumedInstalledAgents].filter((id) => id in agentConfig)
   );
+  const hasInstalledCustom = customConnectedCount > 0;
   const allAgentIds = Object.keys(agentConfig) as AgentProviderId[];
 
   const installedOptions: AgentOption[] = allAgentIds
@@ -34,10 +38,14 @@ export function buildAgentGroups(
     .filter((id) => !installedSet.has(id))
     .map((id) => ({ value: id, label: agentConfig[id].name, agentId: id, disabled: true }));
 
-  return [
-    { value: 'installed', label: 'Installed', items: installedOptions },
-    { value: 'not-installed', label: 'Not installed', items: notInstalledOptions },
-  ].filter((group) => group.items.length > 0);
+  const groups: AgentGroup[] = [];
+  if (installedOptions.length > 0 || hasInstalledCustom) {
+    groups.push({ value: 'installed', label: 'Installed', items: installedOptions });
+  }
+  if (notInstalledOptions.length > 0) {
+    groups.push({ value: 'not-installed', label: 'Not installed', items: notInstalledOptions });
+  }
+  return groups;
 }
 
 /** Build AgentOption entries from custom agents */

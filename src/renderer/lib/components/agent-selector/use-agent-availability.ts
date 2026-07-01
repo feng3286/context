@@ -52,8 +52,8 @@ export function useAgentAvailability({
   );
 
   const builtInGroups = useMemo(
-    () => buildAgentGroups(installedAgents, assumedInstalledAgents),
-    [installedAgents, assumedInstalledAgents]
+    () => buildAgentGroups(installedAgents, assumedInstalledAgents, customAgentConnectedIds.size),
+    [installedAgents, assumedInstalledAgents, customAgentConnectedIds.size]
   );
 
   const groups = useMemo(

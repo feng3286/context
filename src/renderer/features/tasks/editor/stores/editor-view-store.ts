@@ -349,6 +349,21 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
     const tab = this._tabs.find((t) => t.path === filePath);
     const effectiveProjectId = tab?.projectId ?? this.projectId;
 
+    // Handle task-root files (multi-project task root level files like AGENTS.md)
+    if (filePath.startsWith('task-root:')) {
+      const actualPath = filePath.replace('task-root:', '');
+      const taskId = this.workspaceId;
+      const result = await rpc.fs.readTaskRootFile(taskId, actualPath);
+      runInAction(() => {
+        const t = this._tabs.find((t) => t.path === filePath);
+        if (t) {
+          t.content = result.success ? result.data.content : '';
+          t.isLoading = false;
+        }
+      });
+      return;
+    }
+
     if (kind === 'image') {
       const result = await rpc.fs.readImage(effectiveProjectId, this.workspaceId, filePath);
       runInAction(() => {

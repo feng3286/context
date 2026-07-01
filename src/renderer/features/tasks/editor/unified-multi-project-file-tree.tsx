@@ -1,11 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { FileNode } from '@shared/fs';
 import { buildVisibleRows } from '@renderer/features/tasks/editor/stores/files-store-utils';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
+import { rpc } from '@renderer/lib/ipc';
 import { cn } from '@renderer/utils/utils';
 
 /**
@@ -28,18 +29,38 @@ interface ProjectFileNode extends FileNode {
   projectId: string;
 }
 
-type UnifiedNode = ProjectHeaderNode | ProjectFileNode;
+/**
+ * Task-root file node for multi-project tasks
+ */
+interface TaskRootFileNode {
+  path: string;
+  name: string;
+  parentPath: string | null;
+  depth: number;
+  type: 'task-root-file' | 'task-root-dir';
+  isHidden: boolean;
+  projectId: '__task_root__';
+}
+
+type UnifiedNode = ProjectHeaderNode | ProjectFileNode | TaskRootFileNode;
+
+interface TaskRootFileEntry {
+  name: string;
+  type: 'dir' | 'file';
+}
 
 /**
- * Build a unified tree structure from multiple projects
+ * Build a unified tree structure from multiple projects with task-root files
  */
 function buildUnifiedTree(
   projectContexts: NonNullable<ReturnType<typeof useProvisionedTask>['projectContexts']>,
   expandedPaths: Set<string>,
-  expandedProjects: Set<string>
+  expandedProjects: Set<string>,
+  taskRootFiles: TaskRootFileEntry[]
 ): UnifiedNode[] {
   const rows: UnifiedNode[] = [];
 
+  // Add project sections first
   for (const projectContext of Array.from(projectContexts.projects.values())) {
     const projectId = projectContext.projectId;
     const projectName = projectContext.projectName;
@@ -71,6 +92,21 @@ function buildUnifiedTree(
     }
   }
 
+  // Add task-root files at the bottom
+  if (taskRootFiles.length > 0) {
+    for (const entry of taskRootFiles) {
+      rows.push({
+        path: `task-root:${entry.name}`,
+        name: entry.name,
+        parentPath: null,
+        depth: 0,
+        type: entry.type === 'dir' ? 'task-root-dir' : 'task-root-file',
+        isHidden: false,
+        projectId: '__task_root__',
+      });
+    }
+  }
+
   return rows;
 }
 
@@ -88,11 +124,13 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
   const editorView = taskState.taskView.editorView;
 
   const isProjectHeader = node.type === 'project-header';
-  // projectId is now directly attached to all unified nodes
-  const projectId = node.projectId;
-  const projectContext = projectId ? taskState.projectContexts?.projects.get(projectId) : null;
+  const isTaskRoot = node.projectId === '__task_root__';
+  const projectId = isTaskRoot ? undefined : node.projectId;
+  const projectContext = projectId
+    ? taskState.projectContexts?.projects.get(projectId)
+    : null;
 
-  if (!projectContext && !isProjectHeader) return null;
+  if (!projectContext && !isProjectHeader && !isTaskRoot) return null;
 
   // For project headers, check expandedProjects; for directories, check expandedPaths
   const expandedProjects = taskState.projectContexts?.expandedProjects ?? new Set();
@@ -102,11 +140,12 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
 
   const isSelected =
     !isProjectHeader &&
+    !isTaskRoot &&
     taskState.taskView.view === 'editor' &&
     editorView.activeFilePath === node.path;
 
   const fileStatus =
-    !isProjectHeader && projectContext
+    !isProjectHeader && !isTaskRoot && projectContext
       ? projectContext.git.fileChanges?.find((c) => c.path === node.path)?.status
       : undefined;
 
@@ -118,17 +157,28 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
       taskState.taskView.setView('editor');
     }
     if (isProjectHeader) {
-      toggleProjectExpand();
+      taskState.projectContexts?.toggleProjectExpand(node.path);
     } else if (node.type === 'directory') {
-      toggleExpand();
-    } else {
-      editorView.openFilePreview(node.path, projectId);
+      if (editorView.expandedPaths.has(node.path)) {
+        editorView.expandedPaths.delete(node.path);
+      } else {
+        editorView.expandedPaths.add(node.path);
+        if (projectContext && !projectContext.files.loadedPaths.has(node.path)) {
+          void projectContext.files.loadDir(node.path);
+        }
+      }
+    } else if (node.type === 'task-root-file') {
+      editorView.openFile(node.path, '__task_root__');
+    } else if (node.type === 'file' && projectId) {
+      editorView.openFile(node.path, projectId);
     }
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isProjectHeader && node.type === 'file') {
+    if (node.type === 'task-root-file') {
+      editorView.openFile(node.path, '__task_root__');
+    } else if (node.type === 'file' && projectId) {
       editorView.openFile(node.path, projectId);
     }
   };
@@ -136,29 +186,7 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (isProjectHeader) {
-        toggleProjectExpand();
-      } else if (node.type === 'directory') {
-        toggleExpand();
-      } else {
-        editorView.openFilePreview(node.path, projectId);
-      }
-    }
-  };
-
-  const toggleProjectExpand = () => {
-    if (!taskState.projectContexts) return;
-    taskState.projectContexts.toggleProjectExpand(node.path);
-  };
-
-  const toggleExpand = () => {
-    if (editorView.expandedPaths.has(node.path)) {
-      editorView.expandedPaths.delete(node.path);
-    } else {
-      editorView.expandedPaths.add(node.path);
-      if (projectContext && !projectContext.files.loadedPaths.has(node.path)) {
-        void projectContext.files.loadDir(node.path);
-      }
+      handleClick(e as unknown as React.MouseEvent);
     }
   };
 
@@ -169,7 +197,8 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
         'flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 hover:bg-background-1',
         isSelected && 'bg-background-2 hover:bg-background-2',
         node.isHidden && 'opacity-60',
-        isProjectHeader && 'font-medium'
+        isProjectHeader && 'font-medium',
+        isTaskRoot && node.type === 'task-root-file' && 'italic'
       )}
       tabIndex={0}
       onClick={handleClick}
@@ -198,6 +227,12 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
           ) : (
             <Folder className="h-3.5 w-3.5 text-muted-foreground" />
           )
+        ) : isTaskRoot ? (
+          node.type === 'task-root-dir' ? (
+            <Folder className="h-3.5 w-3.5 text-muted-foreground/60" />
+          ) : (
+            <FileText className="h-3.5 w-3.5 text-muted-foreground/60" />
+          )
         ) : node.type === 'directory' ? (
           isExpanded ? (
             <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
@@ -215,7 +250,8 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
           fileStatus === 'added' && 'text-green-500',
           fileStatus === 'modified' && 'text-amber-500',
           fileStatus === 'deleted' && 'text-red-500 line-through',
-          fileStatus === 'renamed' && 'text-blue-500'
+          fileStatus === 'renamed' && 'text-blue-500',
+          isTaskRoot && 'text-muted-foreground/80'
         )}
       >
         {node.name}
@@ -227,17 +263,45 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
 /**
  * Unified multi-project file tree.
  * Shows all projects in a single tree structure with projects as top-level folders.
+ * Also shows task-root files (e.g. AGENTS.md) above project directories.
  */
 export const UnifiedMultiProjectFileTree = observer(function UnifiedMultiProjectFileTree() {
   const taskState = useProvisionedTask();
   const projectContexts = taskState.projectContexts;
   const editorView = taskState.taskView.editorView;
   const expandedProjects = projectContexts?.expandedProjects ?? new Set();
+  const [taskRootFiles, setTaskRootFiles] = useState<TaskRootFileEntry[]>([]);
+
+  // Load task-root files for multi-project tasks
+  useEffect(() => {
+    if (!projectContexts || projectContexts.projects.size <= 1) {
+      setTaskRootFiles([]);
+      return;
+    }
+    const taskId = taskState.workspaceId;
+    rpc.fs
+      .listTaskRootFiles(taskId)
+      .then((result) => {
+        if (result.success) {
+          setTaskRootFiles(
+            result.data.files.map((f) => ({
+              name: f.name,
+              type: f.type as 'dir' | 'file',
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, [projectContexts, taskState.workspaceId]);
 
   // Compute visible rows inline - MobX observer will track all observable accesses
-  // and re-render when files.nodes/childIndex change after loading
   const visibleRows = projectContexts
-    ? buildUnifiedTree(projectContexts, editorView.expandedPaths, expandedProjects)
+    ? buildUnifiedTree(
+        projectContexts,
+        editorView.expandedPaths,
+        expandedProjects,
+        taskRootFiles
+      )
     : [];
 
   const parentRef = useRef<HTMLDivElement>(null);

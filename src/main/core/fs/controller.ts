@@ -1,9 +1,15 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { eq, inArray } from 'drizzle-orm';
 import { planEventChannel } from '@shared/events/appEvents';
 import { fsWatchEventChannel } from '@shared/events/fsEvents';
 import { createRPCController } from '@shared/ipc/rpc';
 import { err, ok } from '@shared/result';
 import { events } from '@main/lib/events';
+import { projectManager } from '@main/core/projects/project-manager';
 import { resolveWorkspace } from '../projects/utils';
+import { db } from '@main/db/client';
+import { projects, taskProjects, tasks } from '@main/db/schema';
 import {
   FileSystemErrorCodes,
   type FileWatcher,
@@ -283,5 +289,48 @@ export const filesController = createRPCController({
       watcherRegistry.get(key)?.update(union);
     }
     return ok({});
+  },
+
+  listTaskRootFiles: async (taskId: string) => {
+    const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!row?.workDir) return err({ type: 'not_found' as const, entity: 'task_root' as const });
+
+    const taskProjectRows = await db
+      .select()
+      .from(taskProjects)
+      .where(eq(taskProjects.taskId, taskId));
+
+    const projectIds = taskProjectRows.map((r) => r.projectId);
+    const projectRows = await db
+      .select({ id: projects.id, name: projects.name })
+      .from(projects)
+      .where(inArray(projects.id, projectIds));
+    const projectNames = new Set(projectRows.map((r) => r.name));
+
+    try {
+      const entries = await fs.readdir(row.workDir, { withFileTypes: true });
+      const files = entries
+        .filter((e) => !projectNames.has(e.name))
+        .map((e) => ({
+          name: e.name,
+          type: e.isDirectory() ? 'dir' : 'file',
+        }));
+      return ok({ path: row.workDir, files });
+    } catch (e) {
+      return err({ type: 'fs_error' as const, message: String(e) });
+    }
+  },
+
+  readTaskRootFile: async (taskId: string, filePath: string) => {
+    const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!row?.workDir) return err({ type: 'not_found' as const, entity: 'task_root' as const });
+
+    try {
+      const fullPath = path.resolve(row.workDir, filePath);
+      const content = await fs.readFile(fullPath, 'utf-8');
+      return ok({ content });
+    } catch (e) {
+      return err({ type: 'fs_error' as const, message: String(e) });
+    }
   },
 });

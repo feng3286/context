@@ -353,14 +353,8 @@ export class EditorViewStore implements Snapshottable<EditorViewSnapshot> {
     if (filePath.startsWith('task-root:')) {
       const actualPath = filePath.replace('task-root:', '');
       const taskId = this.workspaceId;
-      const result = await rpc.fs.readTaskRootFile(taskId, actualPath);
-      runInAction(() => {
-        const t = this._tabs.find((t) => t.path === filePath);
-        if (t) {
-          t.content = result.success ? result.data.content : '';
-          t.isLoading = false;
-        }
-      });
+      const language = getMonacoLanguageId(actualPath);
+      await modelRegistry.registerTaskRoot(taskId, actualPath, language, this.modelRootPath);
       return;
     }
 

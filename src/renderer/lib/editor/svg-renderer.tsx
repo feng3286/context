@@ -23,6 +23,7 @@ export const SvgRenderer = observer(function SvgRenderer({ filePath }: SvgRender
 
   const content =
     modelRegistry.getValue(buildMonacoModelPath(editorView.modelRootPath, filePath, projectId)) ??
+    tab?.content ??
     '';
 
   const svgUrl = useMemo(

@@ -32,7 +32,8 @@ export const MarkdownEditorRenderer = observer(function MarkdownEditorRenderer({
   // component re-renders whenever the buffer content changes or is first populated.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _version = modelRegistry.bufferVersions.get(bufferUri);
-  const content = modelRegistry.getValue(bufferUri) ?? '';
+  // For task-root files, fall back to tab.content (no Monaco model registered)
+  const content = modelRegistry.getValue(bufferUri) ?? tab?.content ?? '';
   const fileDir = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
 
   const resolveImage = useCallback(

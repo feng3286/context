@@ -488,6 +488,69 @@ export class MonacoModelRegistry {
     return uri;
   }
 
+  /**
+   * Register a task-root file (multi-project task root level file like AGENTS.md)
+   * as an in-memory model. Creates disk + buffer models without git model.
+   * Content is fetched via rpc.fs.readTaskRootFile.
+   */
+  async registerTaskRoot(
+    taskId: string,
+    filePath: string,
+    language: string,
+    modelRootPath: string
+  ): Promise<string> {
+    const sentinelProjectId = '__task_root__';
+    const uri = buildMonacoModelPath(modelRootPath, `task-root:${filePath}`, sentinelProjectId);
+
+    // Check ref-counting
+    const existing = this.modelMap.get(uri);
+    if (existing?.type === 'buffer') {
+      existing.refs += 1;
+      return uri;
+    }
+
+    const m = await this.monacoReadyPromise;
+    const diskUri = this.toDiskUri(uri);
+
+    // Fetch content
+    const result = await rpc.fs.readTaskRootFile(taskId, filePath);
+    const content = result.success ? result.data.content : '';
+
+    // Create disk model
+    const diskMonacoUri = m.Uri.parse(diskUri);
+    let diskModel = m.editor.getModel(diskMonacoUri);
+    if (!diskModel) diskModel = m.editor.createModel(content, language, diskMonacoUri);
+    this.modelMap.set(diskUri, {
+      type: 'disk',
+      model: diskModel,
+      refs: 1,
+      projectId: sentinelProjectId,
+      workspaceId: taskId,
+      filePath,
+      language,
+    });
+    this.modelStatus.set(diskUri, 'ready');
+
+    // Create buffer model
+    const bufferMonacoUri = m.Uri.parse(uri);
+    let bufferModel = m.editor.getModel(bufferMonacoUri);
+    if (!bufferModel) bufferModel = m.editor.createModel(content, language, bufferMonacoUri);
+    this.modelMap.set(uri, {
+      type: 'buffer',
+      model: bufferModel,
+      refs: 1,
+      projectId: sentinelProjectId,
+      workspaceId: taskId,
+      filePath,
+      language,
+      viewState: null,
+    });
+    this.modelStatus.set(uri, 'ready');
+    this.bufferVersions.set(uri, 1);
+
+    return uri;
+  }
+
   // ---------------------------------------------------------------------------
   // Unregister (public API)
   // ---------------------------------------------------------------------------

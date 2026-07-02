@@ -8,6 +8,7 @@ import { err, ok } from '@shared/result';
 import { events } from '@main/lib/events';
 import { projectManager } from '@main/core/projects/project-manager';
 import { resolveWorkspace } from '../projects/utils';
+import { getLocalExec } from '@main/core/utils/exec';
 import { db } from '@main/db/client';
 import { projects, taskProjects, tasks } from '@main/db/schema';
 import {
@@ -329,6 +330,19 @@ export const filesController = createRPCController({
       const fullPath = path.resolve(row.workDir, filePath);
       const content = await fs.readFile(fullPath, 'utf-8');
       return ok({ content });
+    } catch (e) {
+      return err({ type: 'fs_error' as const, message: String(e) });
+    }
+  },
+
+  getWorktreeBranch: async (worktreePath: string) => {
+    try {
+      const localExec = getLocalExec();
+      const { stdout } = await localExec('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+        cwd: worktreePath,
+      });
+      const branch = stdout.trim();
+      return ok({ branch: branch === 'HEAD' ? null : branch });
     } catch (e) {
       return err({ type: 'fs_error' as const, message: String(e) });
     }

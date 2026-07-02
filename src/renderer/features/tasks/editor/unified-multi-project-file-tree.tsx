@@ -256,6 +256,12 @@ const UnifiedFileTreeRow = observer(function UnifiedFileTreeRow({
       >
         {node.name}
       </span>
+
+      {isProjectHeader && projectContext?.actualBranch && (
+        <span className="shrink-0 rounded bg-muted/50 px-1 text-[10px] text-muted-foreground font-mono">
+          {projectContext.actualBranch}
+        </span>
+      )}
     </div>
   );
 });

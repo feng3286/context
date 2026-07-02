@@ -15,6 +15,7 @@ export class ProjectContext {
   readonly projectName: string;
   readonly worktreePath: string | null;
   readonly sourceBranch: string | null;
+  actualBranch: string | null = null;
   readonly git: GitStore;
   readonly files: FilesStore;
   readonly changesView: ProjectChangesViewStore;
@@ -35,6 +36,14 @@ export class ProjectContext {
       files: false,
       changesView: false,
     });
+  }
+
+  async fetchActualBranch(): Promise<void> {
+    if (!this.worktreePath) return;
+    const result = await rpc.fs.getWorktreeBranch(this.worktreePath);
+    if (result.success) {
+      this.actualBranch = result.data.branch;
+    }
   }
 
   activate(): void {
@@ -74,6 +83,11 @@ export class ProjectContextStore {
       const projectContext = new ProjectContext(context, workspaceId, repositoryStore);
       this.projects.set(context.projectId, projectContext);
     }
+
+    // Fetch actual git branch for each project's worktree
+    await Promise.all(
+      Array.from(this.projects.values()).map((ctx) => ctx.fetchActualBranch())
+    );
 
     this.activate();
   }

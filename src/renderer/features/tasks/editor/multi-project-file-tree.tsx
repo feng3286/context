@@ -1,12 +1,57 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FileNode } from '@shared/fs';
 import { buildVisibleRows } from '@renderer/features/tasks/editor/stores/files-store-utils';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@renderer/lib/ui/context-menu';
 import { cn } from '@renderer/utils/utils';
+
+/**
+ * Context menu for file tree rows.
+ */
+function FileTreeContextMenu({
+  absolutePath,
+  relativePath,
+}: {
+  absolutePath: string;
+  relativePath: string;
+}) {
+  const { t } = useTranslation();
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = useCallback(async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch {
+      // clipboard may not be available (e.g., in dev without HTTPS)
+    }
+  }, []);
+
+  const label = (field: string, defaultLabel: string) =>
+    copiedField === field ? t('editor:fileTree.copied') : defaultLabel;
+
+  return (
+    <ContextMenuContent>
+      <ContextMenuItem onClick={() => handleCopy(absolutePath, 'absolute')}>
+        {label('absolute', t('editor:fileTree.copyAbsolutePath'))}
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => handleCopy(relativePath, 'relative')}>
+        {label('relative', t('editor:fileTree.copyRelativePath'))}
+      </ContextMenuItem>
+    </ContextMenuContent>
+  );
+}
 
 /**
  * Per-project file tree row component
@@ -31,6 +76,11 @@ const ProjectFileTreeRow = observer(function ProjectFileTreeRow({
     taskState.taskView.view === 'editor' && editorView.activeFilePath === node.path;
   const fileStatus = projectContext.git.fileChanges?.find((c) => c.path === node.path)?.status;
   const paddingLeft = node.depth * 12 + 4;
+
+  // Compute paths for context menu
+  const worktreePath = projectContext.worktreePath ?? '';
+  const absolutePath = worktreePath ? `${worktreePath}/${node.path}` : node.path;
+  const relativePath = node.path;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -74,57 +124,62 @@ const ProjectFileTreeRow = observer(function ProjectFileTreeRow({
   };
 
   return (
-    <div
-      style={{ ...style, paddingLeft }}
-      className={cn(
-        'flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 hover:bg-background-1',
-        isSelected && 'bg-background-2 hover:bg-background-2',
-        node.isHidden && 'opacity-60'
-      )}
-      tabIndex={0}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onKeyDown={handleKeyDown}
-      role="treeitem"
-      aria-selected={isSelected}
-      aria-expanded={node.type === 'directory' ? isExpanded : undefined}
-    >
-      <span className="shrink-0 text-muted-foreground">
-        {node.type === 'directory' ? (
-          isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )
-        ) : (
-          <span className="inline-block w-3.5" />
-        )}
-      </span>
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          style={{ ...style, paddingLeft }}
+          className={cn(
+            'flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 hover:bg-background-1',
+            isSelected && 'bg-background-2 hover:bg-background-2',
+            node.isHidden && 'opacity-60'
+          )}
+          tabIndex={0}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onKeyDown={handleKeyDown}
+          role="treeitem"
+          aria-selected={isSelected}
+          aria-expanded={node.type === 'directory' ? isExpanded : undefined}
+        >
+          <span className="shrink-0 text-muted-foreground">
+            {node.type === 'directory' ? (
+              isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )
+            ) : (
+              <span className="inline-block w-3.5" />
+            )}
+          </span>
 
-      <span className="shrink-0">
-        {node.type === 'directory' ? (
-          isExpanded ? (
-            <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-          ) : (
-            <Folder className="h-3.5 w-3.5 text-muted-foreground" />
-          )
-        ) : (
-          <FileIcon filename={node.name} size={12} />
-        )}
-      </span>
+          <span className="shrink-0">
+            {node.type === 'directory' ? (
+              isExpanded ? (
+                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+              )
+            ) : (
+              <FileIcon filename={node.name} size={12} />
+            )}
+          </span>
 
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate text-sm',
-          fileStatus === 'added' && 'text-green-500',
-          fileStatus === 'modified' && 'text-amber-500',
-          fileStatus === 'deleted' && 'text-red-500 line-through',
-          fileStatus === 'renamed' && 'text-blue-500'
-        )}
-      >
-        {node.name}
-      </span>
-    </div>
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate text-sm',
+              fileStatus === 'added' && 'text-green-500',
+              fileStatus === 'modified' && 'text-amber-500',
+              fileStatus === 'deleted' && 'text-red-500 line-through',
+              fileStatus === 'renamed' && 'text-blue-500'
+            )}
+          >
+            {node.name}
+          </span>
+        </div>
+      </ContextMenuTrigger>
+      <FileTreeContextMenu absolutePath={absolutePath} relativePath={relativePath} />
+    </ContextMenu>
   );
 });
 
@@ -143,16 +198,14 @@ const ProjectFileTreeSection = observer(function ProjectFileTreeSection({
   const projectContext = projectContexts?.projects.get(projectId);
   const editorView = taskState.taskView.editorView;
 
-  if (!projectContext || !projectContexts) return null;
+  const expanded = projectContexts?.isExpanded(projectId);
+  const files = projectContext?.files;
 
-  const expanded = projectContexts.isExpanded(projectId);
-  const files = projectContext.files;
+  const parentRef = useRef<HTMLDivElement>(null);
 
   const visibleRows = files?.tree.data
     ? buildVisibleRows(files.nodes, files.childIndex, editorView.expandedPaths)
     : [];
-
-  const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: visibleRows.length,
@@ -160,6 +213,8 @@ const ProjectFileTreeSection = observer(function ProjectFileTreeSection({
     estimateSize: () => 28,
     overscan: 10,
   });
+
+  if (!projectContext || !projectContexts) return null;
 
   return (
     <div className="flex flex-col border-b border-border last:border-b-0">
@@ -190,13 +245,13 @@ const ProjectFileTreeSection = observer(function ProjectFileTreeSection({
       {/* Project file tree content */}
       {expanded && (
         <div className="flex-1 overflow-hidden">
-          {files.isLoading ? (
+          {files?.isLoading ? (
             <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">
               Loading...
             </div>
-          ) : files.error ? (
+          ) : files?.error ? (
             <div className="flex items-center justify-center py-4 text-xs text-destructive">
-              {files.error}
+              {files?.error}
             </div>
           ) : visibleRows.length === 0 ? (
             <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">

@@ -1,13 +1,60 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, RefreshCw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FileNode } from '@shared/fs';
 import { buildVisibleRows } from '@renderer/features/tasks/editor/stores/files-store-utils';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
+import { Button } from '@renderer/lib/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@renderer/lib/ui/context-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/lib/ui/tooltip';
 import { cn } from '@renderer/utils/utils';
 import { UnifiedMultiProjectFileTree } from './unified-multi-project-file-tree';
+
+/**
+ * Context menu for file tree rows.
+ */
+function FileTreeContextMenu({
+  absolutePath,
+  relativePath,
+}: {
+  absolutePath: string;
+  relativePath: string;
+}) {
+  const { t } = useTranslation();
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = useCallback(async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch {
+      // clipboard may not be available (e.g., in dev without HTTPS)
+    }
+  }, []);
+
+  const label = (field: string, defaultLabel: string) =>
+    copiedField === field ? t('editor:fileTree.copied') : defaultLabel;
+
+  return (
+    <ContextMenuContent>
+      <ContextMenuItem onClick={() => handleCopy(absolutePath, 'absolute')}>
+        {label('absolute', t('editor:fileTree.copyAbsolutePath'))}
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => handleCopy(relativePath, 'relative')}>
+        {label('relative', t('editor:fileTree.copyRelativePath'))}
+      </ContextMenuItem>
+    </ContextMenuContent>
+  );
+}
 
 const FileTreeRow = observer(function FileTreeRow({
   node,
@@ -26,6 +73,11 @@ const FileTreeRow = observer(function FileTreeRow({
   const isSelected = taskView.view === 'editor' && editorView.activeFilePath === node.path;
   const fileStatus = taskState.workspace.git.fileChanges?.find((c) => c.path === node.path)?.status;
   const paddingLeft = node.depth * 12 + 4;
+
+  // Compute paths for context menu
+  const worktreePath = taskState.path ?? '';
+  const absolutePath = worktreePath ? `${worktreePath}/${node.path}` : node.path;
+  const relativePath = node.path;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,68 +121,85 @@ const FileTreeRow = observer(function FileTreeRow({
   };
 
   return (
-    <div
-      style={{ ...style, paddingLeft }}
-      className={cn(
-        'flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 hover:bg-background-1',
-        isSelected && 'bg-background-2 hover:bg-background-2',
-        node.isHidden && 'opacity-60'
-      )}
-      tabIndex={0}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onKeyDown={handleKeyDown}
-      role="treeitem"
-      aria-selected={isSelected}
-      aria-expanded={node.type === 'directory' ? isExpanded : undefined}
-    >
-      <span className="shrink-0 text-muted-foreground">
-        {node.type === 'directory' ? (
-          isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )
-        ) : (
-          <span className="inline-block w-3.5" />
-        )}
-      </span>
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          style={{ ...style, paddingLeft }}
+          className={cn(
+            'flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 hover:bg-background-1',
+            isSelected && 'bg-background-2 hover:bg-background-2',
+            node.isHidden && 'opacity-60'
+          )}
+          tabIndex={0}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onKeyDown={handleKeyDown}
+          role="treeitem"
+          aria-selected={isSelected}
+          aria-expanded={node.type === 'directory' ? isExpanded : undefined}
+        >
+          <span className="shrink-0 text-muted-foreground">
+            {node.type === 'directory' ? (
+              isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )
+            ) : (
+              <span className="inline-block w-3.5" />
+            )}
+          </span>
 
-      <span className="shrink-0">
-        {node.type === 'directory' ? (
-          isExpanded ? (
-            <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-          ) : (
-            <Folder className="h-3.5 w-3.5 text-muted-foreground" />
-          )
-        ) : (
-          <FileIcon filename={node.name} size={12} />
-        )}
-      </span>
+          <span className="shrink-0">
+            {node.type === 'directory' ? (
+              isExpanded ? (
+                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+              )
+            ) : (
+              <FileIcon filename={node.name} size={12} />
+            )}
+          </span>
 
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate text-sm',
-          fileStatus === 'added' && 'text-green-500',
-          fileStatus === 'modified' && 'text-amber-500',
-          fileStatus === 'deleted' && 'text-red-500 line-through',
-          fileStatus === 'renamed' && 'text-blue-500'
-        )}
-      >
-        {node.name}
-      </span>
-    </div>
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate text-sm',
+              fileStatus === 'added' && 'text-green-500',
+              fileStatus === 'modified' && 'text-amber-500',
+              fileStatus === 'deleted' && 'text-red-500 line-through',
+              fileStatus === 'renamed' && 'text-blue-500'
+            )}
+          >
+            {node.name}
+          </span>
+        </div>
+      </ContextMenuTrigger>
+      <FileTreeContextMenu absolutePath={absolutePath} relativePath={relativePath} />
+    </ContextMenu>
   );
 });
 
 export const EditorFileTree = observer(function EditorFileTree() {
   const taskState = useProvisionedTask();
+  const { t } = useTranslation();
+  const [isReloading, setIsReloading] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
 
   const files = taskState.isMultiProject ? null : taskState.workspace.files;
   const editorView = taskState.taskView.editorView;
   const projectId = taskState._projectId;
+
+  const handleRefresh = useCallback(async () => {
+    if (isReloading || !files) return;
+    setIsReloading(true);
+    try {
+      await files.reload();
+    } finally {
+      setIsReloading(false);
+    }
+  }, [files, isReloading]);
 
   const visibleRows = files
     ? buildVisibleRows(files.nodes, files.childIndex, editorView.expandedPaths)
@@ -174,6 +243,27 @@ export const EditorFileTree = observer(function EditorFileTree() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center justify-end border-b border-border px-2 py-1">
+        <TooltipProvider delay={150}>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isReloading}
+                onClick={handleRefresh}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                aria-label={t('editor:fileTree.refresh')}
+              >
+                <RefreshCw className={cn('h-3.5 w-3.5', isReloading && 'animate-spin')} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('editor:fileTree.refresh')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      {/* File tree */}
       <div ref={parentRef} className="flex-1 overflow-y-auto px-1 py-1" role="tree">
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
           {virtualizer.getVirtualItems().map((vItem) => {

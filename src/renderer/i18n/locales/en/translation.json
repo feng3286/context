@@ -757,6 +757,13 @@
     "noFileOpen": "No file open",
     "noFileOpenDesc": "Select a file from the tree to open it here",
     "viewRendered": "View rendered",
+    "fileTree": {
+      "copyAbsolutePath": "Copy absolute path",
+      "copyRelativePath": "Copy relative path",
+      "refresh": "Refresh",
+      "copied": "Copied",
+      "copyFailed": "Copy failed"
+    },
     "editSource": "Edit source",
     "untitled": "Untitled",
     "previewHint": "preview — double-click to keep",

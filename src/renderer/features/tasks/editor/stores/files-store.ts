@@ -113,6 +113,19 @@ export class FilesStore {
     this.tree.start();
   }
 
+  /** Force a full reload of the file tree (e.g., when AI creates new files). */
+  async reload(): Promise<void> {
+    this.tree.invalidate();
+    // Wait for the load to complete by observing loading state
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (!this.tree.loading) resolve();
+        else setTimeout(check, 50);
+      };
+      check();
+    });
+  }
+
   dispose(): void {
     if (this._bumpTimer) {
       clearTimeout(this._bumpTimer);

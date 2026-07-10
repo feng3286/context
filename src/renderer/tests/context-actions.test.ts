@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { PromptTemplate } from '@shared/prompt-templates';
 import type { Issue } from '@shared/tasks';
 import {
   buildDraftCommentsContextAction,
   buildLinkedIssueContextAction,
-  buildReviewPromptContextAction,
+  buildPromptTemplateContextActions,
   buildTaskContextActions,
 } from '@renderer/features/tasks/conversations/context-actions';
 
@@ -19,6 +20,19 @@ function makeIssue(overrides: Partial<Issue> = {}): Issue {
     project: 'Infra',
     updatedAt: '2026-04-15T11:27:38.662Z',
     fetchedAt: '2026-04-15T15:49:46.788Z',
+    ...overrides,
+  };
+}
+
+function makeTemplate(overrides: Partial<PromptTemplate> = {}): PromptTemplate {
+  return {
+    id: 'test-template',
+    name: 'Test Prompt',
+    content: 'Review this worktree for issues.',
+    category: 'review',
+    enabled: true,
+    order: 0,
+    isSystem: false,
     ...overrides,
   };
 }
@@ -64,19 +78,40 @@ describe('buildLinkedIssueContextAction', () => {
   });
 });
 
-describe('buildReviewPromptContextAction', () => {
-  it('returns null for empty review prompt', () => {
-    expect(buildReviewPromptContextAction('   ')).toBeNull();
+describe('buildPromptTemplateContextActions', () => {
+  it('returns empty array for no templates', () => {
+    expect(buildPromptTemplateContextActions([])).toEqual([]);
   });
 
-  it('builds review prompt action', () => {
-    const action = buildReviewPromptContextAction('Review this worktree for issues.');
-    expect(action).not.toBeNull();
-    expect(action).toMatchObject({
-      id: 'review-prompt',
-      kind: 'review-prompt',
-      label: 'Review prompt',
-      text: 'Review this worktree for issues.',
+  it('filters out disabled templates', () => {
+    const actions = buildPromptTemplateContextActions([makeTemplate({ enabled: false })]);
+    expect(actions).toHaveLength(0);
+  });
+
+  it('filters out empty content templates', () => {
+    const actions = buildPromptTemplateContextActions([makeTemplate({ content: '   ' })]);
+    expect(actions).toHaveLength(0);
+  });
+
+  it('builds prompt template actions', () => {
+    const actions = buildPromptTemplateContextActions([
+      makeTemplate({ id: 'review-default', name: 'Review', content: 'Review this code.' }),
+      makeTemplate({ id: 'test-gen', name: 'Tests', content: 'Write tests.', category: 'test' }),
+    ]);
+    expect(actions).toHaveLength(2);
+    expect(actions[0]).toMatchObject({
+      id: 'prompt-template:review-default',
+      kind: 'prompt-template',
+      label: 'Review',
+      text: 'Review this code.',
+      category: 'review',
+    });
+    expect(actions[1]).toMatchObject({
+      id: 'prompt-template:test-gen',
+      kind: 'prompt-template',
+      label: 'Tests',
+      text: 'Write tests.',
+      category: 'test',
     });
   });
 });
@@ -116,14 +151,31 @@ describe('buildDraftCommentsContextAction', () => {
 });
 
 describe('buildTaskContextActions', () => {
-  it('includes linked issue context, then draft comments, then review prompt', () => {
-    const actions = buildTaskContextActions(makeIssue(), 'Review this worktree for issues.', {
-      count: 1,
-      formattedComments: '<user_comments>test</user_comments>',
-    });
+  it('includes linked issue, draft comments, then prompt templates', () => {
+    const actions = buildTaskContextActions(
+      makeIssue(),
+      {
+        count: 1,
+        formattedComments: '<user_comments>test</user_comments>',
+      },
+      [makeTemplate({ id: 'review-default', name: 'Review', content: 'Review this.' })]
+    );
     expect(actions).toHaveLength(3);
     expect(actions[0]?.id).toBe('linked-issue:github:EMD-123');
     expect(actions[1]?.id).toBe('draft-comments');
-    expect(actions[2]?.id).toBe('review-prompt');
+    expect(actions[2]?.id).toBe('prompt-template:review-default');
+  });
+
+  it('works with no prompt templates', () => {
+    const actions = buildTaskContextActions(makeIssue(), {
+      count: 1,
+      formattedComments: '<user_comments>test</user_comments>',
+    });
+    expect(actions).toHaveLength(2);
+  });
+
+  it('works with empty prompt templates array', () => {
+    const actions = buildTaskContextActions(undefined, undefined, []);
+    expect(actions).toHaveLength(0);
   });
 });

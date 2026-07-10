@@ -2,6 +2,7 @@ import z from 'zod';
 import { AGENT_PROVIDER_IDS, AGENT_PROVIDERS } from '@shared/agent-provider-registry';
 import { customAgentEntrySchema } from '@shared/custom-agent';
 import { openInAppIdSchema } from '@shared/openInApps';
+import { DEFAULT_PROMPT_TEMPLATES, promptTemplateSchema } from '@shared/prompt-templates';
 import { DEFAULT_AGENT_ID, DEFAULT_REVIEW_PROMPT } from './settings-registry';
 
 export const localProjectSettingsSchema = z.object({
@@ -42,6 +43,10 @@ export const themeSchema = z
 export const defaultAgentSchema = z.optional(z.enum(AGENT_PROVIDER_IDS)).default(DEFAULT_AGENT_ID);
 
 export const reviewPromptSchema = z.string().default(DEFAULT_REVIEW_PROMPT);
+
+export const promptTemplatesSchema = z
+  .array(promptTemplateSchema)
+  .default(DEFAULT_PROMPT_TEMPLATES);
 
 export const keyboardSettingsSchema = z
   .optional(
@@ -117,6 +122,7 @@ export const APP_SETTINGS_SCHEMA_MAP = {
   agentAutoApproveDefaults: agentAutoApproveDefaultsSchema,
   defaultAgent: defaultAgentSchema,
   reviewPrompt: reviewPromptSchema,
+  promptTemplates: promptTemplatesSchema,
   keyboard: keyboardSettingsSchema,
   notifications: notificationSettingsSchema,
   theme: themeSchema,
@@ -134,6 +140,7 @@ export const appSettingsSchema = z.object({
   agentAutoApproveDefaults: agentAutoApproveDefaultsSchema,
   defaultAgent: defaultAgentSchema,
   reviewPrompt: reviewPromptSchema,
+  promptTemplates: promptTemplatesSchema,
   keyboard: keyboardSettingsSchema,
   notifications: notificationSettingsSchema,
   theme: themeSchema,

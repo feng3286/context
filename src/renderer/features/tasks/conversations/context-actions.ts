@@ -1,9 +1,10 @@
+import type { PromptTemplate } from '@shared/prompt-templates';
 import type { Issue } from '@shared/tasks';
 import { ISSUE_PROVIDER_META } from '@renderer/features/integrations/issue-provider-meta';
 
-const MAX_LABEL_TITLE_LENGTH = 24;
+export type ContextActionKind = 'linked-issue' | 'draft-comments' | 'prompt-template';
 
-export type ContextActionKind = 'linked-issue' | 'draft-comments' | 'review-prompt';
+const MAX_LABEL_TITLE_LENGTH = 24;
 
 export interface ContextAction {
   id: string;
@@ -11,6 +12,7 @@ export interface ContextAction {
   label: string;
   text: string;
   provider?: Issue['provider'];
+  category?: PromptTemplate['category'];
 }
 
 function normalizeWhitespace(value: string | undefined): string {
@@ -65,15 +67,16 @@ export function buildLinkedIssueContextAction(issue?: Issue): ContextAction | nu
   };
 }
 
-export function buildReviewPromptContextAction(reviewPrompt?: string): ContextAction | null {
-  const text = (reviewPrompt ?? '').trim();
-  if (!text) return null;
-  return {
-    id: 'review-prompt',
-    kind: 'review-prompt',
-    label: 'Review prompt',
-    text,
-  };
+export function buildPromptTemplateContextActions(templates: PromptTemplate[]): ContextAction[] {
+  return templates
+    .filter((t) => t.enabled && t.content.trim())
+    .map((t) => ({
+      id: `prompt-template:${t.id}`,
+      kind: 'prompt-template' as const,
+      label: t.name,
+      text: t.content.trim(),
+      category: t.category,
+    }));
 }
 
 export function buildDraftCommentsContextAction(args: {
@@ -93,15 +96,15 @@ export function buildDraftCommentsContextAction(args: {
 
 export function buildTaskContextActions(
   linkedIssue?: Issue,
-  reviewPrompt?: string,
-  draftComments?: { count: number; formattedComments?: string }
+  draftComments?: { count: number; formattedComments?: string },
+  promptTemplates?: PromptTemplate[]
 ): ContextAction[] {
   const linkedIssueAction = buildLinkedIssueContextAction(linkedIssue);
   const draftCommentsAction = draftComments ? buildDraftCommentsContextAction(draftComments) : null;
-  const reviewPromptAction = buildReviewPromptContextAction(reviewPrompt);
+  const templateActions = promptTemplates ? buildPromptTemplateContextActions(promptTemplates) : [];
   const actions: ContextAction[] = [];
   if (linkedIssueAction) actions.push(linkedIssueAction);
   if (draftCommentsAction) actions.push(draftCommentsAction);
-  if (reviewPromptAction) actions.push(reviewPromptAction);
+  actions.push(...templateActions);
   return actions;
 }

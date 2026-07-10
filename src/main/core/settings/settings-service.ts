@@ -1,9 +1,10 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { AppSettingsKeys, type AppSettings, type AppSettingsKey } from '@shared/app-settings';
+import { promptTemplateSchema, type PromptTemplate } from '@shared/prompt-templates';
 import { db } from '@main/db/client';
 import { appSettings } from '@main/db/schema';
 import { APP_SETTINGS_SCHEMA_MAP } from './schema';
-import { getDefaultForKey } from './settings-registry';
+import { DEFAULT_REVIEW_PROMPT, getDefaultForKey } from './settings-registry';
 import { computeDelta, computeTrueOverrides, isDeepEqual, isPlainObject, mergeDeep } from './utils';
 
 export type { AppSettings, AppSettingsKey } from '@shared/app-settings';
@@ -43,7 +44,12 @@ export class SettingsStore {
 
     let value: AppSettings[K];
     if (raw === null || raw === undefined) {
-      value = defaults;
+      // One-time migration: convert custom reviewPrompt to promptTemplates
+      if (key === 'promptTemplates') {
+        value = (await this.migrateReviewPromptToTemplates()) as AppSettings[K];
+      } else {
+        value = defaults;
+      }
     } else if (isPlainObject(raw) && isPlainObject(defaults)) {
       value = mergeDeep(defaults as Record<string, unknown>, raw) as AppSettings[K];
     } else {
@@ -52,6 +58,37 @@ export class SettingsStore {
 
     this.cache[key] = value;
     return value;
+  }
+
+  /**
+   * Migrate a custom reviewPrompt to promptTemplates.
+   * If the user has customized the reviewPrompt (different from default), create a template
+   * from it and return the defaults with that template prepended. Otherwise return defaults.
+   */
+  private async migrateReviewPromptToTemplates(): Promise<PromptTemplate[]> {
+    const defaults = getDefaultForKey('promptTemplates') as PromptTemplate[];
+    const reviewPromptRaw = await this.readRaw('reviewPrompt');
+    const customReviewPrompt =
+      typeof reviewPromptRaw === 'string' && reviewPromptRaw.trim() !== DEFAULT_REVIEW_PROMPT
+        ? reviewPromptRaw.trim()
+        : null;
+
+    if (!customReviewPrompt) {
+      return defaults;
+    }
+
+    // Create a template from the user's custom reviewPrompt
+    const migratedTemplate = promptTemplateSchema.parse({
+      id: `review-migrated-${Date.now()}`,
+      name: 'Custom review',
+      content: customReviewPrompt,
+      category: 'review',
+      enabled: true,
+      order: -1,
+      isSystem: false,
+    });
+
+    return [migratedTemplate, ...defaults];
   }
 
   async getWithMeta<K extends AppSettingsKey>(
@@ -65,7 +102,14 @@ export class SettingsStore {
     const raw = await this.readRaw(key);
 
     if (raw === null || raw === undefined) {
-      return { value: defaults, defaults, overrides: {} as Partial<AppSettings[K]> };
+      // One-time migration: convert custom reviewPrompt to promptTemplates
+      let effectiveValue: AppSettings[K];
+      if (key === 'promptTemplates') {
+        effectiveValue = (await this.migrateReviewPromptToTemplates()) as AppSettings[K];
+      } else {
+        effectiveValue = defaults;
+      }
+      return { value: effectiveValue, defaults, overrides: {} as Partial<AppSettings[K]> };
     }
 
     let value: AppSettings[K];
@@ -144,7 +188,12 @@ export class SettingsStore {
       const defaults = getDefaultForKey(key);
       const raw = rawMap.get(key);
       if (raw === undefined) {
-        result[key] = defaults;
+        // One-time migration: convert custom reviewPrompt to promptTemplates
+        if (key === 'promptTemplates') {
+          result[key] = await this.migrateReviewPromptToTemplates();
+        } else {
+          result[key] = defaults;
+        }
       } else if (isPlainObject(raw) && isPlainObject(defaults)) {
         result[key] = mergeDeep(defaults as Record<string, unknown>, raw);
       } else {

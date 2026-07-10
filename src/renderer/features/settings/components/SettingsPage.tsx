@@ -14,10 +14,9 @@ import KeyboardSettingsCard from './KeyboardSettingsCard';
 import { LanguageSelector } from './LanguageSelector';
 import { MarketplacesCard } from './MarketplacesCard';
 import NotificationSettingsCard from './NotificationSettingsCard';
+import { PromptTemplatesCard } from './PromptTemplatesCard';
 import RepositorySettingsCard from './RepositorySettingsCard';
-import { ReviewPromptResetButton, ReviewPromptSettingsCard } from './ReviewPromptSettingsCard';
 import { AutoGenerateTaskNamesRow, AutoTrustWorktreesRow } from './TaskSettingsRows';
-import TelemetryCard from './TelemetryCard';
 import TerminalSettingsCard from './TerminalSettingsCard';
 import ThemeCard from './ThemeCard';
 import { UpdateCard } from './UpdateCard';
@@ -30,6 +29,7 @@ export type SettingsPageTab =
   | 'repository'
   | 'interface'
   | 'marketplaces'
+  | 'prompt-templates'
   | 'docs';
 
 interface SectionConfig {
@@ -64,6 +64,7 @@ export function SettingsPage({
     { id: 'repository', label: t('settings:tabs.repository') },
     { id: 'interface', label: t('settings:tabs.interface') },
     { id: 'marketplaces', label: t('settings:tabs.marketplaces') },
+    { id: 'prompt-templates', label: t('settings:tabs.promptTemplates') },
     { id: 'docs', label: t('settings:tabs.docs'), isExternal: true },
   ];
 
@@ -96,11 +97,6 @@ export function SettingsPage({
       description: t('settings:agents.description'),
       sections: [
         { component: <DefaultAgentSettingsCard /> },
-        {
-          title: t('settings:agents.reviewPrompt'),
-          action: <ReviewPromptResetButton />,
-          component: <ReviewPromptSettingsCard />,
-        },
         {
           title: t('settings:agents.cliAgents'),
           component: (
@@ -140,6 +136,11 @@ export function SettingsPage({
       title: t('settings:marketplaces.title'),
       description: t('settings:marketplaces.description'),
       sections: [{ component: <MarketplacesCard /> }],
+    },
+    'prompt-templates': {
+      title: t('settings:promptTemplates.title'),
+      description: t('settings:promptTemplates.description'),
+      sections: [{ component: <PromptTemplatesCard /> }],
     },
   };
 

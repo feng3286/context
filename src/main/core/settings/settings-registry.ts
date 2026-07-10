@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { AppSettings, AppSettingsKey } from '@shared/app-settings';
 import type { OpenInAppId } from '@shared/openInApps';
+import { DEFAULT_PROMPT_TEMPLATES } from '@shared/prompt-templates';
 import { getDefaultLocalWorktreeDirectory } from './worktree-defaults';
 
 export const DEFAULT_AGENT_ID = 'claude';
@@ -50,6 +51,7 @@ export const SETTINGS_DEFAULTS = {
   },
   language: 'zh' as const,
   customAgents: [],
+  promptTemplates: DEFAULT_PROMPT_TEMPLATES,
 } satisfies SettingsDefaultsMap;
 
 export function getDefaultForKey<K extends AppSettingsKey>(key: K): AppSettings[K] {

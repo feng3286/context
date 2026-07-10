@@ -8,7 +8,8 @@
       "repository": "Repository",
       "interface": "Interface",
       "marketplaces": "Marketplaces",
-      "docs": "Docs"
+      "docs": "Docs",
+      "promptTemplates": "Prompt Templates"
     },
     "general": {
       "title": "General",
@@ -351,6 +352,31 @@
       "typeOpenaiSkills": "OpenAI Skills",
       "typeAnthropicSkills": "Anthropic Skills",
       "typeJsonFeed": "JSON Feed"
+    },
+    "promptTemplates": {
+      "title": "Prompt Templates",
+      "description": "Manage custom prompts available for use in tasks.",
+      "add": "Add Prompt",
+      "create": "Create Prompt",
+      "edit": "Edit Prompt",
+      "name": "Name",
+      "namePlaceholder": "e.g. Security Review",
+      "category": "Category",
+      "content": "Content",
+      "contentPlaceholder": "Enter the prompt content here…",
+      "enabled": "Enabled",
+      "enabledDesc": "Show this prompt at the bottom of the task detail view",
+      "builtIn": "Built-in",
+      "empty": "No prompts yet. Click the button above to create your first one.",
+      "confirmDelete": "Are you sure you want to delete this prompt?",
+      "categories": {
+        "review": "Review",
+        "test": "Test",
+        "refactor": "Refactor",
+        "explain": "Explain",
+        "custom": "Custom"
+      },
+      "toggleEnabled": "Toggle {{name}}"
     }
   },
   "common": {

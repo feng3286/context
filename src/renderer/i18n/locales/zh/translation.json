@@ -8,7 +8,8 @@
       "repository": "仓库",
       "interface": "界面",
       "marketplaces": "市场",
-      "docs": "文档"
+      "docs": "文档",
+      "promptTemplates": "提示词"
     },
     "general": {
       "title": "通用",
@@ -351,6 +352,31 @@
       "typeOpenaiSkills": "OpenAI Skills",
       "typeAnthropicSkills": "Anthropic Skills",
       "typeJsonFeed": "JSON Feed"
+    },
+    "promptTemplates": {
+      "title": "提示词",
+      "description": "管理可在任务中使用的自定义提示词。",
+      "add": "新增提示词",
+      "create": "创建提示词",
+      "edit": "编辑提示词",
+      "name": "名称",
+      "namePlaceholder": "例如：安全审查",
+      "category": "分类",
+      "content": "内容",
+      "contentPlaceholder": "在此输入提示词内容…",
+      "enabled": "启用",
+      "enabledDesc": "在任务详情页底部显示此提示词",
+      "builtIn": "内置",
+      "empty": "还没有提示词，点击上方按钮创建第一个。",
+      "confirmDelete": "确定要删除此提示词吗？",
+      "categories": {
+        "review": "审查",
+        "test": "测试",
+        "refactor": "重构",
+        "explain": "解释",
+        "custom": "自定义"
+      },
+      "toggleEnabled": "切换{{name}}的启用状态"
     }
   },
   "common": {

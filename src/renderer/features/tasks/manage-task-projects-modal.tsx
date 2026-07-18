@@ -2,15 +2,18 @@ import { AlertTriangle, ChevronDown, Files, GitBranch, Loader2 } from 'lucide-re
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { Branch } from '@shared/git';
 import { getRepositoryStore } from '@renderer/features/projects/stores/project-selectors';
 import { isProvisioned } from '@renderer/features/tasks/stores/task';
 import { getTaskManagerStore } from '@renderer/features/tasks/stores/task-selectors';
 import { workspaceManagerStore } from '@renderer/features/workspaces/stores/workspace-manager';
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
 import { WorkspaceStoreClass } from '@renderer/features/workspaces/stores/workspace-store';
+import { BranchSelector } from '@renderer/lib/components/branch-selector';
 import { rpc } from '@renderer/lib/ipc';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
 import { Button } from '@renderer/lib/ui/button';
+import { ComboboxTrigger, ComboboxValue } from '@renderer/lib/ui/combobox';
 import {
   DialogContentArea,
   DialogFooter,
@@ -290,22 +293,35 @@ export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal
                     </div>
                     {project.selected && (
                       <div className="mt-2 ml-6 flex items-center gap-2">
-                        <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
-                        <select
-                          className="flex-1 px-2 py-1 text-sm border border-border rounded bg-background"
-                          value={project.sourceBranch}
-                          onChange={(e) => handleBranchChange(project.projectId, e.target.value)}
-                        >
+                        <GitBranch className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
                           {(() => {
                             const repo = getRepositoryStore(project.projectId);
                             const branches = repo?.branches ?? [];
-                            return branches.map((b) => (
-                              <option key={b.branch} value={b.branch}>
-                                {b.branch}
-                              </option>
-                            ));
+                            const selectedBranch = branches.find(
+                              (b) => b.branch === project.sourceBranch
+                            );
+                            return (
+                              <BranchSelector
+                                branches={branches}
+                                value={selectedBranch}
+                                onValueChange={(b: Branch) =>
+                                  handleBranchChange(project.projectId, b.branch)
+                                }
+                                onRefresh={() => repo?.refresh()}
+                                isRefreshing={repo?.loading ?? false}
+                                trigger={
+                                  <ComboboxTrigger className="min-w-[240px] border flex border-border h-9 hover:bg-muted/30 rounded-md px-2.5 py-1 text-left text-sm outline-none items-center justify-between">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <GitBranch className="h-4 w-4" />
+                                      <ComboboxValue placeholder="Select a branch" />
+                                    </div>
+                                  </ComboboxTrigger>
+                                }
+                              />
+                            );
                           })()}
-                        </select>
+                        </div>
                       </div>
                     )}
                   </div>

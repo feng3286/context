@@ -130,6 +130,7 @@ export class SshProjectProvider implements ProjectProvider {
     this.worktreeService = new WorktreeService({
       worktreePoolPath: options.worktreePoolPath,
       repoPath: project.path,
+      projectName: project.name,
       projectSettings: this.settings,
       exec: gitExec,
       rootFs: rootFs,

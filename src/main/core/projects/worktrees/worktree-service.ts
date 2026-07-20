@@ -16,6 +16,7 @@ export class WorktreeService {
   private gitOpQueue: Promise<unknown> = Promise.resolve();
   private worktreePoolPath: string;
   private readonly repoPath: string;
+  private readonly projectName: string;
   private readonly exec: ExecFn;
   private readonly rootFs: FileSystemProvider;
   private readonly projectSettings: ProjectSettingsProvider;
@@ -23,12 +24,14 @@ export class WorktreeService {
   constructor(args: {
     worktreePoolPath: string;
     repoPath: string;
+    projectName?: string;
     exec: ExecFn;
     rootFs: FileSystemProvider;
     projectSettings: ProjectSettingsProvider;
   }) {
     this.worktreePoolPath = args.worktreePoolPath;
     this.repoPath = args.repoPath;
+    this.projectName = args.projectName ?? path.basename(this.repoPath);
     this.projectSettings = args.projectSettings;
     this.exec = args.exec;
     this.rootFs = args.rootFs;
@@ -71,7 +74,7 @@ export class WorktreeService {
 
   async syncWorktreePoolPath(): Promise<void> {
     const dir = await this.projectSettings.getWorktreeDirectory();
-    this.worktreePoolPath = path.join(dir, path.basename(this.repoPath));
+    this.worktreePoolPath = path.join(dir, this.projectName);
   }
 
   private async ensureWorktreePoolDirExists(): Promise<void> {

@@ -14,7 +14,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   asMounted,
@@ -538,6 +538,16 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
   const activeLineNumber = useActiveLineNumber(activeFilePath);
   const activeProjectWorktreePath = useWorktreePath(activeFileProjectId);
   const projectOptions = useProjectOptions();
+  const issueProjectOptions = useMemo(
+    () =>
+      projectOptions?.map((opt) => ({
+        ...opt,
+        repositoryUrl: asMounted(getProjectStore(opt.projectId))?.repository?.repositoryUrl ?? null,
+      })),
+    [projectOptions]
+  );
+  const activeProjectRepoUrl =
+    asMounted(getProjectStore(activeFileProjectId))?.repository?.repositoryUrl ?? '';
 
   return (
     <Titlebar
@@ -572,9 +582,11 @@ const ActiveTaskTitlebar = observer(function ActiveTaskTitlebar({
                 onValueChange={(issue) => {
                   taskStore.updateLinkedIssue(issue ?? undefined);
                 }}
-                projectId={projectId}
-                nameWithOwner={provisionedTask.repositoryStore.repositoryUrl ?? ''}
-                projectPath={provisionedTask.path}
+                projectId={activeFileProjectId}
+                nameWithOwner={activeProjectRepoUrl}
+                projectPath={activeProjectWorktreePath}
+                projectOptions={issueProjectOptions}
+                defaultProjectId={activeFileProjectId}
               />
             </PopoverContent>
           </Popover>

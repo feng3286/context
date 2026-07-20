@@ -1,5 +1,5 @@
 import { ExternalLink, Loader2 } from 'lucide-react';
-import { forwardRef, useCallback, useRef, useState } from 'react';
+import { forwardRef, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Issue } from '@shared/tasks';
 import {
@@ -89,22 +89,52 @@ export function IssueRow({ issue }: { issue: Issue }) {
   );
 }
 
+export interface IssueProjectOption {
+  projectId: string;
+  projectName: string;
+  worktreePath: string;
+  repositoryUrl?: string | null;
+}
+
 export interface IssueSelectorProps {
   value: Issue | null;
   onValueChange: (issue: Issue | null) => void;
   projectId?: string;
   nameWithOwner: string;
   projectPath?: string;
+  /** When provided with >1 entry, renders a project picker so the user can search
+   * any project's repo. Multi-project tasks have no implicit "primary" project. */
+  projectOptions?: IssueProjectOption[];
+  defaultProjectId?: string;
 }
 
 export function IssueSelector({
   projectId,
   nameWithOwner,
   projectPath = '',
+  projectOptions,
+  defaultProjectId,
   value,
   onValueChange,
 }: IssueSelectorProps) {
   const { t } = useTranslation();
+
+  // Multi-project: let the user pick which project's repo to search issues from.
+  // Mirrors the OpenInMenu project selector (lib/components/titlebar/open-in-menu.tsx).
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(defaultProjectId);
+  const showProjectSelector = !!projectOptions && projectOptions.length > 1;
+  const selectedOption = useMemo(
+    () =>
+      selectedProjectId
+        ? projectOptions?.find((p) => p.projectId === selectedProjectId)
+        : undefined,
+    [selectedProjectId, projectOptions]
+  );
+  const effectiveProjectId = selectedProjectId ?? projectId;
+  const effectiveNameWithOwner = selectedOption?.repositoryUrl ?? nameWithOwner;
+  const effectiveProjectPath = selectedOption?.worktreePath ?? projectPath;
+  const displayProjectName = selectedOption?.projectName ?? '';
+
   const {
     issues,
     issueProvider,
@@ -114,7 +144,7 @@ export function IssueSelector({
     connectedProviderCount,
     handleSetSearchTerm,
     setSelectedIssueProvider,
-  } = useIssueSearch(nameWithOwner, projectPath, projectId);
+  } = useIssueSearch(effectiveNameWithOwner, effectiveProjectPath, effectiveProjectId);
 
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const providerSelectOpenRef = useRef(false);
@@ -169,7 +199,27 @@ export function IssueSelector({
   ) : null;
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden">
+    <div className="min-w-0 max-w-full flex flex-col gap-1.5 overflow-hidden">
+      {showProjectSelector && (
+        <Select
+          value={selectedProjectId ?? ''}
+          onValueChange={(value) => setSelectedProjectId(value || undefined)}
+        >
+          <SelectTrigger
+            className="h-7 w-full justify-start gap-1 border-border bg-transparent px-2 text-xs hover:bg-background-1"
+            aria-label="Select project"
+          >
+            <span className="truncate text-foreground-muted">{displayProjectName}</span>
+          </SelectTrigger>
+          <SelectContent align="start" alignItemWithTrigger={false} sideOffset={6}>
+            {projectOptions.map((option) => (
+              <SelectItem key={option.projectId} value={option.projectId}>
+                {option.projectName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       {hasAnyIntegration ? (
         <Combobox
           autoHighlight

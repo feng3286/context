@@ -58,7 +58,9 @@ export const TaskRow = observer(function TaskRow({
 
   const handleArchive = () => void taskManager?.archiveTask(task.data.id);
   const handleRestore = () => void taskManager?.restoreTask(task.data.id);
-  const handleProvision = () => void taskManager?.provisionTask(task.data.id);
+  const handleProvision = () => {
+    taskManager?.open(task.data.id);
+  };
   const handleRename = () =>
     showRename({
       projectId,

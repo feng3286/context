@@ -314,7 +314,7 @@ export class ProjectManagerStore {
               ? navParams.taskId
               : undefined;
           if (navTaskId) {
-            taskManager.openTask(navTaskId).catch(() => {});
+            taskManager.open(navTaskId).catch(() => {});
           }
         }
       })

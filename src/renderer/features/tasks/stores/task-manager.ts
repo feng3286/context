@@ -144,75 +144,19 @@ export class TaskManagerStore {
     return this.loadTasks();
   }
 
-  async provisionTask(taskId: string): Promise<void> {
-    await getProjectManagerStore().mountProject(this.projectId);
-    await this.loadTasks();
-
-    const inFlight = this._provisionPromises.get(taskId);
-    if (inFlight) return inFlight;
-
+  /**
+   * Canonical entry for opening a task from the UI. Every call site (sidebar,
+   * project task list, task-view auto-provision, navigation) funnels through
+   * here so the "when to open" decision lives in one place instead of drifting
+   * between components. The underlying worker (`openTask`) is private on purpose.
+   */
+  async open(taskId: string): Promise<void> {
     const task = this.tasks.get(taskId);
-    if (!task || !isUnprovisioned(task)) return;
-
-    runInAction(() => {
-      task.phase = 'provision';
-    });
-
-    const promise = Promise.all([
-      rpc.tasks.provisionTask(taskId),
-      rpc.viewState.get(`task:${taskId}`),
-    ])
-      .then(([result, savedSnapshot]) => {
-        runInAction(() => {
-          const current = this.tasks.get(taskId);
-          if (current && isUnprovisioned(current)) {
-            const updatedData = {
-              ...current.data,
-              lastInteractedAt: new Date().toISOString(),
-            } as Task;
-            current.transitionToProvisioned(
-              updatedData,
-              result.path,
-              this._repository,
-              this.projectId,
-              savedSnapshot as TaskViewSnapshot | undefined
-            );
-            current.activate();
-
-            // Sync provisioning to other projects for multi-project tasks
-            const pt = current.provisionedTask;
-            if (pt && (current.data as Task).workspaceId) {
-              const projectManager = getProjectManagerStore();
-              for (const [pid, project] of projectManager.projects) {
-                if (pid === this.projectId) continue;
-                const otherStore = project.mountedProject?.taskManager.tasks.get(taskId);
-                if (otherStore && isUnprovisioned(otherStore)) {
-                  otherStore.transitionToSharedProvisioned(updatedData, pt);
-                }
-              }
-            }
-          }
-        });
-      })
-      .catch((err: unknown) => {
-        runInAction(() => {
-          const current = this.tasks.get(taskId);
-          if (current && isUnprovisioned(current)) {
-            current.phase = 'provision-error';
-            current.errorMessage = err instanceof Error ? err.message : String(err);
-          }
-        });
-        throw err;
-      })
-      .finally(() => {
-        this._provisionPromises.delete(taskId);
-      });
-
-    this._provisionPromises.set(taskId, promise);
-    return promise;
+    if (!task || task.state !== 'unprovisioned' || task.phase !== 'idle') return;
+    return this.openTask(taskId);
   }
 
-  async openTask(taskId: string): Promise<void> {
+  private async openTask(taskId: string): Promise<void> {
     await getProjectManagerStore().mountProject(this.projectId);
     await this.loadTasks();
 

@@ -9,6 +9,8 @@ import { VirtualizedChangesList } from '../virtualized-changes-list';
 export const PrFilesList = observer(function PrFilesList({ pr }: { pr: PullRequest }) {
   const { projectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
+  const worktreePath =
+    provisioned.projectContexts?.projects.get(projectId)?.worktreePath ?? undefined;
   const prStore = provisioned.workspace.pr;
   const diffView = provisioned.taskView.diffView;
 
@@ -45,6 +47,7 @@ export const PrFilesList = observer(function PrFilesList({ pr }: { pr: PullReque
       className="py-3"
       changes={prFiles}
       activePath={activePath}
+      worktreePath={worktreePath}
       onSelectChange={handleSelectChange}
       onPrefetch={(change) => prefetchPrDiff(change.path)}
     />

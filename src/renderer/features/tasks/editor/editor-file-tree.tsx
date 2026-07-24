@@ -4,57 +4,15 @@ import { observer } from 'mobx-react-lite';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FileNode } from '@shared/fs';
+import { CopyPathContextMenu } from '@renderer/features/tasks/components/copy-path-menu';
 import { buildVisibleRows } from '@renderer/features/tasks/editor/stores/files-store-utils';
 import { useProvisionedTask } from '@renderer/features/tasks/task-view-context';
 import { FileIcon } from '@renderer/lib/editor/file-icon';
 import { Button } from '@renderer/lib/ui/button';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@renderer/lib/ui/context-menu';
+import { ContextMenu, ContextMenuTrigger } from '@renderer/lib/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/lib/ui/tooltip';
 import { cn } from '@renderer/utils/utils';
 import { UnifiedMultiProjectFileTree } from './unified-multi-project-file-tree';
-
-/**
- * Context menu for file tree rows.
- */
-function FileTreeContextMenu({
-  absolutePath,
-  relativePath,
-}: {
-  absolutePath: string;
-  relativePath: string;
-}) {
-  const { t } = useTranslation();
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-
-  const handleCopy = useCallback(async (text: string, field: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedField(field);
-      setTimeout(() => setCopiedField(null), 1500);
-    } catch {
-      // clipboard may not be available (e.g., in dev without HTTPS)
-    }
-  }, []);
-
-  const label = (field: string, defaultLabel: string) =>
-    copiedField === field ? t('editor:fileTree.copied') : defaultLabel;
-
-  return (
-    <ContextMenuContent>
-      <ContextMenuItem onClick={() => handleCopy(absolutePath, 'absolute')}>
-        {label('absolute', t('editor:fileTree.copyAbsolutePath'))}
-      </ContextMenuItem>
-      <ContextMenuItem onClick={() => handleCopy(relativePath, 'relative')}>
-        {label('relative', t('editor:fileTree.copyRelativePath'))}
-      </ContextMenuItem>
-    </ContextMenuContent>
-  );
-}
 
 const FileTreeRow = observer(function FileTreeRow({
   node,
@@ -175,7 +133,7 @@ const FileTreeRow = observer(function FileTreeRow({
           </span>
         </div>
       </ContextMenuTrigger>
-      <FileTreeContextMenu absolutePath={absolutePath} relativePath={relativePath} />
+      <CopyPathContextMenu absolutePath={absolutePath} relativePath={relativePath} />
     </ContextMenu>
   );
 });

@@ -34,6 +34,8 @@ export const StagedSection = observer(function StagedSection({
   const { projectId: contextProjectId } = useTaskViewContext();
   const provisioned = useProvisionedTask();
   const projectId = projectIdOverride ?? contextProjectId;
+  const worktreePath =
+    provisioned.projectContexts?.projects.get(projectId)?.worktreePath ?? undefined;
   const git = gitOverride ?? provisioned.workspace.git;
   const changesView = provisioned.taskView.diffView.changesView;
   const diffView = provisioned.taskView.diffView;
@@ -163,6 +165,7 @@ export const StagedSection = observer(function StagedSection({
               isSelected={(path) => selectedPaths.has(path)}
               onToggleSelect={(path) => effectiveChangesView.toggleStagedItem(path)}
               activePath={activePath}
+              worktreePath={worktreePath}
               onSelectChange={(change) => handleSelectChange(change.path)}
               onPrefetch={(change) => prefetch(change.path)}
             />

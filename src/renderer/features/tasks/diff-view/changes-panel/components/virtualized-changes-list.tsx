@@ -11,6 +11,7 @@ export interface VirtualizedChangesListProps {
   onToggleSelect?: (path: string) => void;
   onPrefetch?: (change: GitChange) => void;
   activePath?: string;
+  worktreePath?: string;
   className?: string;
 }
 
@@ -23,6 +24,7 @@ export function VirtualizedChangesList({
   onToggleSelect,
   onPrefetch,
   activePath,
+  worktreePath,
   className,
 }: VirtualizedChangesListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,7 @@ export function VirtualizedChangesList({
               isSelected={isSelected?.(change.path)}
               isActive={change.path === activePath}
               onToggleSelect={onToggleSelect}
+              worktreePath={worktreePath}
               style={{
                 position: 'absolute',
                 top: virtualItem.start,

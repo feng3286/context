@@ -762,7 +762,8 @@
       "copyRelativePath": "Copy relative path",
       "refresh": "Refresh",
       "copied": "Copied",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "openInFileManager": "Reveal in File Manager"
     },
     "editSource": "Edit source",
     "untitled": "Untitled",

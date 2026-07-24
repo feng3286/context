@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { shell } from 'electron';
 import { createRPCController } from '@shared/ipc/rpc';
 import type { OpenInAppId } from '@shared/openInApps';
 import { formatErrorLine, writeErrorLine } from '@main/lib/error-log-writer';
@@ -77,6 +78,14 @@ export const appController = createRPCController({
     try {
       await appService.openIn(args);
       capture('open_in_external', { app: args.app, has_file: Boolean(args.filePath) });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  },
+  showItemInFolder: (filePath: string) => {
+    try {
+      shell.showItemInFolder(filePath);
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };

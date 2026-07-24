@@ -135,13 +135,29 @@ app.whenReady().then(async () => {
   }
 });
 
-app.on('before-quit', () => {
-  telemetry.capture('app_closed');
-  telemetry.shutdown();
+// Ensure async cleanup finishes BEFORE the process exits. Without
+// preventDefault + awaiting, Electron quits right after this handler returns,
+// leaving agent PTYs / tmux sessions orphaned — their session IDs stay
+// "in use", so reopening a task later fails with "Session ID ... is already
+// in use" when the agent is re-spawned with --resume.
+let isQuitting = false;
+app.on('before-quit', (event) => {
+  event.preventDefault();
+  if (isQuitting) return;
+  isQuitting = true;
 
-  agentHookService.stop();
-  updateService.shutdown();
-  projectManager.shutdown().catch((e) => {
-    log.error('Failed to shutdown project manager:', e);
-  });
+  Promise.resolve()
+    .then(() => {
+      telemetry.capture('app_closed');
+      telemetry.shutdown();
+      agentHookService.stop();
+      updateService.shutdown();
+    })
+    .then(() => projectManager.shutdown())
+    .catch((e) => {
+      log.error('Failed during app shutdown:', e);
+    })
+    .finally(() => {
+      app.exit(0);
+    });
 });

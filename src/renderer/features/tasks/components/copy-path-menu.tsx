@@ -1,6 +1,11 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContextMenuContent, ContextMenuItem } from '@renderer/lib/ui/context-menu';
+import { rpc } from '@renderer/lib/ipc';
+import {
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '@renderer/lib/ui/context-menu';
 
 /**
  * Context menu that offers "copy absolute path" / "copy relative path" for a
@@ -39,6 +44,10 @@ export function CopyPathContextMenu({
       </ContextMenuItem>
       <ContextMenuItem onClick={() => handleCopy(relativePath, 'relative')}>
         {label('relative', t('editor:fileTree.copyRelativePath'))}
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem onClick={() => rpc.app.showItemInFolder(absolutePath)}>
+        {t('editor:fileTree.openInFileManager')}
       </ContextMenuItem>
     </ContextMenuContent>
   );

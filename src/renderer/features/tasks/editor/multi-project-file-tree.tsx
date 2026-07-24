@@ -1,3 +1,7 @@
+/**
+ * @deprecated 废弃文件 —— 导出 `MultiProjectFileTree` 在仓库中未被任何地方 import
+ *（多项目文件树已统一改用 `unified-multi-project-file-tree.tsx`）。保留待删除。
+ */
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import { observer } from 'mobx-react-lite';

@@ -46,6 +46,15 @@ export class ProvisionedTask {
   readonly _projectId: string;
   readonly path: string;
   readonly workspaceId: string;
+  /**
+   * @deprecated 废弃（vestigial）—— 恒为 true。`tasks.workspaceId` 在 DB schema 中为
+   * NOT NULL（并由 migrate-to-workspace 回填），故 `!!workspaceId` 对所有可达任务恒真。
+   * 暂时保留，待统一清理（见 2026-07 isMultiProject 审计）。
+   *
+   * 消费方注意：`isMultiProject && projectContexts` 这类复合判断里，`isMultiProject` 半边
+   * 已死，只有 `projectContexts` 半边有效（用于门控 projectContexts 异步加载窗口）；
+   * `!isMultiProject` / 单项目分支均为不可达死代码。
+   */
   readonly isMultiProject: boolean;
   readonly projectContexts?: ProjectContextStore;
   branchMismatches: BranchMismatchInfo[] = [];
@@ -90,7 +99,7 @@ export class ProvisionedTask {
     this.terminals = new TerminalManagerStore(taskData.id);
     this.draftComments = new DraftCommentsStore(taskData.id);
 
-    // For multi-project tasks, create ProjectContextStore
+    // 废弃：isMultiProject 恒为 true，此 gate 实际等价于无条件——projectContexts 总会创建
     if (this.isMultiProject) {
       this.projectContexts = new ProjectContextStore();
       // Load project contexts asynchronously

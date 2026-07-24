@@ -29,6 +29,7 @@ export const DiffToolbar = observer(function DiffToolbar() {
   }, [activeFile?.group]);
 
   const projectName = useMemo(() => {
+    // 废弃：isMultiProject 恒为 true，此条件实际等价于 `!activeFile?.projectId`
     if (!provisioned.isMultiProject || !activeFile?.projectId) return undefined;
     return projectDisplayName(getProjectStore(activeFile.projectId));
   }, [provisioned.isMultiProject, activeFile?.projectId]);

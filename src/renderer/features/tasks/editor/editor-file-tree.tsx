@@ -187,6 +187,7 @@ export const EditorFileTree = observer(function EditorFileTree() {
 
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // 废弃：isMultiProject 恒为 true → files 恒为 null；单项目 workspace.files 分支不可达
   const files = taskState.isMultiProject ? null : taskState.workspace.files;
   const editorView = taskState.taskView.editorView;
   const projectId = taskState._projectId;
@@ -212,11 +213,13 @@ export const EditorFileTree = observer(function EditorFileTree() {
     overscan: 10,
   });
 
-  // 多项目任务使用统一的文件树
+  // 多项目任务使用统一的文件树（isMultiProject 已废弃恒为 true，此条件实际只靠 projectContexts 门控加载）
   if (taskState.isMultiProject && taskState.projectContexts) {
     return <UnifiedMultiProjectFileTree />;
   }
 
+  // 废弃：以下单项目渲染路径不可达——isMultiProject 恒 true 时只在 projectContexts 加载期间落到这里，
+  // 且 files=null→visibleRows=[]→只显示 "No files"，单项目 FileTreeRow 永不挂载。
   if (files?.isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-xs text-muted-foreground">

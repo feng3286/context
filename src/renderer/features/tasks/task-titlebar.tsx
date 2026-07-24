@@ -62,6 +62,7 @@ function getTaskProjectDisplayName(
   provisionedTask: ReturnType<typeof useProvisionedTask>,
   t: (key: string) => string
 ): string {
+  // 废弃：isMultiProject 恒为 true、workspaceId 亦恒有 → 永远走 workspace 名分支；下方 else 不可达
   if (provisionedTask.isMultiProject && provisionedTask._taskData.workspaceId) {
     const workspaceStore = getWorkspaceStore(provisionedTask._taskData.workspaceId);
     const workspaceName = workspaceStore?.data?.name ?? t('taskTitlebar:workspace');
@@ -489,6 +490,7 @@ const PendingTaskTitlebar = observer(function PendingTaskTitlebar({
 
   // Check if this is a multi-project task directly from taskStore.data
   const taskData = taskStore.state !== 'unregistered' ? taskStore.data : null;
+  // 废弃：workspaceId 恒有 → isMultiProject 恒为 true，永远走 workspace 名分支；下方 else 不可达
   const isMultiProject = taskData && 'workspaceId' in taskData && taskData.workspaceId;
 
   let projectName: string;

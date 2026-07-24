@@ -172,6 +172,8 @@ export class SshProjectProvider implements ProjectProvider {
     task: Task,
     conversations: Conversation[],
     terminals: Terminal[],
+    // 废弃/未实现：SSH provider 暂不实现 multi-project 的 worktree 路径与 ⑤ effectiveTaskPath，
+    // 以下四个参数当前全部被忽略（见偏离② SSH）。待 SSH 支持时再实现。
     _workDir?: string,
     _taskBaseDir?: string,
     _projectCount?: number,

@@ -68,6 +68,8 @@ export interface UsePtyOptions {
   onFirstMessage?: (message: string) => void;
   onEnterPress?: (message: string) => void;
   onInterruptPress?: () => void;
+  /** Fired whenever the xterm selection changes — drives selection-aware UI (e.g. the Copy menu item). */
+  onSelectionChange?: (hasSelection: boolean) => void;
 }
 
 export interface UseTerminalReturn {
@@ -111,6 +113,7 @@ export function usePty(
     onFirstMessage,
     onEnterPress,
     onInterruptPress,
+    onSelectionChange,
   } = options;
 
   // Stable refs for callbacks so the effect doesn't re-run on every render.
@@ -124,6 +127,8 @@ export function usePty(
   onEnterPressRef.current = onEnterPress;
   const onInterruptPressRef = useRef(onInterruptPress);
   onInterruptPressRef.current = onInterruptPress;
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  onSelectionChangeRef.current = onSelectionChange;
   const themeRef = useRef(theme);
   themeRef.current = theme;
 
@@ -501,6 +506,7 @@ export function usePty(
       // ── Auto-copy on selection ─────────────────────────────────────────────
       let selectionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
       const selectionDisposable = terminal.onSelectionChange(() => {
+        onSelectionChangeRef.current?.(terminal.hasSelection());
         if (!autoCopyOnSelectionRef.current) return;
         if (!terminal.hasSelection()) return;
         if (selectionDebounceTimer) clearTimeout(selectionDebounceTimer);

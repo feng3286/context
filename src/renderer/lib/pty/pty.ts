@@ -23,6 +23,22 @@ export function readXtermCssVars(): ITerminalOptions['theme'] {
     cursorAccent: cssVar('--xterm-cursor-accent'),
     selectionBackground: cssVar('--xterm-selection-bg'),
     selectionForeground: cssVar('--xterm-selection-fg'),
+    black: cssVar('--xterm-black'),
+    red: cssVar('--xterm-red'),
+    green: cssVar('--xterm-green'),
+    yellow: cssVar('--xterm-yellow'),
+    blue: cssVar('--xterm-blue'),
+    magenta: cssVar('--xterm-magenta'),
+    cyan: cssVar('--xterm-cyan'),
+    white: cssVar('--xterm-white'),
+    brightBlack: cssVar('--xterm-bright-black'),
+    brightRed: cssVar('--xterm-bright-red'),
+    brightGreen: cssVar('--xterm-bright-green'),
+    brightYellow: cssVar('--xterm-bright-yellow'),
+    brightBlue: cssVar('--xterm-bright-blue'),
+    brightMagenta: cssVar('--xterm-bright-magenta'),
+    brightCyan: cssVar('--xterm-bright-cyan'),
+    brightWhite: cssVar('--xterm-bright-white'),
   };
 }
 

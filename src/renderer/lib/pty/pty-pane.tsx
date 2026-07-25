@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { rpc } from '@renderer/lib/ipc';
 import {
   ContextMenu,
@@ -49,10 +49,11 @@ const PtyPaneComponent = forwardRef<{ focus: () => void }, Props>(
     ref
   ) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const [hasTextSelected, setHasTextSelected] = useState(false);
 
     const theme: SessionTheme = { override: themeOverride };
 
-    const { focus, sendInput, pasteFromClipboard, copySelectionToClipboard, hasSelection } = usePty(
+    const { focus, sendInput, pasteFromClipboard, copySelectionToClipboard } = usePty(
       {
         sessionId,
         pty,
@@ -63,6 +64,7 @@ const PtyPaneComponent = forwardRef<{ focus: () => void }, Props>(
         onFirstMessage,
         onEnterPress,
         onInterruptPress,
+        onSelectionChange: setHasTextSelected,
       },
       containerRef
     );
@@ -139,7 +141,7 @@ const PtyPaneComponent = forwardRef<{ focus: () => void }, Props>(
             onDrop={handleDrop}
           />
           <ContextMenuContent>
-            <ContextMenuItem disabled={!hasSelection()} onClick={copySelectionToClipboard}>
+            <ContextMenuItem disabled={!hasTextSelected} onClick={copySelectionToClipboard}>
               Copy
             </ContextMenuItem>
             <ContextMenuItem onClick={pasteFromClipboard}>Paste</ContextMenuItem>

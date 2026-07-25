@@ -203,14 +203,37 @@
     --monaco-selection-fg: var(--selection-foreground);
     --monaco-inactive-selection-bg: color-mix(in srgb, var(--selection) 15.3%, transparent);
 
-    /* xterm terminals */
-    --xterm-bg: var(--background);
+    /* xterm terminals. NOTE: xterm.js cannot parse color(display-p3 ...) or
+       resolve var() chains — every value here MUST be a literal hex/rgba.
+       Otherwise the terminal silently falls back to a black background, which
+       made text invisible under the light theme. */
+    --xterm-bg: #fcfcfc;
     --xterm-fg: #1f2937;
     --xterm-cursor: #1e293b;
     --xterm-cursor-accent: #ffffff;
     --xterm-selection-bg: rgba(96, 165, 250, 0.3);
     --xterm-selection-fg: #0f172a;
     --xterm-bg-mistral: #ffffff;
+
+    /* ANSI 16-color palette tuned for the light background.
+       "white"/"brightWhite" deliberately map to dark grays — xterm's default
+       palette targets dark backgrounds and renders bright text invisible here. */
+    --xterm-black: #1f2937;
+    --xterm-red: #b91c1c;
+    --xterm-green: #15803d;
+    --xterm-yellow: #a16207;
+    --xterm-blue: #1d4ed8;
+    --xterm-magenta: #9333ea;
+    --xterm-cyan: #0e7490;
+    --xterm-white: #4b5563;
+    --xterm-bright-black: #6b7280;
+    --xterm-bright-red: #dc2626;
+    --xterm-bright-green: #16a34a;
+    --xterm-bright-yellow: #ca8a04;
+    --xterm-bright-blue: #2563eb;
+    --xterm-bright-magenta: #7c3aed;
+    --xterm-bright-cyan: #0891b2;
+    --xterm-bright-white: #111827;
 
     --foreground-diff-added: color(display-p3 0.426 0.694 0.426);
     --foreground-diff-modified: color(display-p3 1 0.77 0.26);
@@ -303,12 +326,31 @@
     --monaco-inactive-selection-bg: color(display-p3 1 1 1 / 0.133);
 
     /* xterm terminals */
-    --xterm-bg: var(--background-1);
-    --xterm-fg: var(--foreground) --xterm-cursor: #1e293b;
-    --xterm-cursor-accent: color(display-p3 0.484 0.484 0.484);
-    --xterm-selection-bg: color(display-p3 0.033 0.197 0.37);
-    --xterm-selection-fg: color(display-p3 0.49 0.72 1);
+    --xterm-bg: #191919;
+    --xterm-fg: #eeeeee;
+    --xterm-cursor: #1e293b;
+    --xterm-cursor-accent: #7b7b7b;
+    --xterm-selection-bg: #1a3a5c;
+    --xterm-selection-fg: #b8d4ff;
     --xterm-bg-mistral: #ffffff;
+
+    /* ANSI 16-color palette tuned for the dark background. */
+    --xterm-black: #1f2937;
+    --xterm-red: #f87171;
+    --xterm-green: #4ade80;
+    --xterm-yellow: #facc15;
+    --xterm-blue: #60a5fa;
+    --xterm-magenta: #c084fc;
+    --xterm-cyan: #22d3ee;
+    --xterm-white: #e5e7eb;
+    --xterm-bright-black: #9ca3af;
+    --xterm-bright-red: #fca5a5;
+    --xterm-bright-green: #86efac;
+    --xterm-bright-yellow: #fde68a;
+    --xterm-bright-blue: #93c5fd;
+    --xterm-bright-magenta: #d8b4fe;
+    --xterm-bright-cyan: #67e8f9;
+    --xterm-bright-white: #ffffff;
 
     --foreground-diff-added: color(display-p3 0.426 0.694 0.426);
     --foreground-diff-modified: color(display-p3 1 0.77 0.26);

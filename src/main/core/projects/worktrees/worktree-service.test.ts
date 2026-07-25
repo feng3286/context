@@ -227,4 +227,50 @@ describe('WorktreeService', () => {
       expect(fs.existsSync(expectedPath)).toBe(false);
     });
   });
+
+  describe('getCurrentBranch', () => {
+    it('returns the bare branch name when a branch shares its name with a tag', async () => {
+      // Regression: `git rev-parse --abbrev-ref HEAD` disambiguates to
+      // "heads/v2.2.7" when both refs/heads/v2.2.7 and refs/tags/v2.2.7 exist,
+      // which falsely tripped the worktree branch-mismatch check (expected
+      // "v2.2.7" vs actual "heads/v2.2.7"). We now parse --symbolic-full-name
+      // and normalize, so the bare name is returned.
+      await exec('git', ['branch', 'v2.2.7'], { cwd: repoDir });
+      await exec('git', ['tag', 'v2.2.7'], { cwd: repoDir });
+
+      const svc = makeService();
+      const result = await svc.checkoutBranchWorktree({ type: 'local', branch: 'main' }, 'v2.2.7');
+      expect(result.success).toBe(true);
+      if (!result.success) throw new Error('expected success');
+
+      expect(await svc.getCurrentBranch(result.data)).toBe('v2.2.7');
+    });
+
+    it('returns null for a detached HEAD', async () => {
+      const svc = makeService();
+      const result = await svc.checkoutBranchWorktree(
+        { type: 'local', branch: 'main' },
+        'task/detached'
+      );
+      expect(result.success).toBe(true);
+      if (!result.success) throw new Error('expected success');
+
+      await exec('git', ['checkout', '--detach', 'HEAD'], { cwd: result.data });
+      expect(await svc.getCurrentBranch(result.data)).toBeNull();
+    });
+
+    it('preserves slashes in a branch name that shares a name with a tag', async () => {
+      // Guard against confusing slash-bearing branch names (e.g. context/dev_xxx)
+      // with the disambiguation prefix. --symbolic-full-name yields the full
+      // refs/heads/context/dev_xxx even when refs/tags/context/dev_xxx exists,
+      // so only the refs/heads/ prefix is stripped — the branch must NOT collapse
+      // to "dev_xxx".
+      await exec('git', ['branch', 'context/dev_xxx'], { cwd: repoDir });
+      await exec('git', ['tag', 'context/dev_xxx'], { cwd: repoDir });
+      await exec('git', ['symbolic-ref', 'HEAD', 'refs/heads/context/dev_xxx'], { cwd: repoDir });
+
+      const svc = makeService();
+      expect(await svc.getCurrentBranch(repoDir)).toBe('context/dev_xxx');
+    });
+  });
 });

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { Branch } from '@shared/git';
-import { DEFAULT_REMOTE_NAME } from '@shared/git-utils';
+import { DEFAULT_REMOTE_NAME, normalizeLocalBranchRef } from '@shared/git-utils';
 import { err, ok, Result } from '@shared/result';
 import { FileSystemProvider } from '@main/core/fs/types';
 import { ExecFn } from '@main/core/utils/exec';
@@ -62,11 +62,12 @@ export class WorktreeService {
 
   async getCurrentBranch(worktreePath: string): Promise<string | null> {
     try {
-      const { stdout } = await this.exec('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      const { stdout } = await this.exec('git', ['rev-parse', '--symbolic-full-name', 'HEAD'], {
         cwd: worktreePath,
       });
-      const branch = stdout.trim();
-      return branch === 'HEAD' ? null : branch;
+      const ref = stdout.trim();
+      if (ref === 'HEAD' || !ref) return null;
+      return normalizeLocalBranchRef(ref);
     } catch {
       return null;
     }

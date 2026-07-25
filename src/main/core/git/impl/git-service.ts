@@ -28,7 +28,7 @@ import {
   type RenameBranchError,
   type SoftResetError,
 } from '@shared/git';
-import { DEFAULT_REMOTE_NAME } from '@shared/git-utils';
+import { DEFAULT_REMOTE_NAME, normalizeLocalBranchRef } from '@shared/git-utils';
 import { ownerFromUrl } from '@shared/pull-requests';
 import { err, ok, type Result } from '@shared/result';
 import type { FileSystemProvider } from '@main/core/fs/types';
@@ -1184,9 +1184,7 @@ export class GitService implements GitProvider {
       });
       const ref = stdout.trim();
       if (ref === 'HEAD' || !ref) return null;
-      if (ref.startsWith('refs/heads/')) return ref.slice('refs/heads/'.length);
-      if (ref.startsWith('heads/')) return ref.slice('heads/'.length);
-      return ref;
+      return normalizeLocalBranchRef(ref);
     } catch {
       return null;
     }

@@ -23,7 +23,6 @@ pnpm run reset
 
 ```bash
 pnpm run format
-pnpm run lint
 pnpm run typecheck
 pnpm test run
 ```
@@ -38,4 +37,4 @@ pnpm run docs:build
 
 - The docs app and the Electron renderer both default to port `3000`.
 - After native dependency changes (`sqlite3`, `node-pty`), run `pnpm run rebuild`.
-- Husky and lint-staged run formatting and linting on staged files during commit.
+- Husky and lint-staged run formatting on staged files during commit.

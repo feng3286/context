@@ -6,7 +6,6 @@ Run these before merging:
 
 ```bash
 pnpm run format
-pnpm run lint
 pnpm run typecheck
 pnpm run test
 ```

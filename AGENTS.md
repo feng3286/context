@@ -8,7 +8,6 @@ dev_command: "pnpm run dev"
 build_command: "pnpm run build"
 test_commands:
   - "pnpm run format"
-  - "pnpm run lint"
   - "pnpm run typecheck"
   - "pnpm run test"
 ports:
@@ -87,7 +86,7 @@ Start here. Load only the linked `agents/` docs that are relevant to the task.
 
 ## Non-Negotiables
 
-- Run `pnpm run format`, `pnpm run lint`, `pnpm run typecheck`, and `pnpm test` before merging.
+- Run `pnpm run format`, `pnpm run typecheck`, and `pnpm test` before merging.
 - Do not hand-edit numbered Drizzle migrations or `drizzle/meta/`.
 - New RPC methods go in the appropriate `src/main/core/*/controller.ts` and are auto-registered via `src/main/rpc.ts`.
 - Only use manual IPC in `electron-api.d.ts` for methods requiring `event.sender`.

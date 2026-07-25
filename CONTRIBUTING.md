@@ -28,9 +28,8 @@ pnpm run d
 pnpm install
 pnpm run dev
 
-# Type checking, lint, build
+# Type checking, build
  pnpm run typecheck
- pnpm run lint
  pnpm run build
 ```
 
@@ -63,11 +62,10 @@ Tip: During development, the renderer hot‑reloads. Changes to the Electron mai
 ```
 pnpm run format      # Format code with Prettier (required)
 pnpm run typecheck  # TypeScript type checking
-pnpm run lint        # ESLint
 pnpm run build       # Build both main and renderer
 ```
 
-Pre-commit hooks run automatically via Husky + lint-staged. On each commit, staged files are auto-formatted with Prettier and linted with ESLint. You don't need to remember to run these manually. Type checking and tests run in CI only since they need the full project context and are slower to execute.
+Pre-commit hooks run automatically via Husky + lint-staged. On each commit, staged files are auto-formatted with Prettier. You don't need to remember to run this manually. Type checking and tests run in CI only since they need the full project context and are slower to execute.
 
 If you need to skip the hook for a work-in-progress commit, use `git commit --no-verify`. The checks will still run in CI when you open a PR.
 
@@ -93,13 +91,12 @@ feat(docs): add changelog tab with GitHub releases integration
 
 ## Code Style and Patterns
 
-TypeScript + ESLint + Prettier
+TypeScript + Prettier
 
-Pre-commit hooks handle formatting and linting automatically on staged files. For full-project checks you can run them manually:
+Pre-commit hooks handle formatting automatically on staged files. For full-project checks you can run them manually:
 
 - `pnpm run format` -- format all files with Prettier
 - `pnpm run typecheck` -- TypeScript type checking (whole project)
-- `pnpm run lint` -- ESLint across all files
 - `pnpm exec vitest run` -- run the test suite
 
 Electron main (Node side)

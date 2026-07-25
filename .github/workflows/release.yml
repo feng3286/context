@@ -412,8 +412,41 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history + tags are required to list commit titles since the
+          # previous release tag.
+          fetch-depth: 0
+          fetch-tags: true
       - name: Publish release as latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+          set -euo pipefail
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          RANGE="${PREV_TAG:+$PREV_TAG..}HEAD"
+
+          # Commit titles since the previous tag; exclude merges and release/
+          # version-bump meta-commits (they aren't user-facing changes).
+          ALL=$(git log --pretty=format:"%s" --no-merges "$RANGE" \
+                | grep -ivE '^@?release:|bump version|^@?chore:[[:space:]]*bump' || true)
+
+          # Group by conventional-commit type and strip the prefix
+          # (@type / type / type(scope):) so only the human description shows.
+          strip() { sed -E 's/^@?[a-zA-Z]+(\(.+\))?:[[:space:]]*//'; }
+          bul()   { sed 's/^/- /'; }
+          features=$(printf '%s\n' "$ALL" | grep -iE '^@?(feat|feature)'                                  | strip || true)
+          fixes=$(printf '%s\n' "$ALL"    | grep -iE '^@?fix(es)?'                                         | strip || true)
+          chores=$(printf '%s\n' "$ALL"   | grep -iE '^@?(chore|docs|style|refactor|perf|test|ci|build)'  | strip || true)
+          misc=$(printf '%s\n' "$ALL"     | grep -ivE '^@?(feat|feature|fix(es)?|chore|docs|style|refactor|perf|test|ci|build)' | strip || true)
+
+          NOTES_FILE="$(mktemp)"
+          {
+            [ -n "$features" ] && { echo "## ✨ Features";             printf '%s\n' "$features" | bul; echo; }
+            [ -n "$fixes" ]    && { echo "## 🐛 Fixes";                printf '%s\n' "$fixes"    | bul; echo; }
+            [ -n "$chores" ]   && { echo "## 🧹 Chore & Maintenance";  printf '%s\n' "$chores"   | bul; echo; }
+            [ -n "$misc" ]     && { echo "## 📦 Other";                printf '%s\n' "$misc"     | bul; echo; }
+          } > "$NOTES_FILE"
+
+          echo "----- release notes for $GITHUB_REF_NAME -----"
+          cat "$NOTES_FILE"
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest --notes-file "$NOTES_FILE"

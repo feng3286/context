@@ -812,7 +812,9 @@
     "searchAgents": "Search agents..."
   },
   "conversation": {
-    "createTitle": "Create Conversation"
+    "createTitle": "Create Conversation",
+    "workingDirectory": "Working directory",
+    "taskDirectory": "Task directory"
   },
   "githubAuth": {
     "notConnected": "GitHub is not connected. Connect your account to create a repository.",

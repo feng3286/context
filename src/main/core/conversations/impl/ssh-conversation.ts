@@ -71,9 +71,11 @@ export class SshConversationProvider implements ConversationProvider {
 
     if (this.sessions.has(sessionId)) return;
 
+    const cwd = conversation.workDir ?? this.taskWorkDir;
+
     await claudeTrustService.maybeAutoTrustSsh({
       providerId: conversation.providerId,
-      cwd: this.taskWorkDir,
+      cwd,
       exec: this.exec,
       remoteFs: new SshFileSystem(this.proxy, '/'),
     });
@@ -95,7 +97,7 @@ export class SshConversationProvider implements ConversationProvider {
       providerId: effectiveProviderId,
       command,
       args,
-      cwd: this.taskWorkDir,
+      cwd,
       shellSetup: this.shellSetup,
       tmuxSessionName,
       autoApprove: conversation.autoApprove ?? false,
@@ -149,7 +151,7 @@ export class SshConversationProvider implements ConversationProvider {
         const count = (this.respawnCounts.get(sessionId) ?? 0) + 1;
         this.respawnCounts.set(sessionId, count);
 
-        if (count > MAX_RESPAWNS && !isResuming) {
+        if (count > MAX_RESPAWNS) {
           log.error('SshConversationProvider: respawn limit reached, giving up', {
             conversationId: conversation.id,
           });
@@ -157,8 +159,12 @@ export class SshConversationProvider implements ConversationProvider {
           return;
         }
 
-        const resumeNext = isResuming && count <= MAX_RESPAWNS;
-        if (count > MAX_RESPAWNS) this.respawnCounts.set(sessionId, 0);
+        // A --resume that exited with an error (non-zero, e.g. "No conversation
+        // found" because no transcript was ever persisted for this id) cannot
+        // succeed by retrying — fall back to a fresh session, which creates a
+        // new transcript under this conversation id so future resumes work.
+        // A clean (exit 0) resumed session is re-resumed to restore its history.
+        const resumeNext = isResuming && exitCode === 0;
 
         setTimeout(() => {
           this.startSession(conversation, initialSize, resumeNext, initialPrompt).catch((e) => {

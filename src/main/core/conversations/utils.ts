@@ -12,6 +12,7 @@ export function mapConversationRowToConversation(
     taskId: row.taskId,
     providerId: row.provider as AgentProviderId,
     autoApprove: row.config ? JSON.parse(row.config).autoApprove : undefined,
+    workDir: row.workDir ?? undefined,
     resume: resume,
   };
 }

@@ -304,6 +304,7 @@ export const conversations = sqliteTable(
     title: text('title').notNull(),
     provider: text('provider'),
     config: text('config'),
+    workDir: text('work_dir'),
     createdAt: text('created_at')
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),

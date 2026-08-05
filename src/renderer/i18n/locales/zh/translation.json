@@ -812,7 +812,9 @@
     "searchAgents": "搜索智能体..."
   },
   "conversation": {
-    "createTitle": "创建对话"
+    "createTitle": "创建对话",
+    "workingDirectory": "工作目录",
+    "taskDirectory": "任务目录"
   },
   "githubAuth": {
     "notConnected": "GitHub 未连接。连接你的账户以创建仓库。",

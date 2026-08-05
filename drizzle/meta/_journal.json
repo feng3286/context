@@ -106,6 +106,13 @@
       "when": 1781500000000,
       "tag": "0016_add_missing_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1781600000000,
+      "tag": "0017_add_conversation_work_dir",
+      "breakpoints": true
     }
   ]
 }

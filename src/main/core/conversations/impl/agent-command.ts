@@ -45,9 +45,13 @@ export async function buildAgentCommand({
   const args: string[] = [];
 
   if (isResuming && resolvedConfig?.resumeFlag) {
+    // Resume: pass the session id as the value of the resume flag
+    // (e.g. `claude --resume <id>`). Adding the standalone `--session-id` flag
+    // alongside `--resume` is rejected by Claude Code unless `--fork-session`
+    // is also given, and would lose the target session id entirely.
     args.push(...resolvedConfig.resumeFlag.split(' '));
     if (resolvedConfig?.sessionIdFlag) {
-      args.push(resolvedConfig.sessionIdFlag);
+      args.push(sessionId);
     }
   } else if (resolvedConfig?.sessionIdFlag) {
     args.push(resolvedConfig.sessionIdFlag, sessionId);

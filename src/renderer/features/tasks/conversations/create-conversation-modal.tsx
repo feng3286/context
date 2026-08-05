@@ -25,6 +25,13 @@ import {
   DialogTitle,
 } from '@renderer/lib/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@renderer/lib/ui/field';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/lib/ui/select';
 import { Switch } from '@renderer/lib/ui/switch';
 import { nextDefaultConversationTitle } from './conversation-title-utils';
 import { resolveConversationProviderSelection } from './provider-selection';
@@ -51,6 +58,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
 }) {
   const { t } = useTranslation();
   const [providerOverride, setProviderOverride] = useState<string | null>(null);
+  const [workDirOverride, setWorkDirOverride] = useState<string | null>(null);
   const { value: defaultAgentValue } = useAppSettingsKey('defaultAgent');
   const { value: rawCustomAgents } = useAppSettingsKey('customAgents');
   const customAgents = Array.isArray(rawCustomAgents) ? rawCustomAgents : [];
@@ -140,6 +148,15 @@ export const CreateConversationModal = observer(function CreateConversationModal
   const taskStore = getTaskStore(projectId, taskId);
   const provisioned = taskStore ? asProvisioned(taskStore) : undefined;
   const conversationMgr = provisioned?.conversations;
+  const projectContexts = provisioned?.projectContexts;
+  const projectOptions = projectContexts
+    ? Array.from(projectContexts.projects.values())
+        .filter((ctx) => ctx.worktreePath)
+        .map((ctx) => ({ name: ctx.projectName, path: ctx.worktreePath as string }))
+    : [];
+  const showCwdRadio = projectOptions.length > 1;
+  const taskWorkDir = provisioned?._taskData.workDir;
+  const effectiveWorkDir = !showCwdRadio ? undefined : (workDirOverride ?? taskWorkDir);
   const autoApproveDefaults = useAgentAutoApproveDefaults();
   const skipPermissions = providerId ? autoApproveDefaults.getDefault(providerId) : false;
   const titleProviderId = providerId ?? defaultProviderId;
@@ -157,10 +174,20 @@ export const CreateConversationModal = observer(function CreateConversationModal
       autoApprove: skipPermissions,
       provider: providerId,
       title,
+      workDir: effectiveWorkDir,
       initialSize: getConversationsPaneSize(),
     });
     onSuccess({ conversationId: id });
-  }, [conversationMgr, createDisabled, providerId, title, onSuccess, taskId, skipPermissions]);
+  }, [
+    conversationMgr,
+    createDisabled,
+    providerId,
+    title,
+    effectiveWorkDir,
+    onSuccess,
+    taskId,
+    skipPermissions,
+  ]);
 
   return (
     <>
@@ -191,6 +218,27 @@ export const CreateConversationModal = observer(function CreateConversationModal
               <FieldLabel>Dangerously skip permissions</FieldLabel>
             </div>
           </Field>
+          {showCwdRadio && taskWorkDir && (
+            <Field>
+              <FieldLabel>{t('conversation:workingDirectory')}</FieldLabel>
+              <Select
+                value={effectiveWorkDir}
+                onValueChange={(v) => setWorkDirOverride(v as string)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={taskWorkDir}>{t('conversation:taskDirectory')}</SelectItem>
+                  {projectOptions.map((p) => (
+                    <SelectItem key={p.path} value={p.path}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
         </FieldGroup>
       </DialogContentArea>
       <DialogFooter>

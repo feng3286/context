@@ -1,4 +1,6 @@
+import fs from 'node:fs/promises';
 import { homedir } from 'node:os';
+import path from 'node:path';
 import { getProvider } from '@shared/agent-provider-registry';
 import type { AgentSessionConfig } from '@shared/agent-session';
 import { Conversation } from '@shared/conversations';
@@ -38,7 +40,6 @@ export class LocalConversationProvider implements ConversationProvider {
   private readonly shellSetup?: string;
   private readonly exec: ExecFn;
   private readonly taskEnvVars: Record<string, string>;
-  private readonly hookConfigWriter: HookConfigWriter;
   private readonly preparedHookProviders = new Map<string, boolean>();
 
   constructor({
@@ -62,7 +63,6 @@ export class LocalConversationProvider implements ConversationProvider {
     this.shellSetup = shellSetup;
     this.exec = exec;
     this.taskEnvVars = taskEnvVars;
-    this.hookConfigWriter = new HookConfigWriter(new LocalFileSystem(taskWorkDir), exec);
   }
 
   async startSession(
@@ -75,19 +75,36 @@ export class LocalConversationProvider implements ConversationProvider {
     this.knownSessionIds.add(sessionId);
     if (this.sessions.has(sessionId)) return;
 
+    const cwd = conversation.workDir ?? this.taskWorkDir;
+
     await claudeTrustService.maybeAutoTrustLocal({
       providerId: conversation.providerId,
-      cwd: this.taskWorkDir,
+      cwd,
       homedir: homedir(),
     });
-    await this.prepareHookConfig(conversation.providerId);
+    await this.prepareHookConfig(conversation.providerId, cwd);
+
+    // Only resume if a session was actually persisted for this conversation.
+    // For Claude we can tell by checking its transcript file; resuming a
+    // non-existent session prints "No conversation found" and exits, so we
+    // start fresh instead. Other providers don't expose a checkable transcript,
+    // so we attempt the resume and rely on the respawn fallback.
+    const effectiveResume = isResuming && (await this.hasResumableSession(conversation));
 
     const { command, args, providerDef, customAgent } = await buildAgentCommand({
       providerId: conversation.providerId,
       autoApprove: conversation.autoApprove,
       sessionId: conversation.id,
-      isResuming,
+      isResuming: effectiveResume,
       initialPrompt,
+    });
+
+    log.warn('[resume-debug] startSession', {
+      conversationId: conversation.id,
+      requestedResume: isResuming,
+      effectiveResume,
+      cwd,
+      args,
     });
 
     const effectiveProviderId = providerDef.id;
@@ -100,11 +117,11 @@ export class LocalConversationProvider implements ConversationProvider {
       providerId: effectiveProviderId,
       command,
       args,
-      cwd: this.taskWorkDir,
+      cwd,
       shellSetup: this.shellSetup,
       tmuxSessionName,
       autoApprove: conversation.autoApprove ?? false,
-      resume: isResuming,
+      resume: effectiveResume,
     };
 
     const spawnParams = resolveSpawnParams('agent', cfg);
@@ -116,7 +133,7 @@ export class LocalConversationProvider implements ConversationProvider {
       id: sessionId,
       command: spawnParams.command,
       args: spawnParams.args,
-      cwd: this.taskWorkDir,
+      cwd,
       env: {
         ...buildAgentEnv({
           hook: port > 0 ? { port, ptyId, token } : undefined,
@@ -160,7 +177,7 @@ export class LocalConversationProvider implements ConversationProvider {
         const count = (this.respawnCounts.get(sessionId) ?? 0) + 1;
         this.respawnCounts.set(sessionId, count);
 
-        if (count > MAX_RESPAWNS && !isResuming) {
+        if (count > MAX_RESPAWNS) {
           log.error('LocalConversationProvider: respawn limit reached, giving up', {
             conversationId: conversation.id,
           });
@@ -168,8 +185,12 @@ export class LocalConversationProvider implements ConversationProvider {
           return;
         }
 
-        const resumeNext = isResuming && count <= MAX_RESPAWNS;
-        if (count > MAX_RESPAWNS) this.respawnCounts.set(sessionId, 0);
+        // A --resume that exited with an error (non-zero, e.g. "No conversation
+        // found" because no transcript was ever persisted for this id) cannot
+        // succeed by retrying — fall back to a fresh session, which creates a
+        // new transcript under this conversation id so future resumes work.
+        // A clean (exit 0) resumed session is re-resumed to restore its history.
+        const resumeNext = isResuming && exitCode === 0;
 
         setTimeout(() => {
           this.startSession(conversation, initialSize, resumeNext, initialPrompt).catch((e) => {
@@ -191,24 +212,49 @@ export class LocalConversationProvider implements ConversationProvider {
     });
   }
 
-  private async prepareHookConfig(providerId: Conversation['providerId']): Promise<void> {
+  /**
+   * Whether the agent has a persisted session for this conversation that can be
+   * resumed. Claude Code stores one transcript per session at
+   * `<configDir>/projects/<cwdHash>/<sessionId>.jsonl`, so for Claude we probe
+   * that file. For other providers there is no checkable artifact, so we assume
+   * resumable and let the respawn fallback handle a missed resume.
+   */
+  private async hasResumableSession(conversation: Conversation): Promise<boolean> {
+    if (conversation.providerId !== 'claude') return true;
+    const claudeDir = process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude');
+    const cwdHash = (conversation.workDir ?? this.taskWorkDir).replace(/[:\\/]/g, '-');
+    const transcript = path.join(claudeDir, 'projects', cwdHash, `${conversation.id}.jsonl`);
+    try {
+      await fs.access(transcript);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async prepareHookConfig(
+    providerId: Conversation['providerId'],
+    cwd: string
+  ): Promise<void> {
     try {
       const localProjectSettings = await appSettingsService.get('localProject');
       const writeGitIgnoreEntries = localProjectSettings.writeAgentConfigToGitIgnore ?? true;
-      const previousWriteGitIgnoreEntries = this.preparedHookProviders.get(providerId);
+      const cacheKey = `${providerId}:${cwd}`;
+      const previousWriteGitIgnoreEntries = this.preparedHookProviders.get(cacheKey);
       const shouldPrepareHookConfig =
         previousWriteGitIgnoreEntries === undefined ||
         (!previousWriteGitIgnoreEntries && writeGitIgnoreEntries);
       if (!shouldPrepareHookConfig) return;
 
-      await this.hookConfigWriter.writeForProvider(providerId, {
+      const writer = new HookConfigWriter(new LocalFileSystem(cwd), this.exec);
+      await writer.writeForProvider(providerId, {
         writeGitIgnoreEntries,
       });
-      this.preparedHookProviders.set(providerId, writeGitIgnoreEntries);
+      this.preparedHookProviders.set(cacheKey, writeGitIgnoreEntries);
     } catch (error) {
       log.warn('LocalConversationProvider: failed to prepare hook config', {
         providerId,
-        taskWorkDir: this.taskWorkDir,
+        cwd,
         error: String(error),
       });
     }

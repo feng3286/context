@@ -5,6 +5,7 @@ export type Conversation = {
   title: string;
   resume?: boolean;
   autoApprove?: boolean;
+  workDir?: string;
 };
 
 export type RenameConversationParams = {
@@ -20,4 +21,5 @@ export type CreateConversationParams = {
   autoApprove?: boolean;
   initialSize?: { cols: number; rows: number };
   initialPrompt?: string;
+  workDir?: string;
 };

@@ -28,6 +28,7 @@ export async function createConversation(params: CreateConversationParams): Prom
       title: params.title,
       provider: params.provider,
       config,
+      workDir: params.workDir,
       createdAt: sql`CURRENT_TIMESTAMP`,
       updatedAt: sql`CURRENT_TIMESTAMP`,
     })

@@ -11,23 +11,46 @@ import { log } from '@main/lib/logger';
 import { capture } from '@main/lib/telemetry';
 
 /**
+ * Remove a path with retries to tolerate transient Windows file locks
+ * (open PTY sessions / file watchers holding handles). Treats a missing path
+ * as success. Returns true if the path is gone afterwards.
+ */
+async function rmWithRetries(
+  target: string,
+  { label, maxAttempts = 3 }: { label: string; maxAttempts?: number }
+): Promise<boolean> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      if (!fs.existsSync(target)) return true;
+      await fs.promises.rm(target, { recursive: true, force: true });
+      return true;
+    } catch (e) {
+      log.warn('deleteTask: removal attempt failed', {
+        label,
+        target,
+        attempt,
+        error: String(e),
+      });
+      if (attempt < maxAttempts - 1) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Remove a worktree directory directly using filesystem operations.
  * Used when the project is not available in projectManager.
  */
 async function removeWorktreeDirectly(worktreePath: string): Promise<boolean> {
-  try {
-    if (!fs.existsSync(worktreePath)) {
-      log.info('deleteTask: worktree path does not exist', { worktreePath });
-      return true;
-    }
-
-    await fs.promises.rm(worktreePath, { recursive: true, force: true });
+  const ok = await rmWithRetries(worktreePath, { label: 'worktree' });
+  if (ok) {
     log.info('deleteTask: removed worktree directly via filesystem', { worktreePath });
-    return true;
-  } catch (e) {
-    log.warn('deleteTask: direct worktree removal failed', { worktreePath, error: String(e) });
-    return false;
+  } else {
+    log.warn('deleteTask: direct worktree removal failed after retries', { worktreePath });
   }
+  return ok;
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
@@ -116,13 +139,12 @@ export async function deleteTask(taskId: string): Promise<void> {
     }
 
     // Remove the parent task directory itself
-    try {
-      await fs.promises.rm(task.workDir, { recursive: true, force: true });
+    const rootRemoved = await rmWithRetries(task.workDir, { label: 'task root directory' });
+    if (rootRemoved) {
       log.info('deleteTask: removed task root directory', { taskWorkDir: task.workDir });
-    } catch (e) {
-      log.warn('deleteTask: failed to remove task root directory', {
+    } else {
+      log.warn('deleteTask: failed to remove task root directory after retries', {
         taskWorkDir: task.workDir,
-        error: String(e),
       });
     }
 

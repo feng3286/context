@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Project } from '@shared/projects';
 import type { Task, TaskLifecycleStatus } from '@shared/tasks';
+import { getProjectManagerStore } from '@renderer/features/projects/stores/project-selectors';
 import { SidebarItemMiniButton } from '@renderer/features/sidebar/sidebar-primitives';
 import { Titlebar } from '@renderer/lib/components/titlebar/Titlebar';
 import { rpc } from '@renderer/lib/ipc';
@@ -19,6 +20,7 @@ import {
 } from '@renderer/lib/ui/dropdown-menu';
 import { EmptyState } from '@renderer/lib/ui/empty-state';
 import { RelativeTime } from '@renderer/lib/ui/relative-time';
+import { debugLog } from '@renderer/utils/debug-logger';
 import { cn } from '@renderer/utils/utils';
 import { workspaceManagerStore } from './stores/workspace-manager';
 import { getWorkspaceStore } from './stores/workspace-selectors';
@@ -232,10 +234,49 @@ export const WorkspaceDetailMainPanel = observer(function WorkspaceDetailMainPan
   };
 
   const handleTaskClick = async (task: Task) => {
-    // Use the first project from the workspace's projects
-    const firstProjectId = projects[0]?.id;
-    if (!firstProjectId) return;
-    navigate('task', { projectId: firstProjectId, taskId: task.id });
+    const projectManager = getProjectManagerStore();
+    const workspaceProjectIds = projects.map((p) => p.id);
+
+    // Resolve the project that actually owns this task. The detail page lists
+    // tasks across the whole workspace, but a single-project task belongs to
+    // exactly one project — not necessarily projects[0]. Navigating under the
+    // wrong projectId leaves the task view blank (getTaskStore returns
+    // undefined → kind "missing").
+    let targetProjectId: string | undefined;
+    // 1. Prefer a workspace project that already has the task loaded.
+    for (const pid of workspaceProjectIds) {
+      if (projectManager.projects.get(pid)?.mountedProject?.taskManager.tasks.get(task.id)) {
+        targetProjectId = pid;
+        break;
+      }
+    }
+    // 2. Cold path: ask the backend for the task's project association.
+    if (!targetProjectId) {
+      try {
+        const ctxs = await rpc.tasks.getTaskProjectContexts(task.id);
+        targetProjectId =
+          ctxs.find((c) => workspaceProjectIds.includes(c.projectId))?.projectId ??
+          ctxs[0]?.projectId;
+      } catch {
+        /* ignore — fall through to the default below */
+      }
+    }
+    // 3. Last resort: the workspace's first project.
+    if (!targetProjectId) targetProjectId = workspaceProjectIds[0];
+    if (!targetProjectId) return;
+
+    if (!projectManager.projects.get(targetProjectId)) {
+      await projectManager.load();
+    }
+    if (projectManager.projects.get(targetProjectId)) {
+      await projectManager.mountProject(targetProjectId);
+    }
+
+    debugLog('workspace-detail', 'handleTaskClick navigate', {
+      taskId: task.id,
+      targetProjectId,
+    });
+    navigate('task', { projectId: targetProjectId, taskId: task.id });
   };
 
   return (

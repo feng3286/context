@@ -226,7 +226,13 @@ export const CreateConversationModal = observer(function CreateConversationModal
                 onValueChange={(v) => setWorkDirOverride(v as string)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string | null) => {
+                      if (!value) return '';
+                      if (value === taskWorkDir) return t('conversation:taskDirectory');
+                      return projectOptions.find((p) => p.path === value)?.name ?? value;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={taskWorkDir}>{t('conversation:taskDirectory')}</SelectItem>

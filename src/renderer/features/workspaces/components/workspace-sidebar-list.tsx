@@ -1,17 +1,7 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  FolderClosed,
-  Layers,
-  Link2,
-  MessageSquare,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Layers, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Project } from '@shared/projects';
 import type { Task } from '@shared/tasks';
 import { getProjectManagerStore } from '@renderer/features/projects/stores/project-selectors';
 import {
@@ -85,45 +75,6 @@ function WorkspaceHeaderRow({
   );
 }
 
-function ProjectSidebarRow({
-  project,
-  workspaceId,
-  isActive,
-  onNavigate,
-  onRemove,
-}: {
-  project: Project;
-  workspaceId: string;
-  isActive: boolean;
-  onNavigate: () => void;
-  onRemove: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <SidebarMenuRow
-      isActive={isActive}
-      className="group/project pl-3 pr-1.5 h-7 gap-1.5 rounded-md mx-0.5"
-      onClick={onNavigate}
-    >
-      <FolderClosed className="h-3.5 w-3.5 shrink-0 text-foreground-tertiary-muted" />
-      <span className="truncate flex-1">{project.name}</span>
-      <Badge variant="outline" className="text-[10px] px-1 h-4 shrink-0">
-        {project.type === 'ssh' ? t('workspaces:ssh') : t('workspaces:local')}
-      </Badge>
-      <SidebarItemMiniButton
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        title={t('workspaces:removeProject')}
-        className="opacity-0 group-hover/project:opacity-100 transition-opacity"
-      >
-        <Trash2 className="h-3 w-3" />
-      </SidebarItemMiniButton>
-    </SidebarMenuRow>
-  );
-}
-
 function TaskSidebarRow({
   task,
   isActive,
@@ -166,13 +117,8 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
   const { navigate } = useNavigate();
   const { currentView } = useWorkspaceSlots();
   const { params } = useParams('workspace');
-  const projectParams = useParams('project');
   const taskParams = useParams('task');
-  const showAddProjectModal = useShowModal('addProjectModal');
   const showCreateTaskModal = useShowModal('taskModal');
-  const showSelectProjectModal = useShowModal('selectProjectModal');
-
-  const showAlertWarning = useShowModal('alertWarningDialog');
 
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(new Set());
 
@@ -182,10 +128,6 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
 
   const workspaces = Array.from(workspaceManagerStore.workspaces.values());
   const activeWorkspaceId = currentView === 'workspace' ? params.workspaceId : null;
-
-  // Get current workspace context from project view (if navigating from workspace)
-  const currentProjectWorkspaceId =
-    currentView === 'project' ? projectParams.params.workspaceId : null;
 
   const toggleExpand = (workspaceId: string) => {
     const newSet = new Set(expandedWorkspaces);
@@ -217,46 +159,54 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
     }
   };
 
-  const handleRemoveProject = async (workspaceId: string, projectId: string) => {
-    // Scene 1: Remove project from workspace - check if project has tasks in this workspace
-    const { taskCount } = await rpc.workspace.canRemoveProjectFromWorkspace(workspaceId, projectId);
-    if (taskCount > 0) {
-      showAlertWarning({
-        title: t('workspaces:cannotRemoveProject'),
-        message: t('workspaces:cannotRemoveProjectMsgShort', { count: taskCount }),
-        details: t('workspaces:cannotRemoveProjectDetailsShort'),
-      });
-      return;
-    }
-    const store = workspaceManagerStore.getWorkspace(workspaceId);
-    if (store) {
-      await (store as WorkspaceStoreClass).removeProject(projectId);
-    }
-  };
-
   const handleTaskClick = async (task: Task, workspaceProjects: string[]) => {
-    // Ensure project is loaded and mounted before navigating
     const projectManager = getProjectManagerStore();
-    // Use the first project from the workspace's projects
-    const firstProjectId = workspaceProjects[0];
-    if (!firstProjectId) return;
 
-    const projectStore = projectManager.projects.get(firstProjectId);
+    // Resolve the project that actually owns this task. The sidebar lists tasks
+    // across the whole workspace, but a single-project task belongs to exactly
+    // one of the workspace's projects — not necessarily workspaceProjects[0].
+    // Navigating under the wrong projectId leaves the task view blank, because
+    // getTaskStore(wrongProject, taskId) returns undefined → kind "missing".
+    let targetProjectId: string | undefined;
+    // 1. Prefer a workspace project that already has the task loaded (instant,
+    //    covers re-visits where the task is already provisioned somewhere).
+    for (const pid of workspaceProjects) {
+      if (projectManager.projects.get(pid)?.mountedProject?.taskManager.tasks.get(task.id)) {
+        targetProjectId = pid;
+        break;
+      }
+    }
+    // 2. Cold path: task not loaded anywhere yet — ask the backend for the task's
+    //    project association.
+    if (!targetProjectId) {
+      try {
+        const ctxs = await rpc.tasks.getTaskProjectContexts(task.id);
+        targetProjectId =
+          ctxs.find((c) => workspaceProjects.includes(c.projectId))?.projectId ??
+          ctxs[0]?.projectId;
+      } catch {
+        /* ignore — fall through to the default below */
+      }
+    }
+    // 3. Last resort: the workspace's first project.
+    if (!targetProjectId) targetProjectId = workspaceProjects[0];
+    if (!targetProjectId) return;
 
-    if (!projectStore) {
-      // Project not in store, need to load first
+    // Ensure the project is loaded and mounted before navigating.
+    if (!projectManager.projects.get(targetProjectId)) {
       await projectManager.load();
     }
-
-    // Check again after load
-    const projectStoreAfterLoad = projectManager.projects.get(firstProjectId);
-    if (projectStoreAfterLoad) {
-      // Mount the project if not already mounted
-      await projectManager.mountProject(firstProjectId);
+    if (projectManager.projects.get(targetProjectId)) {
+      await projectManager.mountProject(targetProjectId);
     }
 
-    // Navigate to task view
-    navigate('task', { projectId: firstProjectId, taskId: task.id });
+    debugLog('workspace-sidebar', 'handleTaskClick navigate', {
+      taskId: task.id,
+      targetProjectId,
+      triedFallback: !workspaceProjects.includes(targetProjectId),
+    });
+    // Navigate to task view under the task's actual project
+    navigate('task', { projectId: targetProjectId, taskId: task.id });
   };
 
   const handleDeleteTask = async (workspaceId: string, task: Task) => {
@@ -295,63 +245,9 @@ export const WorkspaceSidebarList = observer(function WorkspaceSidebarList() {
               onDelete={() => void handleDeleteWorkspace(store.data.id)}
             />
 
-            {/* Expanded content: Projects & Tasks */}
+            {/* Expanded content: Tasks */}
             {isExpanded && (
               <div className="ml-3 mt-1.5 mb-2 space-y-2">
-                {/* Projects section */}
-                <div className="space-y-0.5">
-                  <div className="flex items-center justify-between px-2 py-0.5 h-6">
-                    <span className="text-xs font-medium text-foreground-tertiary-muted flex items-center gap-1">
-                      <FolderClosed className="h-3 w-3" />
-                      Projects ({projects.length})
-                    </span>
-                    <div className="flex items-center gap-0.5">
-                      <SidebarItemMiniButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          showSelectProjectModal({ workspaceId: store.data.id });
-                        }}
-                        title={t('workspaces:linkExistingProject')}
-                        className="opacity-0 group-hover/workspace:opacity-100 transition-opacity"
-                      >
-                        <Link2 className="h-3.5 w-3.5" />
-                      </SidebarItemMiniButton>
-                      <SidebarItemMiniButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          showAddProjectModal({ workspaceId: store.data.id });
-                        }}
-                        title={t('workspaces:createNewProject')}
-                        className="opacity-0 group-hover/workspace:opacity-100 transition-opacity"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </SidebarItemMiniButton>
-                    </div>
-                  </div>
-                  {projects.length === 0 ? (
-                    <div className="text-xs text-foreground-tertiary-muted px-3 py-1 opacity-60">
-                      {t('workspaces:noProjectsShort')}
-                    </div>
-                  ) : (
-                    projects.map((project) => (
-                      <ProjectSidebarRow
-                        key={`${store.data.id}:${project.id}`}
-                        project={project}
-                        workspaceId={store.data.id}
-                        isActive={
-                          currentView === 'project' &&
-                          projectParams.params.projectId === project.id &&
-                          projectParams.params.workspaceId === store.data.id
-                        }
-                        onNavigate={() =>
-                          navigate('project', { projectId: project.id, workspaceId: store.data.id })
-                        }
-                        onRemove={() => void handleRemoveProject(store.data.id, project.id)}
-                      />
-                    ))
-                  )}
-                </div>
-
                 {/* Tasks section */}
                 <div className="space-y-0.5">
                   <div className="flex items-center justify-between px-2 py-0.5 h-6">

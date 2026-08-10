@@ -359,17 +359,19 @@ export class WorktreeService {
   }
 
   async removeWorktree(worktreePath: string): Promise<void> {
-    // Force remove the directory first with retries (handles Windows file locks)
+    // Force remove the directory first with retries (handles Windows file locks).
+    // rootFs.remove() resolves { success, error } and never throws, so we must
+    // check the return value ourselves — otherwise the retry loop is a no-op.
     let lastError: unknown;
     for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        await this.rootFs.remove(worktreePath, { recursive: true });
+      const result = await this.rootFs.remove(worktreePath, { recursive: true });
+      if (result.success) {
+        lastError = undefined;
         break; // Success
-      } catch (err) {
-        lastError = err;
-        if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, 500));
-        }
+      }
+      lastError = new Error(result.error ?? `Failed to remove worktree: ${worktreePath}`);
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
     if (lastError) throw lastError;

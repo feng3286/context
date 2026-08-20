@@ -79,6 +79,8 @@ export interface ProjectProvider {
   getTaskBootstrapStatus(taskId: string): TaskBootstrapStatus;
   teardownTask(taskId: string): Promise<Result<void, TeardownTaskError>>;
   getWorktreeForBranch(branchName: string): Promise<string | undefined>;
+  /** Branch names that currently have a linked worktree (excluding the main checkout). */
+  listWorktreeBranches(): Promise<string[]>;
   removeTaskWorktree(taskBranch: string): Promise<void>;
   removeWorktreeAtPath(worktreePath: string): Promise<void>;
   fetch(): Promise<Result<void, FetchError>>;

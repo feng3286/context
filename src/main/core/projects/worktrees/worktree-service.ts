@@ -161,6 +161,36 @@ export class WorktreeService {
     return undefined;
   }
 
+  /**
+   * Branch names that currently have a linked worktree (excluding the main
+   * repo checkout). Used by the UI to flag branches already checked out in a
+   * worktree when picking a task source branch.
+   *
+   * Path comparison is normalised to forward slashes + lowercase: porcelain
+   * output uses forward slashes while repoPath usually has backslashes on
+   * Windows, and drive-letter case varies.
+   */
+  async listWorktreeBranches(): Promise<string[]> {
+    try {
+      const { stdout } = await this.exec('git', ['worktree', 'list', '--porcelain'], {
+        cwd: this.repoPath,
+      });
+      const mainPath = this.repoPath.replace(/\\/g, '/').toLowerCase();
+      const branches: string[] = [];
+      for (const block of stdout.split('\n\n')) {
+        const wtMatch = /^worktree (.+)$/m.exec(block);
+        const wtPath = wtMatch?.[1];
+        if (!wtPath) continue;
+        if (wtPath.replace(/\\/g, '/').toLowerCase() === mainPath) continue;
+        const branchMatch = /^branch refs\/heads\/(.+)$/m.exec(block);
+        if (branchMatch?.[1]) branches.push(branchMatch[1]);
+      }
+      return branches;
+    } catch {
+      return [];
+    }
+  }
+
   async checkoutBranchWorktree(
     sourceBranch: Branch | undefined,
     branchName: string,

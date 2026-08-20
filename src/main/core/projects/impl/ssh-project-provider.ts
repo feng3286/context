@@ -724,6 +724,10 @@ export class SshProjectProvider implements ProjectProvider {
     return this.worktreeService.getWorktree(branchName);
   }
 
+  async listWorktreeBranches(): Promise<string[]> {
+    return this.worktreeService.listWorktreeBranches();
+  }
+
   async removeTaskWorktree(taskBranch: string): Promise<void> {
     const worktreePath = await this.worktreeService.getWorktree(taskBranch);
     if (worktreePath) {

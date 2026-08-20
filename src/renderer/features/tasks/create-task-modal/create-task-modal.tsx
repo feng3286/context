@@ -12,6 +12,7 @@ import { workspaceManagerStore } from '@renderer/features/workspaces/stores/work
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
 import { WorkspaceStoreClass } from '@renderer/features/workspaces/stores/workspace-store';
 import { BranchSelector } from '@renderer/lib/components/branch-selector';
+import { useWorktreeBranches } from '@renderer/lib/components/use-worktree-branches';
 import { rpc } from '@renderer/lib/ipc';
 import { useNavigate } from '@renderer/lib/layout/navigation-provider';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
@@ -121,6 +122,8 @@ const ProjectBranchRow = observer(function ProjectBranchRow({
 }: ProjectBranchRowProps) {
   const branches = repo?.branches ?? [];
   const defaultBranchName = repo?.defaultBranch?.branch ?? 'main';
+  const worktreeBranches = useWorktreeBranches(project.id);
+  const activeBranch = repo?.currentBranch ?? null;
 
   // Find the Branch object matching the currently selected sourceBranch string
   const selectedBranch: Branch | undefined = useMemo(
@@ -154,6 +157,8 @@ const ProjectBranchRow = observer(function ProjectBranchRow({
               onValueChange={(b: Branch) => onBranchChange(project.id, b.branch)}
               onRefresh={() => repo?.refresh()}
               isRefreshing={repo?.loading ?? false}
+              worktreeBranches={worktreeBranches}
+              activeBranch={activeBranch}
               trigger={
                 <ComboboxTrigger className="min-w-[240px] border flex border-border h-9 hover:bg-muted/30 rounded-md px-2.5 py-1 text-left text-sm outline-none items-center justify-between">
                   <div className="flex items-center gap-2 text-muted-foreground">

@@ -33,6 +33,17 @@ export const repositoryController = createRPCController({
     return project.repository.getRemotes();
   },
 
+  /**
+   * Branch names that currently have a linked worktree (excluding the main
+   * checkout). Used by the branch selector to flag branches already checked
+   * out elsewhere when picking a task source branch.
+   */
+  getWorktreeBranches: async (projectId: string): Promise<string[]> => {
+    const project = projectManager.getProject(projectId);
+    if (!project) return [];
+    return project.listWorktreeBranches();
+  },
+
   addRemote: async (projectId: string, name: string, url: string) => {
     const project = projectManager.getProject(projectId);
     if (!project) return err({ type: 'not_found' as const });

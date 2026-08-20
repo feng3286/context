@@ -25,6 +25,10 @@ interface BranchSelectorProps {
   trigger?: React.ReactNode;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  /** Branch names that already have a linked worktree — flagged in the list. */
+  worktreeBranches?: Set<string>;
+  /** Branch currently checked out in the project's main directory — flagged in the list. */
+  activeBranch?: string | null;
 }
 
 export function BranchSelector({
@@ -35,6 +39,8 @@ export function BranchSelector({
   trigger,
   onRefresh,
   isRefreshing = false,
+  worktreeBranches,
+  activeBranch,
 }: BranchSelectorProps) {
   const [tab, setTab] = useState<'local' | 'remote'>(remoteOnly ? 'remote' : 'local');
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -135,7 +141,36 @@ export function BranchSelector({
         <ComboboxList>
           {(item) => (
             <ComboboxItem value={item} disabled={item.label.startsWith('_reserve')}>
-              {item.label}
+              <span className="flex-1 truncate">{item.label}</span>
+              {item.label === activeBranch && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto shrink-0 px-1 text-[10px] font-normal"
+                    >
+                      active
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    This branch is checked out in the project's main directory
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {worktreeBranches?.has(item.label) && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto shrink-0 gap-0.5 px-1 text-[10px] font-normal"
+                    >
+                      <GitBranch className="size-2.5" />
+                      worktree
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>This branch is already checked out in a worktree</TooltipContent>
+                </Tooltip>
+              )}
             </ComboboxItem>
           )}
         </ComboboxList>

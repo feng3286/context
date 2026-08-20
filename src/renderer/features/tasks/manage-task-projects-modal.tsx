@@ -10,6 +10,7 @@ import { workspaceManagerStore } from '@renderer/features/workspaces/stores/work
 import { getWorkspaceStore } from '@renderer/features/workspaces/stores/workspace-selectors';
 import { WorkspaceStoreClass } from '@renderer/features/workspaces/stores/workspace-store';
 import { BranchSelector } from '@renderer/lib/components/branch-selector';
+import { useWorktreeBranches } from '@renderer/lib/components/use-worktree-branches';
 import { rpc } from '@renderer/lib/ipc';
 import { BaseModalProps } from '@renderer/lib/modal/modal-provider';
 import { Button } from '@renderer/lib/ui/button';
@@ -21,7 +22,6 @@ import {
   DialogTitle,
 } from '@renderer/lib/ui/dialog';
 import { MicroLabel } from '@renderer/lib/ui/label';
-import { ScrollArea } from '@renderer/lib/ui/scroll-area';
 
 interface BoundProject {
   projectId: string;
@@ -42,6 +42,43 @@ type Props = BaseModalProps<void> & {
   taskId: string;
   projectId: string;
 };
+
+/** Branch picker for one available project in the add-section. */
+const ProjectBranchPicker = observer(function ProjectBranchPicker({
+  projectId,
+  sourceBranch,
+  onBranchChange,
+}: {
+  projectId: string;
+  sourceBranch: string;
+  onBranchChange: (projectId: string, branch: string) => void;
+}) {
+  const repo = getRepositoryStore(projectId);
+  const branches = repo?.branches ?? [];
+  const selectedBranch = branches.find((b) => b.branch === sourceBranch);
+  const worktreeBranches = useWorktreeBranches(projectId);
+  const activeBranch = repo?.currentBranch ?? null;
+
+  return (
+    <BranchSelector
+      branches={branches}
+      value={selectedBranch}
+      onValueChange={(b: Branch) => onBranchChange(projectId, b.branch)}
+      onRefresh={() => repo?.refresh()}
+      isRefreshing={repo?.loading ?? false}
+      worktreeBranches={worktreeBranches}
+      activeBranch={activeBranch}
+      trigger={
+        <ComboboxTrigger className="min-w-[240px] border flex border-border h-9 hover:bg-muted/30 rounded-md px-2.5 py-1 text-left text-sm outline-none items-center justify-between">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <GitBranch className="h-4 w-4" />
+            <ComboboxValue placeholder="Select a branch" />
+          </div>
+        </ComboboxTrigger>
+      }
+    />
+  );
+});
 
 export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal({
   taskId,
@@ -218,7 +255,7 @@ export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal
           <MicroLabel className="text-foreground-passive">
             {t('manageTaskProjects:boundProjects', { count: boundProjects.length })}
           </MicroLabel>
-          <ScrollArea className="max-h-48">
+          <div className="max-h-48 overflow-y-auto">
             <div className="flex flex-col gap-1">
               {boundProjects.map((project) => (
                 <div
@@ -246,7 +283,7 @@ export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -264,7 +301,7 @@ export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal
           </Button>
 
           {showAddSection && availableProjects.length > 0 && (
-            <ScrollArea className="max-h-48">
+            <div className="max-h-48 overflow-y-auto">
               <div className="flex flex-col gap-1 border border-border rounded-md divide-y divide-border">
                 {availableProjects.map((project) => (
                   <div key={project.projectId} className="px-3 py-2">
@@ -295,39 +332,18 @@ export const ManageTaskProjectsModal = observer(function ManageTaskProjectsModal
                       <div className="mt-2 ml-6 flex items-center gap-2">
                         <GitBranch className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0">
-                          {(() => {
-                            const repo = getRepositoryStore(project.projectId);
-                            const branches = repo?.branches ?? [];
-                            const selectedBranch = branches.find(
-                              (b) => b.branch === project.sourceBranch
-                            );
-                            return (
-                              <BranchSelector
-                                branches={branches}
-                                value={selectedBranch}
-                                onValueChange={(b: Branch) =>
-                                  handleBranchChange(project.projectId, b.branch)
-                                }
-                                onRefresh={() => repo?.refresh()}
-                                isRefreshing={repo?.loading ?? false}
-                                trigger={
-                                  <ComboboxTrigger className="min-w-[240px] border flex border-border h-9 hover:bg-muted/30 rounded-md px-2.5 py-1 text-left text-sm outline-none items-center justify-between">
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <GitBranch className="h-4 w-4" />
-                                      <ComboboxValue placeholder="Select a branch" />
-                                    </div>
-                                  </ComboboxTrigger>
-                                }
-                              />
-                            );
-                          })()}
+                          <ProjectBranchPicker
+                            projectId={project.projectId}
+                            sourceBranch={project.sourceBranch}
+                            onBranchChange={handleBranchChange}
+                          />
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           )}
 
           {showAddSection && availableProjects.length === 0 && (

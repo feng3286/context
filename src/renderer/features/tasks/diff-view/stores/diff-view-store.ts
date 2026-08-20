@@ -1,4 +1,13 @@
-import { action, computed, makeObservable, observable, reaction, runInAction, when } from 'mobx';
+import {
+  action,
+  computed,
+  makeObservable,
+  observable,
+  reaction,
+  runInAction,
+  toJS,
+  when,
+} from 'mobx';
 import { commitRef, type GitObjectRef } from '@shared/git';
 import type { ActiveFile, DiffViewSnapshot } from '@shared/view-state';
 import { ChangesViewStore } from '@renderer/features/tasks/diff-view/stores/changes-view-store';
@@ -145,7 +154,11 @@ export class DiffViewStore implements Snapshottable<DiffViewSnapshot> {
     return {
       diffStyle: this.diffStyle,
       viewMode: 'file',
-      activeFile: this.activeFileOverride ?? undefined,
+      // activeFileOverride is an observable; toJS deep-converts it (and nested
+      // GitObjectRef values) to a plain object so it survives IPC structured
+      // clone. Passing the observable proxy directly throws
+      // "An object could not be cloned." in rpc.viewState.save.
+      activeFile: toJS(this.activeFileOverride) ?? undefined,
       commitAction: this.commitAction,
       prTab: this.prTab,
     };

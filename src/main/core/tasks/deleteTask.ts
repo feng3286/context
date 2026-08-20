@@ -9,6 +9,7 @@ import { projects, taskProjects, tasks } from '@main/db/schema';
 import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
 import { capture } from '@main/lib/telemetry';
+import { moveToTrash } from './deferred-cleanup';
 
 /**
  * Remove a path with retries to tolerate transient Windows file locks
@@ -138,8 +139,25 @@ export async function deleteTask(taskId: string): Promise<void> {
       }
     }
 
-    // Remove the parent task directory itself
-    const rootRemoved = await rmWithRetries(task.workDir, { label: 'task root directory' });
+    // Remove the parent task directory itself. Retries tolerate transient
+    // Windows file locks; if a file is still busy (typically a process that
+    // survived teardown — e.g. an electron dev server started in the task
+    // terminal holds node_modules/electron/.../default_app.asar open), defer via
+    // moveToTrash so the task path clears now and the next app launch sweeps it.
+    let rootRemoved = await rmWithRetries(task.workDir, {
+      label: 'task root directory',
+      maxAttempts: 5,
+    });
+    if (!rootRemoved) {
+      const trashed = await moveToTrash(task.workDir);
+      if (trashed) {
+        rootRemoved = true;
+        log.info('deleteTask: deferred task root deletion (busy file), moved to trash', {
+          taskWorkDir: task.workDir,
+          trashPath: trashed,
+        });
+      }
+    }
     if (rootRemoved) {
       log.info('deleteTask: removed task root directory', { taskWorkDir: task.workDir });
     } else {

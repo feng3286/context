@@ -17,6 +17,7 @@ import { githubConnectionService } from './core/github/services/github-connectio
 import { projectManager } from './core/projects/project-manager';
 import { prSyncScheduler } from './core/pull-requests/pr-sync-scheduler';
 import { appSettingsService } from './core/settings/settings-service';
+import { sweepDeferredTrash } from './core/tasks/deferred-cleanup';
 import { updateService } from './core/updates/update-service';
 import { initializeDatabase } from './db/initialize';
 import { loadMenuLanguage } from './lib/i18n/menu';
@@ -103,6 +104,19 @@ app.whenReady().then(async () => {
   prSyncScheduler.initialize();
   appService.initialize();
   appSettingsService.initialize();
+
+  // Sweep deferred-deletion trash left by previous sessions. When a task is
+  // deleted but a process (e.g. a dev server started in the task terminal)
+  // holds a file in node_modules open, the workDir is moved aside rather than
+  // left as an orphan; clear those now that any locking process is likely gone.
+  // Best-effort and non-blocking.
+  void appSettingsService
+    .get('localProject')
+    .then((s) => s.defaultWorktreeDirectory)
+    .then((root) => sweepDeferredTrash(root))
+    .catch((e) => {
+      log.warn('deferred trash sweep failed', { error: String(e) });
+    });
 
   agentHookService.start().catch((e) => {
     log.error('Failed to start agent event service:', e);

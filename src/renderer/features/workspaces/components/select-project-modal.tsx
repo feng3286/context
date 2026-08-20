@@ -102,7 +102,7 @@ export const SelectProjectModal = observer(function SelectProjectModal({
     >
       <DialogContentArea className="gap-4">
         <Field>
-          <FieldLabel>{t('workspaces:selectProjects')}</FieldLabel>
+          <FieldLabel>{t('workspaces:selectProjects', { count: selectedProjectIds.size })}</FieldLabel>
           <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border bg-background">
             {projects.length === 0 ? (
               <div className="px-3 py-2 text-sm text-foreground-tertiary-muted">

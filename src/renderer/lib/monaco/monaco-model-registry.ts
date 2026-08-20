@@ -6,6 +6,14 @@ import { buildMonacoModelPath } from './monacoModelPath';
 
 const BUFFER_DEBOUNCE_MS = 2000;
 
+/**
+ * Cap for disk reads feeding Monaco models. Matches the git-side limit
+ * (MAX_DIFF_CONTENT_BYTES, 512 KB) so both diff sides cover the same range.
+ * Files larger than this are treated as too large rather than truncated —
+ * a silently truncated side renders phantom deletions in the diff view.
+ */
+const MAX_DISK_CONTENT_BYTES = 512 * 1024;
+
 // ---------------------------------------------------------------------------
 // Discriminated-union entry types
 // ---------------------------------------------------------------------------
@@ -128,6 +136,16 @@ export class MonacoModelRegistry {
    */
   private pendingFetches = new Map<string, Promise<string | null>>();
 
+  /**
+   * In-flight registerModel calls, keyed by typed URI. unregisterModel may run
+   * before an async registerModel lands (e.g. rapid file switches in the diff
+   * view). Such an unregister is meaningless at the time it arrives (no entry
+   * exists yet) — it is recorded in pendingUnregisters and consumed when the
+   * registration settles, so no orphaned refs:1 entry survives the race.
+   */
+  private pendingRegisterCount = new Map<string, number>();
+  private pendingUnregisters = new Map<string, number>();
+
   // ---------------------------------------------------------------------------
   // MobX reactive state
   // ---------------------------------------------------------------------------
@@ -199,6 +217,33 @@ export class MonacoModelRegistry {
   }
 
   // ---------------------------------------------------------------------------
+  // Pending-registration tracking (unregister-before-register race)
+  // ---------------------------------------------------------------------------
+
+  /** Mark a registerModel call as in flight for `uri`. */
+  private _trackPendingRegistration(uri: string): void {
+    this.pendingRegisterCount.set(uri, (this.pendingRegisterCount.get(uri) ?? 0) + 1);
+  }
+
+  /** Mark a registerModel call as settled (completed or failed) for `uri`. */
+  private _untrackPendingRegistration(uri: string): void {
+    const n = this.pendingRegisterCount.get(uri) ?? 0;
+    if (n <= 1) this.pendingRegisterCount.delete(uri);
+    else this.pendingRegisterCount.set(uri, n - 1);
+  }
+
+  /**
+   * Consume unregisters that arrived while a registration for `uri` was in
+   * flight. Returns how many were pending; the caller skips model creation
+   * when > 0 — the caller that issued the registration already gave up on it.
+   */
+  private _consumePendingUnregisters(uri: string): number {
+    const n = this.pendingUnregisters.get(uri) ?? 0;
+    this.pendingUnregisters.delete(uri);
+    return n;
+  }
+
+  // ---------------------------------------------------------------------------
   // Register (public API)
   // ---------------------------------------------------------------------------
 
@@ -263,33 +308,65 @@ export class MonacoModelRegistry {
       return uri;
     }
 
+    this._trackPendingRegistration(diskUri);
     this.modelStatus.set(diskUri, 'loading');
 
     // Run the RPC fetch and Monaco initialization in parallel — no need to wait
     // for Monaco before fetching file content from the main process.
+    // content === null means the file is absent on disk (e.g. an unstaged
+    // deletion) or too large for the diff view — an empty model mirrors how
+    // git:// models render missing blobs.
     let content: string;
     let m: typeof monaco;
     try {
       const fetchKey = `${projectId}:${workspaceId}:${filePath}:disk`;
       [content, m] = await Promise.all([
         this.dedupFetch(fetchKey, async () => {
-          const res = await rpc.fs.readFile(projectId, workspaceId, filePath);
+          const res = await rpc.fs.readFile(
+            projectId,
+            workspaceId,
+            filePath,
+            MAX_DISK_CONTENT_BYTES
+          );
           if (!res.success)
             throw new Error(`registerModel(disk): readFile failed for ${filePath}: ${res.error}`);
-          const result = res.data.content;
-          if (result === null) throw new Error(`registerModel(disk): null content for ${filePath}`);
-          return result;
+          // A truncated read must never enter a diff — it would render every
+          // line past the truncation point as deleted (disk side silently
+          // shorter than the git side). Treat as missing; the editor's
+          // too-large path handles genuinely large files.
+          if (res.data.truncated) return null;
+          return res.data.content ?? '';
         }) as Promise<string>,
         this.monacoReadyPromise,
       ]);
     } catch (err) {
       this.modelStatus.set(diskUri, 'error');
+      // The registration failed — nothing will be created, so a racing
+      // unregister has nothing to balance. Drop it.
+      this._consumePendingUnregisters(diskUri);
       throw err;
+    } finally {
+      this._untrackPendingRegistration(diskUri);
+    }
+
+    // An unregister arrived while this registration was in flight — apply it now.
+    if (this._consumePendingUnregisters(diskUri) > 0) {
+      this.modelStatus.delete(diskUri);
+      return uri;
+    }
+
+    // A concurrent registerDisk for the same URI completed first — its entry is
+    // authoritative; just add our ref instead of overwriting and leaking one.
+    const raced = this.modelMap.get(diskUri);
+    if (raced?.type === 'disk') {
+      raced.refs += 1;
+      this.modelStatus.set(diskUri, 'ready');
+      return uri;
     }
 
     const diskMonacoUri = m.Uri.parse(diskUri);
     let model = m.editor.getModel(diskMonacoUri);
-    if (!model) model = m.editor.createModel(content, language, diskMonacoUri);
+    if (!model) model = m.editor.createModel(content ?? '', language, diskMonacoUri);
     const entry: DiskModelEntry = {
       type: 'disk',
       model,
@@ -327,26 +404,54 @@ export class MonacoModelRegistry {
       return uri;
     }
 
+    this._trackPendingRegistration(gitUri);
     this.modelStatus.set(gitUri, 'loading');
 
     // Run the RPC fetch and Monaco initialization in parallel.
     const fetchKey = `${projectId}:${workspaceId}:${filePath}:git:${gitRefToString(ref)}`;
-    const [content, m] = await Promise.all([
-      this.dedupFetch(fetchKey, async () => {
-        if (ref.kind === 'staged') {
-          const res = await rpc.git.getFileAtIndex(projectId, workspaceId, filePath);
+    let content: string | null;
+    let m: typeof monaco;
+    try {
+      [content, m] = await Promise.all([
+        this.dedupFetch(fetchKey, async () => {
+          if (ref.kind === 'staged') {
+            const res = await rpc.git.getFileAtIndex(projectId, workspaceId, filePath);
+            return res.success ? res.data.content : null;
+          }
+          const res = await rpc.git.getFileAtRef(
+            projectId,
+            workspaceId,
+            filePath,
+            gitRefToString(ref)
+          );
           return res.success ? res.data.content : null;
-        }
-        const res = await rpc.git.getFileAtRef(
-          projectId,
-          workspaceId,
-          filePath,
-          gitRefToString(ref)
-        );
-        return res.success ? res.data.content : null;
-      }),
-      this.monacoReadyPromise,
-    ]);
+        }),
+        this.monacoReadyPromise,
+      ]);
+    } catch (err) {
+      this.modelStatus.set(gitUri, 'error');
+      // The registration failed — nothing will be created, so a racing
+      // unregister has nothing to balance. Drop it.
+      this._consumePendingUnregisters(gitUri);
+      throw err;
+    } finally {
+      this._untrackPendingRegistration(gitUri);
+    }
+
+    // An unregister arrived while this registration was in flight — apply it now.
+    if (this._consumePendingUnregisters(gitUri) > 0) {
+      this.modelStatus.delete(gitUri);
+      return uri;
+    }
+
+    // A concurrent registerGit for the same URI completed first — add our ref
+    // to its entry instead of overwriting it and leaking one.
+    const raced = this.modelMap.get(gitUri);
+    if (raced?.type === 'git') {
+      raced.refs += 1;
+      this.modelStatus.set(gitUri, 'ready');
+      return uri;
+    }
 
     const gitMonacoUri = m.Uri.parse(gitUri);
     let model = m.editor.getModel(gitMonacoUri);
@@ -413,7 +518,25 @@ export class MonacoModelRegistry {
       return uri;
     }
 
+    this._trackPendingRegistration(uri);
     const m = await this.monacoReadyPromise;
+    this._untrackPendingRegistration(uri);
+
+    // An unregister arrived while this registration was in flight — the caller
+    // already gave up on this model; skip creating it.
+    if (this._consumePendingUnregisters(uri) > 0) {
+      this.modelStatus.delete(uri);
+      return uri;
+    }
+
+    // A concurrent registerBuffer for the same URI completed first — add our
+    // ref to its entry instead of overwriting it and leaking one.
+    const raced = this.modelMap.get(uri);
+    if (raced?.type === 'buffer') {
+      raced.refs += 1;
+      this.modelStatus.set(uri, 'ready');
+      return uri;
+    }
 
     const diskEntry = this.modelMap.get(this.toDiskUri(uri));
     const seedContent = diskEntry?.type === 'disk' ? diskEntry.model.getValue() : '';
@@ -566,7 +689,15 @@ export class MonacoModelRegistry {
    */
   unregisterModel(uri: string): void {
     const entry = this.modelMap.get(uri);
-    if (!entry) return;
+    if (!entry) {
+      // No entry and a registration still in flight — the unregister is racing
+      // registerModel (rapid file switch). Defer it so the registration can
+      // balance the count when it lands instead of leaving an orphaned refs:1.
+      if (this.pendingRegisterCount.has(uri)) {
+        this.pendingUnregisters.set(uri, (this.pendingUnregisters.get(uri) ?? 0) + 1);
+      }
+      return;
+    }
 
     entry.refs -= 1;
     if (entry.refs > 0) return;
@@ -788,8 +919,17 @@ export class MonacoModelRegistry {
     const entry = this.modelMap.get(uri);
     if (!entry) return;
     if (entry.type === 'disk') {
-      const res = await rpc.fs.readFile(entry.projectId, entry.workspaceId, entry.filePath);
-      if (res.success) this.applyDiskUpdate(uri, entry, res.data.content);
+      const res = await rpc.fs.readFile(
+        entry.projectId,
+        entry.workspaceId,
+        entry.filePath,
+        MAX_DISK_CONTENT_BYTES
+      );
+      // Skip truncated reads — applying one would silently drop the tail of
+      // the file and render phantom deletions in the diff view.
+      if (res.success && !res.data.truncated) {
+        this.applyDiskUpdate(uri, entry, res.data.content ?? '');
+      }
     } else if (entry.type === 'git') {
       const res =
         entry.ref.kind === 'staged'

@@ -5,12 +5,12 @@ import { planEventChannel } from '@shared/events/appEvents';
 import { fsWatchEventChannel } from '@shared/events/fsEvents';
 import { createRPCController } from '@shared/ipc/rpc';
 import { err, ok } from '@shared/result';
-import { events } from '@main/lib/events';
 import { projectManager } from '@main/core/projects/project-manager';
-import { resolveWorkspace } from '../projects/utils';
 import { getLocalExec } from '@main/core/utils/exec';
 import { db } from '@main/db/client';
 import { projects, taskProjects, tasks } from '@main/db/schema';
+import { events } from '@main/lib/events';
+import { resolveWorkspace } from '../projects/utils';
 import {
   FileSystemErrorCodes,
   type FileWatcher,
@@ -54,6 +54,17 @@ export const filesController = createRPCController({
       const result = await env.fs.read(filePath, maxBytes);
       return ok(result);
     } catch (e) {
+      // A missing file is not a transport error for callers that render disk
+      // state (e.g. the diff view for a deleted unstaged file): return null
+      // content — the same convention as the git read APIs — and let callers
+      // decide how to render it.
+      if ((e as unknown as { code?: string }).code === FileSystemErrorCodes.NOT_FOUND) {
+        return ok<{ content: string | null; truncated: boolean; totalSize: number }>({
+          content: null,
+          truncated: false,
+          totalSize: 0,
+        });
+      }
       return err({ type: 'fs_error' as const, message: String(e) });
     }
   },

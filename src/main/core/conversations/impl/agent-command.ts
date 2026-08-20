@@ -44,6 +44,12 @@ export async function buildAgentCommand({
 
   const args: string[] = [];
 
+  // Launchers whose flags must precede everything else (e.g. dsh
+  // `--profile headless`) take their defaultArgs up front.
+  if (resolvedConfig?.prependDefaultArgs && resolvedConfig?.defaultArgs) {
+    args.push(...resolvedConfig.defaultArgs);
+  }
+
   if (isResuming && resolvedConfig?.resumeFlag) {
     // Resume: pass the session id as the value of the resume flag
     // (e.g. `claude --resume <id>`). Adding the standalone `--session-id` flag
@@ -70,7 +76,9 @@ export async function buildAgentCommand({
     }
   }
 
-  args.push(...(resolvedConfig?.defaultArgs ?? []));
+  if (!resolvedConfig?.prependDefaultArgs) {
+    args.push(...(resolvedConfig?.defaultArgs ?? []));
+  }
 
   return {
     command: cli ?? providerId,

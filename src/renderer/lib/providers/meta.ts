@@ -1,4 +1,5 @@
 import ampcodeIcon from '@/assets/images/ampcode.png';
+import antigravityIcon from '@/assets/images/antigravity.png';
 import atlassianIcon from '@/assets/images/atlassian.png';
 import augmentcodeIcon from '@/assets/images/Auggie.svg?raw';
 import autohandIcon from '@/assets/images/autohand.svg?raw';
@@ -8,6 +9,7 @@ import clineIcon from '@/assets/images/cline.png';
 import codebuffIcon from '@/assets/images/codebuff.png';
 import continueIcon from '@/assets/images/continue.png';
 import cursorlogoIcon from '@/assets/images/cursor.svg?raw';
+import deepseekIcon from '@/assets/images/deepseek.svg?raw';
 import factorydroidIcon from '@/assets/images/droid.svg?raw';
 import geminiIcon from '@/assets/images/gemini.png';
 import ghcopilotIcon from '@/assets/images/gh-copilot.svg?raw';
@@ -34,6 +36,8 @@ const ICONS: Record<string, string> = {
   'claude.png': claudeIcon,
   'droid.svg': factorydroidIcon,
   'gemini.png': geminiIcon,
+  'antigravity.png': antigravityIcon,
+  'deepseek.svg': deepseekIcon,
   'cursor.svg': cursorlogoIcon,
   'gh-copilot.svg': ghcopilotIcon,
   'goose.png': gooseIcon,

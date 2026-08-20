@@ -1,5 +1,6 @@
 import type { AgentProviderId } from '@shared/agent-provider-registry';
 import { createAmpClassifier } from './amp';
+import { createAntigravityClassifier } from './antigravity';
 import { createAuggieClassifier } from './auggie';
 import { createAutohandClassifier } from './autohand';
 import type { ProviderClassifier } from './base';
@@ -26,6 +27,7 @@ export type { ProviderClassifier, ClassificationResult } from './base';
 
 const classifierFactories: Partial<Record<AgentProviderId, () => ProviderClassifier>> = {
   amp: createAmpClassifier,
+  antigravity: createAntigravityClassifier,
   auggie: createAuggieClassifier,
   autohand: createAutohandClassifier,
   charm: createCharmClassifier,

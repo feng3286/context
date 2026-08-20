@@ -7,6 +7,8 @@ export const customAgentEntrySchema = z.object({
   autoApproveFlag: z.string().optional(),
   initialPromptFlag: z.string().optional(),
   defaultArgs: z.array(z.string()).optional(),
+  /** When true, defaultArgs go before resume/session/prompt args (launcher-prefix style). */
+  prependDefaultArgs: z.boolean().optional(),
   resumeFlag: z.string().optional(),
   sessionIdFlag: z.string().optional(),
   useKeystrokeInjection: z.boolean().default(false),

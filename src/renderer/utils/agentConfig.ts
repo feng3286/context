@@ -1,5 +1,6 @@
 import { AgentProviderId } from '@shared/agent-provider-registry';
 import ampLogo from '../../assets/images/ampcode.png';
+import antigravityLogo from '../../assets/images/antigravity.png';
 import atlassianLogo from '../../assets/images/atlassian.png';
 import augmentLogoSvg from '../../assets/images/Auggie.svg?raw';
 import autohandLogoSvg from '../../assets/images/autohand.svg?raw';
@@ -9,6 +10,7 @@ import clineLogo from '../../assets/images/cline.png';
 import codebuffLogo from '../../assets/images/codebuff.png';
 import continueLogo from '../../assets/images/continue.png';
 import cursorLogoSvg from '../../assets/images/cursor.svg?raw';
+import deepseekLogoSvg from '../../assets/images/deepseek.svg?raw';
 import factoryLogoSvg from '../../assets/images/droid.svg?raw';
 import geminiLogo from '../../assets/images/gemini.png';
 import copilotLogoSvg from '../../assets/images/gh-copilot.svg?raw';
@@ -36,10 +38,17 @@ export const agentConfig: Record<AgentProviderId, AgentInfo> = {
   codex: { name: 'Codex', logo: openaiLogoSvg, alt: 'Codex', isSvg: true },
   cursor: { name: 'Cursor', logo: cursorLogoSvg, alt: 'Cursor CLI', isSvg: true },
   gemini: { name: 'Gemini', logo: geminiLogo, alt: 'Gemini CLI' },
+  antigravity: { name: 'Antigravity', logo: antigravityLogo, alt: 'Antigravity CLI' },
   mistral: { name: 'Mistral Vibe', logo: mistralLogo, alt: 'Mistral Vibe CLI' },
   qwen: { name: 'Qwen Code', logo: qwenLogo, alt: 'Qwen Code' },
   droid: { name: 'Droid', logo: factoryLogoSvg, alt: 'Factory Droid', isSvg: true },
   pi: { name: 'Pi', logo: piLogo, alt: 'Pi CLI' },
+  deepseek: {
+    name: 'DeepSeek Harness',
+    logo: deepseekLogoSvg,
+    alt: 'DeepSeek Harness CLI',
+    isSvg: true,
+  },
   autohand: { name: 'Autohand Code', logo: autohandLogoSvg, alt: 'Autohand Code CLI', isSvg: true },
   opencode: { name: 'OpenCode', logo: opencodeLogo, alt: 'OpenCode', invertInDark: true },
   auggie: { name: 'Auggie', logo: augmentLogoSvg, alt: 'Auggie CLI', isSvg: true },

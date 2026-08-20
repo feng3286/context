@@ -79,6 +79,8 @@ export const providerCustomConfigEntrySchema = z.object({
   cli: z.string().optional(),
   resumeFlag: z.string().optional(),
   defaultArgs: z.array(z.string()).optional(),
+  /** When true, defaultArgs go before resume/session/prompt args (launcher-prefix style). */
+  prependDefaultArgs: z.boolean().optional(),
   autoApproveFlag: z.string().optional(),
   initialPromptFlag: z.string().optional(),
   sessionIdFlag: z.string().optional(),
@@ -97,6 +99,7 @@ export const providerConfigDefaults = Object.fromEntries(
       ...(p.autoApproveFlag ? { autoApproveFlag: p.autoApproveFlag } : {}),
       ...(p.initialPromptFlag !== undefined ? { initialPromptFlag: p.initialPromptFlag } : {}),
       ...(p.defaultArgs ? { defaultArgs: p.defaultArgs } : {}),
+      ...(p.prependDefaultArgs ? { prependDefaultArgs: true } : {}),
       ...(p.sessionIdFlag ? { sessionIdFlag: p.sessionIdFlag } : {}),
     },
   ])

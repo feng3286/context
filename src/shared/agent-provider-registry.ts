@@ -4,6 +4,7 @@ export const AGENT_PROVIDER_IDS = [
   'qwen',
   'droid',
   'gemini',
+  'antigravity',
   'cursor',
   'copilot',
   'amp',
@@ -21,6 +22,7 @@ export const AGENT_PROVIDER_IDS = [
   'mistral',
   'pi',
   'autohand',
+  'deepseek',
 ] as const;
 
 export type AgentProviderId = (typeof AGENT_PROVIDER_IDS)[number];
@@ -54,6 +56,13 @@ export type AgentProviderDefinition = {
    */
   sessionIdFlag?: string;
   defaultArgs?: string[];
+  /**
+   * When true, defaultArgs are prepended (before resume/session/prompt args)
+   * instead of appended. Needed for launchers whose own flags must come
+   * before the positional prompt — e.g. `dsh --profile headless "task"`,
+   * where anything after the prompt is passed through to the profile app.
+   */
+  prependDefaultArgs?: boolean;
   planActivateCommand?: string;
   autoStartCommand?: string;
   icon?: string;
@@ -135,6 +144,24 @@ export const AGENT_PROVIDERS: AgentProviderDefinition[] = [
     resumeFlag: '--resume',
     icon: 'gemini.png',
     alt: 'Gemini CLI',
+    terminalOnly: true,
+  },
+  {
+    id: 'antigravity',
+    name: 'Antigravity',
+    description:
+      'Google Antigravity CLI (agy) — Gemini CLI successor with agent-first workflows, planning, and browser control.',
+    docUrl: 'https://antigravity.google/docs/cli/install/',
+    installCommand: 'irm https://antigravity.google/cli/install.ps1 | iex',
+    commands: ['agy'],
+    versionArgs: ['--version'],
+    cli: 'agy',
+    // No --yolo equivalent; auto-approval is governed by settings.json
+    // (approval mode + safety settings) instead of a CLI flag.
+    initialPromptFlag: '-p',
+    resumeFlag: '--resume',
+    icon: 'antigravity.png',
+    alt: 'Antigravity CLI',
     terminalOnly: true,
   },
   {
@@ -424,6 +451,27 @@ export const AGENT_PROVIDERS: AgentProviderDefinition[] = [
     initialPromptFlag: '-p',
     icon: 'autohand.svg',
     alt: 'Autohand Code CLI',
+    terminalOnly: true,
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek Harness',
+    description:
+      'DeepSeek Harness (dsh) — plugin-based agentic coding framework with headless one-shot runs and a web UI.',
+    docUrl: 'https://github.com/deepseek-ai/deepseek-harness',
+    installCommand: 'npm install -g @deepseek-ai/dsh',
+    commands: ['dsh'],
+    versionArgs: ['--version'],
+    // headless profile runs a single fresh session for the given prompt,
+    // prints the answer, and exits — there is no interactive TUI.
+    // Launcher flags must precede the positional prompt (`dsh --profile
+    // headless "task"`), hence prependDefaultArgs.
+    cli: 'dsh',
+    defaultArgs: ['--profile', 'headless'],
+    prependDefaultArgs: true,
+    initialPromptFlag: '',
+    icon: 'deepseek.svg',
+    alt: 'DeepSeek Harness CLI',
     terminalOnly: true,
   },
 ];

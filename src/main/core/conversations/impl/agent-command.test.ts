@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { providerOverrideSettings } from '@main/core/settings/provider-settings-service';
 import { buildAgentCommand } from './agent-command';
 
 // Claude's default provider config — mirrors providerConfigDefaults for 'claude'
@@ -22,6 +23,20 @@ vi.mock('@main/core/settings/custom-agent-service', () => ({
 }));
 
 const SESSION_ID = '11111111-2222-3333-4444-555555555555';
+
+// Claude's default provider config — restored before each test so later
+// suites can swap in other providers (e.g. deepseek) without leaking state.
+const CLAUDE_CONFIG = {
+  cli: 'claude',
+  resumeFlag: '--resume',
+  autoApproveFlag: '--dangerously-skip-permissions',
+  initialPromptFlag: '',
+  sessionIdFlag: '--session-id',
+};
+
+beforeEach(() => {
+  vi.mocked(providerOverrideSettings.getItem).mockResolvedValue(CLAUDE_CONFIG);
+});
 
 describe('buildAgentCommand – Claude resume/fresh session id wiring', () => {
   it('passes the session id as the value of --resume, never as a standalone --session-id flag', async () => {
@@ -57,5 +72,29 @@ describe('buildAgentCommand – Claude resume/fresh session id wiring', () => {
     });
 
     expect(args).toEqual(['--resume', SESSION_ID, '--dangerously-skip-permissions']);
+  });
+});
+
+describe('buildAgentCommand – prepended defaultArgs (launcher-prefix providers)', () => {
+  it('places --profile headless before the positional prompt', async () => {
+    // DeepSeek Harness: launcher flags must precede the positional prompt —
+    // `dsh "fix the bug" --profile headless` would pass --profile through to
+    // the profile app instead of the launcher.
+    vi.mocked(providerOverrideSettings.getItem).mockResolvedValue({
+      cli: 'dsh',
+      defaultArgs: ['--profile', 'headless'],
+      prependDefaultArgs: true,
+      initialPromptFlag: '',
+    });
+
+    const { command, args } = await buildAgentCommand({
+      providerId: 'deepseek',
+      sessionId: SESSION_ID,
+      initialPrompt: 'fix the bug',
+      isResuming: false,
+    });
+
+    expect(command).toBe('dsh');
+    expect(args).toEqual(['--profile', 'headless', 'fix the bug']);
   });
 });

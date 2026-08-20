@@ -76,6 +76,7 @@ class CustomAgentService {
       resumeFlag: entry.resumeFlag,
       sessionIdFlag: entry.sessionIdFlag,
       defaultArgs: entry.defaultArgs,
+      prependDefaultArgs: entry.prependDefaultArgs,
       icon: undefined,
       alt: entry.name,
       terminalOnly: true,

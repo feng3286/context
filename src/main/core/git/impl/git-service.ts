@@ -68,7 +68,11 @@ export class GitService implements GitProvider {
 
   private _getCatFile(): CatFileBatch | null {
     if (!this._localWorkspace) return null;
-    this._catFile ??= new CatFileBatch(this.path);
+    // A batch may have been disposed externally (worktree removal kills
+    // helpers whose CWD pins the directory) — recreate it lazily.
+    if (!this._catFile || this._catFile.disposed) {
+      this._catFile = new CatFileBatch(this.path);
+    }
     return this._catFile;
   }
 

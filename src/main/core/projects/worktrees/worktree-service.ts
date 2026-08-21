@@ -3,6 +3,7 @@ import type { Branch } from '@shared/git';
 import { DEFAULT_REMOTE_NAME, normalizeLocalBranchRef } from '@shared/git-utils';
 import { err, ok, Result } from '@shared/result';
 import { FileSystemProvider } from '@main/core/fs/types';
+import { disposeCatFileBatchesUnder } from '@main/core/git/impl/cat-file-batch';
 import { ExecFn } from '@main/core/utils/exec';
 import { log } from '@main/lib/logger';
 import { ProjectSettingsProvider } from '../settings/schema';
@@ -389,6 +390,17 @@ export class WorktreeService {
   }
 
   async removeWorktree(worktreePath: string): Promise<void> {
+    // Kill our own persistent git helpers first: a `git cat-file --batch`
+    // spawned with cwd inside this worktree pins the directory (Windows blocks
+    // rmdir/rename of any process's CWD), which would make the app deadlock
+    // its own worktree removal.
+    const disposedHelpers = disposeCatFileBatchesUnder(worktreePath);
+    if (disposedHelpers.length > 0) {
+      log.info('worktree-service: disposed git helpers pinning worktree', {
+        worktreePath,
+        helpers: disposedHelpers,
+      });
+    }
     // Force remove the directory first with retries (handles Windows file locks).
     // rootFs.remove() resolves { success, error } and never throws, so we must
     // check the return value ourselves — otherwise the retry loop is a no-op.

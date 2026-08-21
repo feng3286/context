@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { GIT_EXECUTABLE } from '@main/core/utils/exec';
+import { isPathUnder } from '@main/core/utils/paths';
 
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -9,12 +10,40 @@ type Pending = {
   reject: (e: Error) => void;
 };
 
+// Live batches, so worktree removal can dispose helpers pinning a directory.
+const liveBatches = new Set<CatFileBatch>();
+
+/**
+ * Dispose every live `cat-file --batch` helper whose CWD is under `pathPrefix`.
+ *
+ * On Windows a process's current working directory blocks both deletion and
+ * renaming of that directory — and of every ancestor — so a long-lived helper
+ * spawned with `cwd: <worktree>` otherwise deadlocks the app's own task
+ * deletion (`fs.rm` deletes the contents but cannot remove the directory
+ * itself). GitService recreates the batch lazily on the next read, so disposal
+ * only costs a process respawn.
+ *
+ * @returns the cwds of the disposed batches (for logging).
+ */
+export function disposeCatFileBatchesUnder(pathPrefix: string): string[] {
+  const disposed: string[] = [];
+  for (const batch of liveBatches) {
+    if (batch.disposed) continue;
+    if (isPathUnder(batch.cwd, pathPrefix)) {
+      const cwd = batch.cwd;
+      batch.dispose();
+      disposed.push(cwd);
+    }
+  }
+  return disposed;
+}
+
 /**
  * Persistent `git cat-file --batch` subprocess with a strictly serialized queue.
  * Local workspace only — SSH workspaces use per-call `git show` in GitService.
  */
 export class CatFileBatch {
-  private disposed = false;
+  private _disposed = false;
   private proc: ChildProcessWithoutNullStreams | null = null;
   private buf = Buffer.alloc(0);
   private wake: (() => void) | null = null;
@@ -23,12 +52,20 @@ export class CatFileBatch {
   private readAborted: Error | null = null;
 
   constructor(
-    private readonly cwd: string,
+    /** Directory the helper process runs in (read by disposeCatFileBatchesUnder). */
+    readonly cwd: string,
     private readonly gitBin: string = GIT_EXECUTABLE
-  ) {}
+  ) {
+    liveBatches.add(this);
+  }
+
+  get disposed(): boolean {
+    return this._disposed;
+  }
 
   dispose(): void {
-    this.disposed = true;
+    this._disposed = true;
+    liveBatches.delete(this);
     try {
       this.proc?.stdin?.end();
       this.proc?.kill();
@@ -48,7 +85,7 @@ export class CatFileBatch {
 
   read(query: string): Promise<string | null> {
     return new Promise((resolve, reject) => {
-      if (this.disposed) {
+      if (this._disposed) {
         reject(new Error('CatFileBatch disposed'));
         return;
       }
@@ -58,7 +95,7 @@ export class CatFileBatch {
   }
 
   private _ensureProc(): ChildProcessWithoutNullStreams {
-    if (this.disposed) throw new Error('CatFileBatch disposed');
+    if (this._disposed) throw new Error('CatFileBatch disposed');
     if (this.proc) return this.proc;
 
     this.readAborted = null;

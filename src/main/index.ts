@@ -18,6 +18,7 @@ import { projectManager } from './core/projects/project-manager';
 import { prSyncScheduler } from './core/pull-requests/pr-sync-scheduler';
 import { appSettingsService } from './core/settings/settings-service';
 import { sweepDeferredTrash } from './core/tasks/deferred-cleanup';
+import { sweepOrphanTaskDirs } from './core/tasks/orphan-cleanup';
 import { updateService } from './core/updates/update-service';
 import { initializeDatabase } from './db/initialize';
 import { loadMenuLanguage } from './lib/i18n/menu';
@@ -109,11 +110,18 @@ app.whenReady().then(async () => {
   // deleted but a process (e.g. a dev server started in the task terminal)
   // holds a file in node_modules open, the workDir is moved aside rather than
   // left as an orphan; clear those now that any locking process is likely gone.
+  // Then sweep orphaned task directories left behind by deletions that failed
+  // outright (typical cause: a process pinned the directory as its CWD, which
+  // blocks both removal and the trash move) — pruning stale worktree
+  // registrations and their task branches in the source repos.
   // Best-effort and non-blocking.
   void appSettingsService
     .get('localProject')
     .then((s) => s.defaultWorktreeDirectory)
-    .then((root) => sweepDeferredTrash(root))
+    .then(async (root) => {
+      await sweepDeferredTrash(root);
+      await sweepOrphanTaskDirs(root);
+    })
     .catch((e) => {
       log.warn('deferred trash sweep failed', { error: String(e) });
     });

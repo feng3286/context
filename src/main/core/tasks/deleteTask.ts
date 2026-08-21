@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { eq, inArray } from 'drizzle-orm';
 import { taskDeletedChannel } from '@shared/events/taskEvents';
+import { disposeCatFileBatchesUnder } from '@main/core/git/impl/cat-file-batch';
 import { projectManager } from '@main/core/projects/project-manager';
 import { viewStateService } from '@main/core/view-state/view-state-service';
 import { db } from '@main/db/client';
@@ -45,6 +46,9 @@ async function rmWithRetries(
  * Used when the project is not available in projectManager.
  */
 async function removeWorktreeDirectly(worktreePath: string): Promise<boolean> {
+  // See removeWorktree(): our git helpers pin the directory as their CWD.
+  // This path skips the provider, so dispose here as well.
+  disposeCatFileBatchesUnder(worktreePath);
   const ok = await rmWithRetries(worktreePath, { label: 'worktree' });
   if (ok) {
     log.info('deleteTask: removed worktree directly via filesystem', { worktreePath });
@@ -99,6 +103,20 @@ export async function deleteTask(taskId: string): Promise<void> {
 
   // Clean up worktrees (only if there are project associations)
   if (taskProjectRows.length > 0 && task.workDir) {
+    const taskWorkDir = task.workDir;
+
+    // Kill our persistent git helpers (cat-file --batch) spawned with their
+    // CWD inside this task's worktrees: on Windows a process CWD blocks both
+    // rmdir and rename-to-trash of the directory, so without this the app
+    // deadlocks its own deletion and leaves an orphan dir behind.
+    const disposedHelpers = disposeCatFileBatchesUnder(taskWorkDir);
+    if (disposedHelpers.length > 0) {
+      log.info('deleteTask: disposed git helpers pinning task workdir', {
+        taskWorkDir,
+        helpers: disposedHelpers,
+      });
+    }
+
     // Batch fetch all project names in a single query
     const projectIds = taskProjectRows.map((r) => r.projectId);
     const projectRows = await db
@@ -106,24 +124,26 @@ export async function deleteTask(taskId: string): Promise<void> {
       .from(projects)
       .where(inArray(projects.id, projectIds));
     const nameById = new Map(projectRows.map((r) => [r.id, r.name]));
+    const worktreePaths = taskProjectRows.map((row) => ({
+      projectId: row.projectId,
+      worktreePath: path.join(taskWorkDir, nameById.get(row.projectId) ?? row.projectId),
+    }));
 
     // Remove worktrees under task.workDir/{project.name} for each associated project
-    for (const row of taskProjectRows) {
-      const rowProject = projectManager.getProject(row.projectId);
-      const projectName = nameById.get(row.projectId) ?? row.projectId;
-      const worktreePath = path.join(task.workDir, projectName);
+    for (const { projectId, worktreePath } of worktreePaths) {
+      const rowProject = projectManager.getProject(projectId);
       if (rowProject) {
         try {
           await rowProject.removeWorktreeAtPath(worktreePath);
           log.info('deleteTask: removed worktree', {
             taskId,
-            projectId: row.projectId,
+            projectId,
             worktreePath,
           });
         } catch (e) {
           log.warn('deleteTask: worktree removal failed, trying direct removal', {
             taskId,
-            projectId: row.projectId,
+            projectId,
             worktreePath,
             error: String(e),
           });
@@ -132,7 +152,7 @@ export async function deleteTask(taskId: string): Promise<void> {
       } else {
         log.info('deleteTask: project not in projectManager, using direct removal', {
           taskId,
-          projectId: row.projectId,
+          projectId,
           worktreePath,
         });
         await removeWorktreeDirectly(worktreePath);
@@ -144,25 +164,35 @@ export async function deleteTask(taskId: string): Promise<void> {
     // survived teardown — e.g. an electron dev server started in the task
     // terminal holds node_modules/electron/.../default_app.asar open), defer via
     // moveToTrash so the task path clears now and the next app launch sweeps it.
-    let rootRemoved = await rmWithRetries(task.workDir, {
+    let rootRemoved = await rmWithRetries(taskWorkDir, {
       label: 'task root directory',
       maxAttempts: 5,
     });
     if (!rootRemoved) {
-      const trashed = await moveToTrash(task.workDir);
+      const trashed = await moveToTrash(taskWorkDir);
       if (trashed) {
         rootRemoved = true;
         log.info('deleteTask: deferred task root deletion (busy file), moved to trash', {
-          taskWorkDir: task.workDir,
+          taskWorkDir,
           trashPath: trashed,
         });
+        // A failed per-project removal above may have skipped its internal
+        // `git worktree prune` (the rm threw first), leaving a registration
+        // that points at the now-trashed path and would block branch deletion
+        // below. Retrying on the moved path is cheap: the rm is a no-op on a
+        // missing directory and the prune clears the stale reference.
+        for (const { projectId, worktreePath } of worktreePaths) {
+          const project = projectManager.getProject(projectId);
+          if (!project) continue;
+          await project.removeWorktreeAtPath(worktreePath).catch(() => {});
+        }
       }
     }
     if (rootRemoved) {
-      log.info('deleteTask: removed task root directory', { taskWorkDir: task.workDir });
+      log.info('deleteTask: removed task root directory', { taskWorkDir });
     } else {
       log.warn('deleteTask: failed to remove task root directory after retries', {
-        taskWorkDir: task.workDir,
+        taskWorkDir,
       });
     }
 

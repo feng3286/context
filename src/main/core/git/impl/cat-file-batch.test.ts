@@ -1,12 +1,13 @@
 import { execSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CatFileBatch } from './cat-file-batch';
+import { CatFileBatch, disposeCatFileBatchesUnder } from './cat-file-batch';
 
-function makeTempRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'emdash-catfile-'));
+function makeTempRepo(at?: string): string {
+  const dir = at ?? mkdtempSync(join(tmpdir(), 'emdash-catfile-'));
+  mkdirSync(dir, { recursive: true });
   execSync('git init', { cwd: dir, stdio: 'pipe' });
   execSync('git config user.email "t@test.local"', { cwd: dir, stdio: 'pipe' });
   execSync('git config user.name "test"', { cwd: dir, stdio: 'pipe' });
@@ -42,5 +43,38 @@ describe('CatFileBatch', () => {
     const batch = new CatFileBatch(dir);
     batch.dispose();
     await expect(batch.read('HEAD:a.txt')).rejects.toThrow();
+  });
+
+  it('disposeCatFileBatchesUnder disposes only batches pinned under the prefix', async () => {
+    const parent = mkdtempSync(join(tmpdir(), 'emdash-catfile-parent-'));
+    const repoA = makeTempRepo(join(parent, 'task', 'repo-a'));
+    const repoB = makeTempRepo();
+    const batchA = new CatFileBatch(repoA);
+    const batchB = new CatFileBatch(repoB);
+    try {
+      // Nested cwd caught by an ancestor prefix (task workDir → worktree).
+      expect(disposeCatFileBatchesUnder(parent)).toEqual([repoA]);
+      expect(batchA.disposed).toBe(true);
+      expect(batchB.disposed).toBe(false);
+      await expect(batchA.read('HEAD:a.txt')).rejects.toThrow();
+
+      // Batches outside the prefix stay functional.
+      expect(await batchB.read('HEAD:a.txt')).toBe('hello\n');
+
+      // A fresh batch on the same path works again (GitService respawn path).
+      const batchA2 = new CatFileBatch(repoA);
+      try {
+        expect(await batchA2.read('HEAD:a.txt')).toBe('hello\n');
+      } finally {
+        batchA2.dispose();
+      }
+
+      // Exact-path prefix matches its own batch.
+      expect(disposeCatFileBatchesUnder(repoB)).toEqual([repoB]);
+      expect(batchB.disposed).toBe(true);
+    } finally {
+      batchA.dispose();
+      batchB.dispose();
+    }
   });
 });

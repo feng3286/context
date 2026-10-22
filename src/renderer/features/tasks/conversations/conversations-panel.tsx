@@ -2,6 +2,8 @@ import { useHotkey } from '@tanstack/react-hotkeys';
 import { MessageSquare } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
+import { ChatTerminalToggle } from '@renderer/features/chat/components/chat-terminal-toggle';
+import { ChatView } from '@renderer/features/chat/components/chat-view';
 import { asMounted, getProjectStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useIsActiveTask } from '@renderer/features/tasks/hooks/use-is-active-task';
@@ -76,6 +78,11 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
           onInterruptPress={(s) => s.clearWorking()}
           mapShiftEnterToCtrlJ
           remoteConnectionId={remoteConnectionId}
+          toolbar={(s) => <ChatTerminalToggle conversation={s} />}
+          renderPane={(s, defaultPane) =>
+            s.viewMode === 'chat' ? <ChatView conversation={s} /> : defaultPane
+          }
+          searchEnabled={conversationTabs.activeTab?.viewMode !== 'chat'}
           tabBar={<ConversationsTabs projectId={projectId} taskId={taskId} />}
           emptyState={
             <EmptyState

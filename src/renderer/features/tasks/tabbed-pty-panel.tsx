@@ -21,6 +21,15 @@ export interface TabbedPtyPanelProps<TEntity> {
   onInterruptPress?: (entity: TEntity) => void;
   mapShiftEnterToCtrlJ?: boolean;
   remoteConnectionId?: string;
+  /** Toolbar rendered above the pane for the active tab (e.g. view-mode switch). */
+  toolbar?: (entity: TEntity) => React.ReactNode;
+  /**
+   * Replace the pane contents. Receives the default terminal node, or null when
+   * the PTY is not ready yet — chat-style views can still render from history.
+   */
+  renderPane?: (entity: TEntity, defaultPane: React.ReactNode | null) => React.ReactNode;
+  /** Disable the terminal search overlay (e.g. while a non-terminal pane is shown). */
+  searchEnabled?: boolean;
 }
 
 export const TabbedPtyPanel = observer(function TabbedPtyPanel<TEntity>({
@@ -35,6 +44,9 @@ export const TabbedPtyPanel = observer(function TabbedPtyPanel<TEntity>({
   onInterruptPress,
   mapShiftEnterToCtrlJ,
   remoteConnectionId,
+  toolbar,
+  renderPane,
+  searchEnabled = true,
 }: TabbedPtyPanelProps<TEntity>) {
   const tabs = useMemo(() => store?.tabs ?? [], [store?.tabs]);
   const activeTab = store?.activeTab;
@@ -66,7 +78,7 @@ export const TabbedPtyPanel = observer(function TabbedPtyPanel<TEntity>({
   } = useTerminalSearch({
     terminal: activeSession?.pty?.terminal,
     containerRef: terminalContainerRef,
-    enabled: Boolean(activeSession?.pty),
+    enabled: searchEnabled && Boolean(activeSession?.pty),
     onCloseFocus: () => terminalRef.current?.focus(),
   });
 
@@ -114,28 +126,56 @@ export const TabbedPtyPanel = observer(function TabbedPtyPanel<TEntity>({
           emptyState
         ) : (
           <div className={cn('flex min-h-0 flex-1 flex-col')}>
-            {activeSessionId && activeSession?.status === 'ready' && activeSession.pty ? (
-              <div ref={terminalContainerRef} className="relative flex h-full min-h-0 flex-1">
-                <TerminalSearchOverlay
-                  isOpen={isSearchOpen}
-                  fullWidth
-                  searchQuery={searchQuery}
-                  searchStatus={searchStatus}
-                  searchInputRef={searchInputRef}
-                  onQueryChange={handleSearchQueryChange}
-                  onStep={stepSearch}
-                  onClose={closeSearch}
-                />
-                <PtyPane
-                  ref={terminalRef}
-                  sessionId={activeSessionId}
-                  pty={activeSession.pty}
-                  className="h-full w-full"
-                  onEnterPress={activeOnEnterPress}
-                  onInterruptPress={activeOnInterruptPress}
-                  mapShiftEnterToCtrlJ={mapShiftEnterToCtrlJ}
-                  remoteConnectionId={remoteConnectionId}
-                />
+            {activeTab &&
+            activeSessionId &&
+            activeSession?.status === 'ready' &&
+            activeSession.pty ? (
+              <div className="flex h-full min-h-0 flex-1 flex-col">
+                {toolbar?.(activeTab)}
+                <div ref={terminalContainerRef} className="relative min-h-0 flex-1">
+                  <TerminalSearchOverlay
+                    isOpen={isSearchOpen}
+                    fullWidth
+                    searchQuery={searchQuery}
+                    searchStatus={searchStatus}
+                    searchInputRef={searchInputRef}
+                    onQueryChange={handleSearchQueryChange}
+                    onStep={stepSearch}
+                    onClose={closeSearch}
+                  />
+                  {renderPane ? (
+                    renderPane(
+                      activeTab,
+                      <PtyPane
+                        ref={terminalRef}
+                        sessionId={activeSessionId}
+                        pty={activeSession.pty}
+                        className="h-full w-full"
+                        onEnterPress={activeOnEnterPress}
+                        onInterruptPress={activeOnInterruptPress}
+                        mapShiftEnterToCtrlJ={mapShiftEnterToCtrlJ}
+                        remoteConnectionId={remoteConnectionId}
+                      />
+                    )
+                  ) : (
+                    <PtyPane
+                      ref={terminalRef}
+                      sessionId={activeSessionId}
+                      pty={activeSession.pty}
+                      className="h-full w-full"
+                      onEnterPress={activeOnEnterPress}
+                      onInterruptPress={activeOnInterruptPress}
+                      mapShiftEnterToCtrlJ={mapShiftEnterToCtrlJ}
+                      remoteConnectionId={remoteConnectionId}
+                    />
+                  )}
+                </div>
+              </div>
+            ) : activeTab && (toolbar || renderPane) ? (
+              // PTY not ready yet — toolbar-based views (e.g. chat) can still render history.
+              <div className="flex h-full min-h-0 flex-1 flex-col">
+                {toolbar?.(activeTab)}
+                {renderPane?.(activeTab, null) ?? null}
               </div>
             ) : null}
           </div>

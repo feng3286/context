@@ -7,9 +7,12 @@ import {
   type NotificationType,
 } from '@shared/events/agentEvents';
 import { makeConversationSessionId } from '@shared/ptySessionId';
+import { ChatStore } from '@renderer/features/chat/stores/chat-store';
 import { events, rpc } from '@renderer/lib/ipc';
 import { PtySession } from '@renderer/lib/pty/pty-session';
 import { soundPlayer } from '@renderer/utils/soundPlayer';
+
+export type ConversationViewMode = 'terminal' | 'chat';
 
 export type AgentStatus = 'idle' | 'working' | 'awaiting-input' | 'error' | 'completed';
 
@@ -159,6 +162,8 @@ export class ConversationStore {
   status: AgentStatus = 'idle';
   seen = true;
   lastNotificationType: NotificationType | null = null;
+  viewMode: ConversationViewMode = 'terminal';
+  chat: ChatStore | null = null;
 
   constructor(conversation: Conversation, taskId: string) {
     this.data = conversation;
@@ -169,11 +174,15 @@ export class ConversationStore {
       status: observable,
       seen: observable,
       lastNotificationType: observable,
+      viewMode: observable,
+      chat: observable,
       setStatus: action,
       setAwaitingInput: action,
       setWorking: action,
       clearWorking: action,
       markSeen: action,
+      setViewMode: action,
+      ensureChat: action,
       indicatorStatus: computed,
     });
   }
@@ -218,7 +227,21 @@ export class ConversationStore {
     this.seen = true;
   }
 
+  setViewMode(mode: ConversationViewMode) {
+    this.viewMode = mode;
+    if (mode === 'chat') this.ensureChat();
+  }
+
+  ensureChat(): ChatStore {
+    if (!this.chat) {
+      this.chat = new ChatStore(this.session.sessionId);
+      void this.chat.init();
+    }
+    return this.chat;
+  }
+
   dispose() {
     this.session.dispose();
+    this.chat?.dispose();
   }
 }

@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { ChatContextUsage, ChatMessage, ChatSessionSummary } from '@shared/chat';
 import { chatDeltaChannel, chatMessageChannel, chatRunChannel } from '@shared/events/chatEvents';
+import { i18n } from '@renderer/i18n/config';
 import { events, rpc } from '@renderer/lib/ipc';
 
 const HISTORY_PAGE = 400;
@@ -83,7 +84,7 @@ export class SessionChatStore {
         const failed = payload.status === 'error';
         runInAction(() => {
           this.running = false;
-          this.runError = failed ? (payload.error ?? 'Run failed') : null;
+          this.runError = failed ? (payload.error ?? i18n.t('chat:runFailed')) : null;
           this.streamText = '';
           this.streamThinking = '';
         });
@@ -258,7 +259,7 @@ export class TaskSessionsStore {
       sessionId: crypto.randomUUID(),
       providerId,
       cwd,
-      title: 'New session',
+      title: i18n.t('chat:newSessionTitle'),
       updatedAt: Date.now(),
       file: '',
     };
@@ -290,7 +291,7 @@ export class TaskSessionsStore {
           sessionId: stub.sessionId,
           providerId: stub.providerId,
           cwd: stub.cwd,
-          title: stub.title || 'New session',
+          title: stub.title || i18n.t('chat:newSessionTitle'),
           updatedAt: stub.createdAt,
           file: '',
         }));
@@ -372,25 +373,27 @@ export class TaskSessionsStore {
 export function describeSendError(error: { type: string; message?: string }): string {
   switch (error.type) {
     case 'busy':
-      return 'The agent is still responding — wait for it to finish or press Stop.';
+      return i18n.t('chat:sendErrors.busy');
     case 'live_in_terminal':
-      return 'This session is running in a task terminal — reply there to keep one writer.';
+      return i18n.t('chat:sendErrors.live_in_terminal');
     case 'unsupported':
-      return 'Headless chat is not available for this provider.';
+      return i18n.t('chat:sendErrors.unsupported');
     case 'spawn_failed':
-      return `Failed to start the agent CLI${error.message ? `: ${error.message}` : ''}`;
+      return i18n.t('chat:sendErrors.spawn_failed', {
+        detail: error.message ? `: ${error.message}` : '',
+      });
     default:
-      return error.message ?? 'Failed to send the message.';
+      return error.message ?? i18n.t('chat:sendErrors.default');
   }
 }
 
 function describeDeleteError(error: { type: string; message?: string }): string {
   switch (error.type) {
     case 'busy':
-      return 'Session is still running — stop it before deleting.';
+      return i18n.t('chat:deleteErrors.busy');
     case 'forbidden':
-      return 'That transcript path is outside the session directories.';
+      return i18n.t('chat:deleteErrors.forbidden');
     default:
-      return error.message ?? 'Failed to delete the session.';
+      return error.message ?? i18n.t('chat:deleteErrors.default');
   }
 }

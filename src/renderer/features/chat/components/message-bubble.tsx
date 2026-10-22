@@ -1,4 +1,5 @@
 import { Brain, ChevronRight, Sparkles, User, Wrench } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ChatBlock, ChatMessage } from '@shared/chat';
 import { MarkdownRenderer } from '@renderer/lib/ui/markdown-renderer';
 import { cn } from '@renderer/utils/utils';
@@ -50,12 +51,13 @@ function preText(text: string): React.ReactNode {
 }
 
 function ChatBlockView({ block }: { block: ChatBlock }) {
+  const { t } = useTranslation();
   switch (block.kind) {
     case 'text':
       return <MarkdownRenderer content={block.text} />;
     case 'thinking':
       return (
-        <CollapsibleRow icon={<Brain className="size-3" />} label="Thought process">
+        <CollapsibleRow icon={<Brain className="size-3" />} label={t('chat:thoughtProcess')}>
           {preText(block.text)}
         </CollapsibleRow>
       );
@@ -77,7 +79,7 @@ function ChatBlockView({ block }: { block: ChatBlock }) {
       return (
         <CollapsibleRow
           icon={<ChevronRight className="size-3" />}
-          label={block.isError ? 'Tool error' : 'Tool result'}
+          label={block.isError ? t('chat:toolError') : t('chat:toolResult')}
           detail={summarize(block.content)}
         >
           {preText(block.content)}
@@ -89,12 +91,26 @@ function ChatBlockView({ block }: { block: ChatBlock }) {
 }
 
 export const MessageBubble = function MessageBubble({ message }: { message: ChatMessage }) {
+  const { t } = useTranslation();
   const time = formatTime(message.timestamp);
 
   // System events (e.g. context compaction) render as centered timeline dividers.
   if (message.role === 'system') {
     const text = message.blocks
-      .map((block) => (block.kind === 'system' ? block.text : ''))
+      .map((block) => {
+        if (block.kind !== 'system') return '';
+        if (block.notice === 'compacted') {
+          return t('chat:compactedDetail', {
+            trigger:
+              block.values?.trigger === 'manual'
+                ? t('chat:compactedManual')
+                : t('chat:compactedAuto'),
+            pre: block.values?.pre ?? '?',
+            post: block.values?.post ?? '?',
+          });
+        }
+        return block.text;
+      })
       .filter(Boolean)
       .join(' · ');
     return (
@@ -114,10 +130,10 @@ export const MessageBubble = function MessageBubble({ message }: { message: Chat
       <div className="px-3 py-1.5">
         <div className="flex items-center gap-1.5 pb-1 text-[11px] text-muted-foreground">
           <User className="size-3" />
-          You
+          {t('chat:you')}
           {time ? <span>· {time}</span> : null}
           {message.failed ? (
-            <span className="font-medium text-red-500">· not delivered</span>
+            <span className="font-medium text-red-500">· {t('chat:notDelivered')}</span>
           ) : null}
         </div>
         <div
@@ -147,13 +163,15 @@ export const MessageBubble = function MessageBubble({ message }: { message: Chat
   }
 
   const tokens = message.tokens
-    ? `${((message.tokens.input + message.tokens.output) / 1000).toFixed(1)}k tok`
+    ? t('chat:tokensAbbrev', {
+        n: ((message.tokens.input + message.tokens.output) / 1000).toFixed(1),
+      })
     : null;
 
   return (
     <div className="px-3 py-1.5">
       <div className="flex items-center gap-1.5 pb-0.5 text-[11px] text-muted-foreground">
-        <span className="font-medium text-foreground/70">Agent</span>
+        <span className="font-medium text-foreground/70">{t('chat:agent')}</span>
         {time ? <span>· {time}</span> : null}
         {tokens ? <span className={cn('opacity-70')}>· {tokens}</span> : null}
       </div>

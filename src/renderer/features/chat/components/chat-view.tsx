@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ChatCommandInfo, ChatMessage, ChatSessionSummary } from '@shared/chat';
 import { rpc } from '@renderer/lib/ipc';
 import { Button } from '@renderer/lib/ui/button';
@@ -37,6 +38,7 @@ export const AutoResizingTextarea = forwardRef<
 });
 
 function StreamingBubble({ text, thinking }: { text: string; thinking: string }) {
+  const { t } = useTranslation();
   return (
     <div className="px-4 py-1.5">
       {thinking ? (
@@ -50,21 +52,24 @@ function StreamingBubble({ text, thinking }: { text: string; thinking: string })
           <span className="animate-pulse">▍</span>
         </div>
       ) : (
-        <span className="animate-pulse text-xs text-muted-foreground">thinking…</span>
+        <span className="animate-pulse text-xs text-muted-foreground">{t('chat:thinking')}</span>
       )}
     </div>
   );
 }
 
-function formatRelative(ms: number): string {
+function formatRelative(
+  ms: number,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
   const diff = Date.now() - ms;
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'now';
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1) return t('chat:relativeNow');
+  if (minutes < 60) return t('chat:relativeMinutes', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return t('chat:relativeHours', { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d`;
+  if (days < 30) return t('chat:relativeDays', { n: days });
   return new Date(ms).toLocaleDateString();
 }
 
@@ -84,6 +89,7 @@ export const ChatTabView = observer(function ChatTabView({
   projectDir?: string;
 }) {
   const sessionsStore = useMemo(() => new TaskSessionsStore(), []);
+  const { t } = useTranslation();
   const externalChat = sessionsStore.externalChat;
 
   useEffect(() => {
@@ -113,9 +119,9 @@ export const ChatTabView = observer(function ChatTabView({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
           <MessageSquare className="size-6 text-muted-foreground" />
-          <div className="text-sm font-medium">No session selected</div>
+          <div className="text-sm font-medium">{t('chat:noSessionSelected')}</div>
           <div className="max-w-xs text-xs text-muted-foreground">
-            Create a new session with the + button in the sidebar, or pick one from the list.
+            {t('chat:noSessionSelectedHint')}
           </div>
         </div>
       )}
@@ -136,19 +142,25 @@ const SessionsRail = observer(function SessionsRail({
 }) {
   // Only this tab's agent sessions — one tab per agent.
   const external = store.railSessions.filter((s) => s.providerId === chatTab.providerId);
+  const { t } = useTranslation();
   const [choosingContext, setChoosingContext] = useState(false);
   const contextOptions = [
     ...(projectDir && projectDir.toLowerCase() !== workDir.toLowerCase()
-      ? [{ label: `Project · ${projectDir.split(/[\/]/).pop()}`, path: projectDir }]
+      ? [
+          {
+            label: t('chat:projectContext', { name: projectDir.split(/[\/]/).pop() }),
+            path: projectDir,
+          },
+        ]
       : []),
-    { label: 'Task directory', path: workDir },
+    { label: t('chat:taskDirectory'), path: workDir },
   ];
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border">
       <div className="flex items-center justify-between px-2.5 pt-2.5 pb-1">
         <span className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-          Sessions
+          {t('chat:sessions')}
         </span>
         <div className="flex items-center gap-0.5">
           <Button
@@ -156,7 +168,7 @@ const SessionsRail = observer(function SessionsRail({
             size="icon"
             className="size-5"
             onClick={() => setChoosingContext((v) => !v)}
-            aria-label="New session"
+            aria-label={t('chat:newSession')}
           >
             <Plus className="size-3" />
           </Button>
@@ -166,7 +178,7 @@ const SessionsRail = observer(function SessionsRail({
             className="size-5"
             disabled={store.loading}
             onClick={() => void store.refresh()}
-            aria-label="Refresh sessions"
+            aria-label={t('chat:refreshSessions')}
           >
             {store.loading ? (
               <Loader2 className="size-3 animate-spin" />
@@ -178,7 +190,9 @@ const SessionsRail = observer(function SessionsRail({
       </div>
       {choosingContext ? (
         <div className="mx-1.5 mb-1 rounded-md border border-border bg-background-1 p-1">
-          <div className="px-1.5 pb-1 text-[10px] text-muted-foreground">Context directory</div>
+          <div className="px-1.5 pb-1 text-[10px] text-muted-foreground">
+            {t('chat:contextDirectory')}
+          </div>
           {contextOptions.map((option) => (
             <button
               key={option.path}
@@ -199,7 +213,7 @@ const SessionsRail = observer(function SessionsRail({
           type="button"
           className="mx-1.5 mb-1 rounded-md bg-red-500/10 px-2 py-1 text-left text-[10px] leading-relaxed text-red-500"
           onClick={() => (store.deleteError = null)}
-          title="Click to dismiss"
+          title={t('chat:deleteErrorDismiss')}
         >
           {store.deleteError}
         </button>
@@ -216,7 +230,7 @@ const SessionsRail = observer(function SessionsRail({
         ))}
         {store.loaded && external.length === 0 ? (
           <div className="px-2 py-3 text-[10px] leading-relaxed text-muted-foreground/70">
-            No sessions found under this working directory yet.
+            {t('chat:noSessionsYet')}
           </div>
         ) : null}
       </div>
@@ -236,6 +250,7 @@ function RailSessionItem({
   onDelete?: () => void;
 }) {
   // Two-step delete: arm on first click, confirm on the second.
+  const { t } = useTranslation();
   const [armed, setArmed] = useState(false);
   // The transcript may belong to a TUI session that is still running — the
   // CLI keeps writing (claude even recreates the file), so say so up front.
@@ -269,11 +284,14 @@ function RailSessionItem({
         active ? 'bg-background-1 shadow-sm' : 'hover:bg-background-1/60'
       )}
     >
-      <span className="line-clamp-2 pr-5 text-xs leading-snug">{session.title}</span>
+      <span className="line-clamp-2 pr-5 text-xs leading-snug">
+        {/* Pending stubs keep a placeholder title as data — localize it at render. */}
+        {session.title === 'New session' ? t('chat:newSessionTitle') : session.title}
+      </span>
       <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
         <span className="rounded bg-background-1 px-1 py-px font-medium">{session.providerId}</span>
         {session.cwd ? <span className="truncate">{session.cwd.split(/[\\/]/).pop()}</span> : null}
-        <span className="ml-auto shrink-0">{formatRelative(session.updatedAt)}</span>
+        <span className="ml-auto shrink-0">{formatRelative(session.updatedAt, t)}</span>
       </span>
       {onDelete ? (
         <Button
@@ -286,15 +304,15 @@ function RailSessionItem({
           aria-label={
             armed
               ? liveInTerminal
-                ? 'Session is running in a terminal — delete anyway'
-                : 'Confirm delete'
-              : 'Delete session'
+                ? t('chat:deleteLiveInTerminal')
+                : t('chat:confirmDelete')
+              : t('chat:deleteSession')
           }
           title={
             armed
               ? liveInTerminal
-                ? 'This session is running in a terminal — its CLI may recreate the transcript. Click again to delete anyway.'
-                : 'Click again to delete'
+                ? t('chat:deleteLiveInTerminalDetail')
+                : t('chat:clickAgainToDelete')
               : undefined
           }
           onClick={(e) => {
@@ -328,6 +346,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [commands, setCommands] = useState<ChatCommandInfo[]>([]);
   const [highlight, setHighlight] = useState(0);
@@ -351,7 +370,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
         if (onNewSession) {
           list.unshift({
             name: 'new',
-            description: 'Start a fresh session in this tab',
+            description: t('chat:newCommand'),
             source: 'app',
           });
         }
@@ -403,11 +422,11 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
         <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-          {session.cwd || 'unknown directory'}
+          {session.cwd || t('chat:unknownDirectory')}
         </span>
         {usage ? (
           <span
-            title="Approximate context window usage (from the transcript tail)"
+            title={t('chat:ctxTitle')}
             className={cn(
               'shrink-0 rounded px-1.5 py-px text-[10px] font-medium',
               usagePct > 0.95
@@ -417,7 +436,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
                   : 'bg-background-1 text-muted-foreground'
             )}
           >
-            ctx {fmtTokens(usage.tokens)}
+            {t('chat:ctx')} {fmtTokens(usage.tokens)}
             {usage.contextWindow ? `/${fmtTokens(usage.contextWindow)}` : ''}
           </span>
         ) : null}
@@ -434,17 +453,15 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
         {store.loading ? (
           <div className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
             <Spinner className="size-4" />
-            Loading conversation…
+            {t('chat:loadingConversation')}
           </div>
         ) : null}
         {store.historyError ? (
-          <div className="py-6 text-center text-xs text-red-500">
-            Could not load this conversation's history.
-          </div>
+          <div className="py-6 text-center text-xs text-red-500">{t('chat:historyError')}</div>
         ) : null}
         {!store.loading && store.messages.length === 0 && !showStream ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
-            No messages in this session yet — send the first one below.
+            {t('chat:emptySession')}
           </div>
         ) : null}
         {store.messages.map((message: ChatMessage) => (
@@ -478,7 +495,11 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
               >
                 <span className="shrink-0 font-medium">/{cmd.name}</span>
                 {cmd.description ? (
-                  <span className="truncate text-muted-foreground">{cmd.description}</span>
+                  <span className="truncate text-muted-foreground">
+                    {/* Builtin descriptions localize by command name; custom
+                        commands keep their frontmatter text as the fallback. */}
+                    {t(`chat:commands.${cmd.name}`, { defaultValue: cmd.description })}
+                  </span>
                 ) : null}
               </button>
             ))}
@@ -490,10 +511,10 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
             value={text}
             placeholder={
               canSend
-                ? 'Send a message… ( / for commands )'
+                ? t('chat:placeholder')
                 : session.cwd
-                  ? 'Headless chat is not available for this provider'
-                  : 'Cannot send — the session directory is unknown'
+                  ? t('chat:placeholderUnsupported')
+                  : t('chat:placeholderNoCwd')
             }
             disabled={!canSend}
             className="max-h-40 min-h-6 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
@@ -539,7 +560,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
               variant="ghost"
               className="size-7 shrink-0"
               onClick={() => store.abort()}
-              aria-label="Stop"
+              aria-label={t('chat:stop')}
             >
               <Square className="size-3.5" />
             </Button>
@@ -550,7 +571,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
               className="size-7 shrink-0"
               disabled={!text.trim() || store.sendPending || !canSend}
               onClick={() => void send()}
-              aria-label="Send"
+              aria-label={t('chat:send')}
             >
               {store.sendPending ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -560,9 +581,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
             </Button>
           )}
         </div>
-        <div className="pt-1 text-[10px] text-muted-foreground">
-          Enter to send · Shift+Enter for a new line · replies stream in as they are generated
-        </div>
+        <div className="pt-1 text-[10px] text-muted-foreground">{t('chat:inputHint')}</div>
       </div>
     </div>
   );

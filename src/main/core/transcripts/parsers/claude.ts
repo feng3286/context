@@ -60,6 +60,27 @@ export function formatCompactNotice(meta?: {
   return `Context compacted (${meta.trigger ?? 'auto'}): ${fmt(meta.preTokens)} → ${fmt(meta.postTokens)} tokens`;
 }
 
+/** Structured values for a compaction notice, so the renderer can localize
+ * it; `formatCompactNotice` stays as the English fallback text. */
+export function compactNoticeBlock(meta?: {
+  trigger?: string;
+  preTokens?: number;
+  postTokens?: number;
+}): ChatBlock {
+  if (!meta) return { kind: 'system', text: formatCompactNotice() };
+  const fmt = (n?: number) => (n != null ? `${Math.round(n / 100) / 10}k` : '?');
+  return {
+    kind: 'system',
+    text: formatCompactNotice(meta),
+    notice: 'compacted',
+    values: {
+      trigger: meta.trigger ?? 'auto',
+      pre: fmt(meta.preTokens),
+      post: fmt(meta.postTokens),
+    },
+  };
+}
+
 /** Injected/user-invisible payloads that must not render as user messages. */
 const SKIPPED_TEXT_PREFIXES = [
   '<system-reminder>',
@@ -98,7 +119,7 @@ export const claudeParser: TranscriptParser = {
         {
           id: row.uuid ?? `sys-${ts}`,
           role: 'system',
-          blocks: [{ kind: 'system', text: formatCompactNotice(row.compactMetadata) }],
+          blocks: [compactNoticeBlock(row.compactMetadata)],
           timestamp: ts,
         },
       ];

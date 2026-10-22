@@ -13,8 +13,15 @@ export type ChatBlock =
   | { kind: 'thinking'; text: string }
   | { kind: 'tool_use'; name: string; input?: unknown; toolUseId: string }
   | { kind: 'tool_result'; toolUseId: string; content: string; isError?: boolean }
-  /** Provider system event (e.g. context compaction) rendered as a divider. */
-  | { kind: 'system'; text: string };
+  /** Provider system event (e.g. context compaction) rendered as a divider.
+   * `notice` marks a known event so the renderer can localize it; `text`
+   * stays as the English fallback. */
+  | {
+      kind: 'system';
+      text: string;
+      notice?: 'compacted';
+      values?: Record<string, string>;
+    };
 
 /** A slash command offered by the chat input autocomplete. */
 export interface ChatCommandInfo {

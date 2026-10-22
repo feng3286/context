@@ -5,7 +5,7 @@ import { chatDeltaChannel, chatMessageChannel, chatRunChannel } from '@shared/ev
 import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
 import { isWindowsCmd, resolveShell } from '@main/core/pty/spawn-utils';
 import { providerOverrideSettings } from '@main/core/settings/provider-settings-service';
-import { formatCompactNotice } from '@main/core/transcripts/parsers/claude';
+import { compactNoticeBlock } from '@main/core/transcripts/parsers/claude';
 import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
 import { quoteShellArg } from '@main/utils/shellEscape';
@@ -337,7 +337,7 @@ function handleClaudeLine(
     const message: ChatMessage = {
       id: `hl-compact-${randomUUID()}`,
       role: 'system',
-      blocks: [{ kind: 'system', text: formatCompactNotice(row.compactMetadata) }],
+      blocks: [compactNoticeBlock(row.compactMetadata)],
       timestamp: new Date().toISOString(),
     };
     events.emit(chatMessageChannel, { sessionId: topic, messages: [message] }, topic);

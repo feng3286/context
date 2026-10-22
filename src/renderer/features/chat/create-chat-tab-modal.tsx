@@ -1,5 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isValidProviderId } from '@shared/agent-provider-registry';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { AgentSelector } from '@renderer/lib/components/agent-selector/agent-selector';
@@ -28,6 +29,7 @@ export const CreateChatTabModal = observer(function CreateChatTabModal({
   onCreate: (providerId: string) => void;
 }) {
   const { value: defaultAgentValue } = useAppSettingsKey('defaultAgent');
+  const { t } = useTranslation();
   const [providerId, setProviderId] = useState<string | null>(
     isValidProviderId(defaultAgentValue) && !excludeProviderIds.includes(defaultAgentValue)
       ? defaultAgentValue
@@ -43,12 +45,12 @@ export const CreateChatTabModal = observer(function CreateChatTabModal({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>New chat tab</DialogTitle>
+        <DialogTitle>{t('chat:createTab.title')}</DialogTitle>
       </DialogHeader>
       <DialogContentArea>
         <FieldGroup>
           <Field>
-            <FieldLabel>Agent</FieldLabel>
+            <FieldLabel>{t('chat:createTab.agent')}</FieldLabel>
             <AgentSelector
               value={providerId}
               onChange={setProviderId}
@@ -59,7 +61,7 @@ export const CreateChatTabModal = observer(function CreateChatTabModal({
       </DialogContentArea>
       <DialogFooter>
         <ConfirmButton onClick={handleCreate} disabled={!providerId}>
-          Create
+          {t('chat:createTab.create')}
         </ConfirmButton>
       </DialogFooter>
     </>

@@ -1,5 +1,6 @@
 import { MessageSquare, Plus } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useTranslation } from 'react-i18next';
 import type { ChatTab, ChatTabsStore } from '@renderer/features/chat/chat-tabs-store';
 import { asMounted, getProjectStore } from '@renderer/features/projects/stores/project-selectors';
 import { AgentStatusIndicator } from '@renderer/features/tasks/components/agent-status-indicator';
@@ -32,6 +33,7 @@ export const ConversationsTabs = observer(function ConversationsTabs({
   chatTabs: ChatTabsStore;
 }) {
   const provisioned = useProvisionedTask();
+  const { t } = useTranslation();
   const conversationMgr = provisioned.conversations;
   const conversationTabs = provisioned.taskView.conversationTabs;
   const showCreateConversationModal = useShowModal('createConversationModal');
@@ -121,7 +123,7 @@ export const ConversationsTabs = observer(function ConversationsTabs({
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              Create conversation
+              {t('conversation:createTitle')}
               <ShortcutHint settingsKey="newConversation" />
             </TooltipContent>
           </Tooltip>
@@ -143,7 +145,7 @@ export const ConversationsTabs = observer(function ConversationsTabs({
                 <MessageSquare className="size-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>New chat tab</TooltipContent>
+            <TooltipContent>{t('chat:createTab.title')}</TooltipContent>
           </Tooltip>
         </>
       }

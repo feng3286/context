@@ -30,6 +30,9 @@ export class SessionChatStore {
   private deltasOff: (() => void) | null = null;
   private runsOff: (() => void) | null = null;
   private messagesOff: (() => void) | null = null;
+  /** Optimistic user bubble of the in-flight run, so a failed run can keep it
+   * on screen (marked undelivered) instead of silently flushing it. */
+  private pendingUser: ChatMessage | null = null;
   /** Stable event topic. Pending sessions adopt the CLI's own session id when
    * the first run lands, but subscriptions must keep receiving events. */
   private readonly topic: string;
@@ -77,9 +80,10 @@ export class SessionChatStore {
           });
           return;
         }
+        const failed = payload.status === 'error';
         runInAction(() => {
           this.running = false;
-          this.runError = payload.status === 'error' ? (payload.error ?? 'Run failed') : null;
+          this.runError = failed ? (payload.error ?? 'Run failed') : null;
           this.streamText = '';
           this.streamThinking = '';
         });
@@ -105,7 +109,28 @@ export class SessionChatStore {
             });
           }
         }
-        if (this.session.file) void this.reload();
+        if (this.session.file) await this.reload();
+        // A failed run never landed in the transcript, so the reload above (or
+        // an early return for a still-pending session) would drop the user's
+        // optimistic bubble. Keep it, marked undelivered.
+        const optimistic = this.pendingUser;
+        this.pendingUser = null;
+        if (failed && optimistic) {
+          const text = optimistic.blocks.find((b) => b.kind === 'text');
+          const landed =
+            !!text &&
+            this.messages.some((m) =>
+              m.blocks.some((b) => b.kind === 'text' && b.text === text.text)
+            );
+          runInAction(() => {
+            if (landed) return;
+            if (this.session.file) {
+              this.messages.push({ ...optimistic, failed: true });
+            } else {
+              optimistic.failed = true;
+            }
+          });
+        }
       },
       this.topic
     );
@@ -176,13 +201,15 @@ export class SessionChatStore {
         return false;
       }
       // Optimistic user bubble — the transcript reload after the run replaces it.
+      const optimistic: ChatMessage = {
+        id: `local-${Date.now()}`,
+        role: 'user',
+        blocks: [{ kind: 'text', text: value }],
+        timestamp: new Date().toISOString(),
+      };
       runInAction(() => {
-        this.messages.push({
-          id: `local-${Date.now()}`,
-          role: 'user',
-          blocks: [{ kind: 'text', text: value }],
-          timestamp: new Date().toISOString(),
-        });
+        this.pendingUser = optimistic;
+        this.messages.push(optimistic);
         this.running = true;
         this.streamText = '';
         this.streamThinking = '';

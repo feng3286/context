@@ -21,7 +21,7 @@ export const chatDeltaChannel = defineEvent<{
 /** Headless run lifecycle. Topic = provider session id. */
 export const chatRunChannel = defineEvent<{
   sessionId: string;
-  status: 'running' | 'done' | 'error';
+  status: 'running' | 'done' | 'error' | 'aborted';
   error?: string;
   /** Session id the CLI itself reported (differs from our placeholder for
    * codex new sessions, which pick their rollout uuid at run time). */

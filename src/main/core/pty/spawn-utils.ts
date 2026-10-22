@@ -69,7 +69,7 @@ function doResolveShell(): string {
 /**
  * Check if the resolved shell is cmd.exe on Windows.
  */
-function isWindowsCmd(shell: string): boolean {
+export function isWindowsCmd(shell: string): boolean {
   if (process.platform !== 'win32') return false;
   const lower = shell.toLowerCase();
   return lower.endsWith('cmd.exe') || lower.endsWith('cmd');

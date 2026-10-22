@@ -237,9 +237,15 @@ function RailSessionItem({
 }) {
   // Two-step delete: arm on first click, confirm on the second.
   const [armed, setArmed] = useState(false);
+  // The transcript may belong to a TUI session that is still running — the
+  // CLI keeps writing (claude even recreates the file), so say so up front.
+  const [liveInTerminal, setLiveInTerminal] = useState(false);
   useEffect(() => {
     if (!armed) return;
-    const timer = setTimeout(() => setArmed(false), 2500);
+    const timer = setTimeout(() => {
+      setArmed(false);
+      setLiveInTerminal(false);
+    }, 2500);
     return () => clearTimeout(timer);
   }, [armed]);
 
@@ -277,11 +283,32 @@ function RailSessionItem({
             'absolute right-1 top-1 size-5',
             armed ? 'text-red-500 opacity-100' : 'opacity-0 group-hover:opacity-100'
           )}
-          aria-label={armed ? 'Confirm delete' : 'Delete session'}
+          aria-label={
+            armed
+              ? liveInTerminal
+                ? 'Session is running in a terminal — delete anyway'
+                : 'Confirm delete'
+              : 'Delete session'
+          }
+          title={
+            armed
+              ? liveInTerminal
+                ? 'This session is running in a terminal — its CLI may recreate the transcript. Click again to delete anyway.'
+                : 'Click again to delete'
+              : undefined
+          }
           onClick={(e) => {
             e.stopPropagation();
             if (armed) onDelete();
-            else setArmed(true);
+            else {
+              setArmed(true);
+              void rpc.chats
+                .isSessionInTerminal({ sessionId: session.sessionId })
+                .then((result) => {
+                  if (result.success) setLiveInTerminal(result.data);
+                })
+                .catch(() => {});
+            }
           }}
         >
           <Trash2 className="size-3" />

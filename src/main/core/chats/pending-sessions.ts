@@ -1,8 +1,8 @@
-import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { ChatPendingSession } from '@shared/chat';
 import { db } from '@main/db/client';
 import { appSettings } from '@main/db/schema';
+import { cwdMatches } from './cwd-match';
 
 /**
  * Durable registry of chat sessions created in the UI that have no transcript
@@ -25,7 +25,7 @@ export async function listPendingSessions(opts?: {
       stubs = [];
     }
   }
-  const prefix = opts?.cwdPrefix ? opts.cwdPrefix.toLowerCase() : null;
+  const prefix = opts?.cwdPrefix ?? null;
   if (!prefix) return stubs;
   return stubs.filter((s) => cwdMatches(s.cwd, prefix));
 }
@@ -45,6 +45,20 @@ export async function removePendingSessions(ids: string[]): Promise<void> {
   await store(next);
 }
 
+/**
+ * A "new session" placeholder turned out to have a different provider-assigned
+ * id (codex rollout uuid). Rename the stub in place so the next index scan
+ * finds it under the real id and retires it — otherwise it would ghost in the
+ * rail forever and a send on it would start yet another fresh session.
+ */
+export async function adoptPendingSession(oldId: string, newId: string): Promise<void> {
+  const stubs = await listPendingSessions();
+  const stub = stubs.find((s) => s.sessionId === oldId);
+  if (!stub || stubs.some((s) => s.sessionId === newId)) return;
+  stub.sessionId = newId;
+  await store(stubs);
+}
+
 async function store(stubs: ChatPendingSession[]): Promise<void> {
   const serialized = JSON.stringify(stubs);
   await db
@@ -52,11 +66,4 @@ async function store(stubs: ChatPendingSession[]): Promise<void> {
     .values({ key: KEY, value: serialized })
     .onConflictDoUpdate({ target: appSettings.key, set: { value: serialized } })
     .execute();
-}
-
-/** Same rule as the transcript index: the directory itself or any subdirectory. */
-function cwdMatches(cwd: string, prefixLower: string): boolean {
-  if (!cwd) return false;
-  const lower = cwd.toLowerCase();
-  return lower === prefixLower || lower.startsWith(prefixLower + path.sep.toLowerCase());
 }

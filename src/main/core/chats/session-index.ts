@@ -5,6 +5,7 @@ import type { ChatSessionSummary } from '@shared/chat';
 import { claudeParser } from '@main/core/transcripts/parsers/claude';
 import { codexParser } from '@main/core/transcripts/parsers/codex';
 import { log } from '@main/lib/logger';
+import { cwdMatches } from './cwd-match';
 
 /**
  * Discovers chat sessions by scanning the providers' own transcript files.
@@ -39,10 +40,11 @@ export function codexTranscriptRoot(): string {
 }
 
 export async function listSessions(opts?: { cwdPrefix?: string }): Promise<ChatSessionSummary[]> {
-  const files = [...(await scanClaudeFiles()), ...(await scanCodexFiles())].slice(
-    0,
-    MAX_FILES_SCANNED
-  );
+  // Cap each provider separately — appending the lists would let whichever
+  // provider comes first starve the other once its file count hits the cap.
+  const [claudeFiles, codexFiles] = await Promise.all([scanClaudeFiles(), scanCodexFiles()]);
+  const perProvider = Math.ceil(MAX_FILES_SCANNED / 2);
+  const files = [...claudeFiles.slice(0, perProvider), ...codexFiles.slice(0, perProvider)];
 
   const summaries: ChatSessionSummary[] = [];
   await Promise.all(
@@ -52,17 +54,10 @@ export async function listSessions(opts?: { cwdPrefix?: string }): Promise<ChatS
     })
   );
 
-  const prefix = opts?.cwdPrefix ? opts.cwdPrefix.toLowerCase() : null;
+  const prefix = opts?.cwdPrefix ?? null;
   const filtered = prefix ? summaries.filter((s) => cwdMatches(s.cwd, prefix)) : summaries;
   filtered.sort((a, b) => b.updatedAt - a.updatedAt);
   return filtered.slice(0, MAX_SESSIONS);
-}
-
-/** Sessions of the directory itself or any subdirectory (multi-project tasks). */
-function cwdMatches(cwd: string, prefixLower: string): boolean {
-  if (!cwd) return false;
-  const lower = cwd.toLowerCase();
-  return lower === prefixLower || lower.startsWith(prefixLower + path.sep.toLowerCase());
 }
 
 /** Drop a deleted transcript from the index cache so it leaves the list. */

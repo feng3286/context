@@ -116,8 +116,16 @@ export const MessageBubble = function MessageBubble({ message }: { message: Chat
           <User className="size-3" />
           You
           {time ? <span>· {time}</span> : null}
+          {message.failed ? (
+            <span className="font-medium text-red-500">· not delivered</span>
+          ) : null}
         </div>
-        <div className="rounded-lg border border-border bg-background-1 px-3 py-2">
+        <div
+          className={cn(
+            'rounded-lg border bg-background-1 px-3 py-2',
+            message.failed ? 'border-red-500/60' : 'border-border'
+          )}
+        >
           {message.blocks.map((block, i) =>
             block.kind === 'text' ? (
               <MarkdownRenderer key={i} content={block.text} variant="compact" />

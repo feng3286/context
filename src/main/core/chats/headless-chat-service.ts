@@ -3,12 +3,13 @@ import { randomUUID } from 'node:crypto';
 import type { ChatBlock, ChatMessage } from '@shared/chat';
 import { chatDeltaChannel, chatMessageChannel, chatRunChannel } from '@shared/events/chatEvents';
 import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
-import { resolveShell } from '@main/core/pty/spawn-utils';
+import { isWindowsCmd, resolveShell } from '@main/core/pty/spawn-utils';
 import { providerOverrideSettings } from '@main/core/settings/provider-settings-service';
 import { formatCompactNotice } from '@main/core/transcripts/parsers/claude';
 import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
 import { quoteShellArg } from '@main/utils/shellEscape';
+import { adoptPendingSession } from './pending-sessions';
 
 /**
  * Drives agent CLIs headlessly (`claude -p`, `codex exec`) so the chat center
@@ -24,6 +25,8 @@ interface HeadlessRun {
   sessionId: string;
   providerId: string;
   child: ChildProcess;
+  /** Set by abortHeadless so the resulting non-zero close is not an error. */
+  aborted?: boolean;
 }
 
 const runs = new Map<string, HeadlessRun>();
@@ -64,18 +67,30 @@ export async function sendHeadless(args: {
   if (ptySessionRegistry.hasConversationSession(sessionId)) {
     return { ok: false, error: { type: 'live_in_terminal' } };
   }
+  // The session id is spliced into the command line — restrict it to the
+  // charset the providers actually use (uuids) so no shell metacharacters
+  // can slip through whichever quoting the current shell needs.
+  if (sessionId && !/^[a-zA-Z0-9:_-]+$/.test(sessionId)) {
+    return { ok: false, error: { type: 'unsupported' } };
+  }
 
   const cli = (await providerOverrideSettings.getItem(providerId))?.cli ?? providerId;
+  const shell = resolveShell();
+  const useCmd = isWindowsCmd(shell);
+  // cmd.exe does not understand POSIX single-quote escaping. Only the cli
+  // path and the (validated) session id reach the line — the prompt itself
+  // goes over stdin — so double-quoting the path is sufficient there.
+  const quote = useCmd ? quoteWinArg : quoteShellArg;
 
   let commandLine: string;
   if (providerId === 'claude') {
     // stream-json in print mode requires --verbose; partial messages give us
     // real token-level streaming deltas.
     const resumeOrSession = newSession
-      ? `--session-id ${quoteShellArg(sessionId)}`
-      : `--resume ${quoteShellArg(sessionId)}`;
+      ? `--session-id ${quote(sessionId)}`
+      : `--resume ${quote(sessionId)}`;
     commandLine = [
-      quoteShellArg(cli),
+      quote(cli),
       '--print',
       '--output-format',
       'stream-json',
@@ -85,25 +100,33 @@ export async function sendHeadless(args: {
     ].join(' ');
   } else {
     commandLine = [
-      quoteShellArg(cli),
+      quote(cli),
       'exec',
       '--json',
       '--skip-git-repo-check',
-      ...(newSession ? [] : ['resume', quoteShellArg(sessionId)]),
+      ...(newSession ? [] : ['resume', quote(sessionId)]),
       '-',
     ].join(' ');
   }
 
-  const shell = resolveShell();
-  const useCmd = shell.toLowerCase().endsWith('cmd.exe');
   let child: ChildProcess;
   try {
-    child = spawn(shell, [useCmd ? '/c' : '-c', commandLine], {
-      cwd,
-      env: process.env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
+    child = spawn(
+      shell,
+      // cmd.exe: wrap the whole command in an extra quote pair — cmd's /c
+      // stripping then leaves the double-quoted executable + args intact.
+      // Node's own arg quoting would turn embedded quotes into \" which cmd
+      // does not understand, so the line is passed verbatim instead. Safe:
+      // every variable part is either a validated id or a quoted path.
+      useCmd ? ['/d', '/c', `"${commandLine}"`] : ['-c', commandLine],
+      {
+        cwd,
+        env: process.env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+        windowsVerbatimArguments: useCmd,
+      }
+    );
   } catch (e) {
     return { ok: false, error: { type: 'spawn_failed', message: String(e) } };
   }
@@ -152,7 +175,7 @@ export async function sendHeadless(args: {
     stderrTail = (stderrTail + chunk).slice(-2000);
   });
 
-  const finish = (status: 'done' | 'error', error?: string) => {
+  const finish = (status: 'done' | 'error' | 'aborted', error?: string) => {
     if (flushTimer) {
       clearTimeout(flushTimer);
       flushTimer = null;
@@ -168,14 +191,29 @@ export async function sendHeadless(args: {
       { sessionId: topic, status, error, actualSessionId: actualSessionId ?? undefined },
       topic
     );
+    // A "new session" placeholder id (codex picks its rollout uuid at run time)
+    // must not linger as a pending stub: rename it to the id the CLI actually
+    // used so the next index scan retires the stub instead of ghosting it.
+    if (actualSessionId && actualSessionId !== sessionId) {
+      void adoptPendingSession(sessionId, actualSessionId).catch((e) => {
+        log.warn('chats: pending session adoption failed', {
+          sessionId,
+          actualSessionId,
+          error: String(e),
+        });
+      });
+    }
   };
 
   child.on('error', (e) => {
     log.warn('chats: headless spawn error', { providerId, sessionId, error: String(e) });
-    finish('error', String(e));
+    finish(run.aborted ? 'aborted' : 'error', String(e));
   });
   child.on('close', (code) => {
-    if (code === 0) {
+    if (run.aborted) {
+      // User-initiated Stop — a non-zero/signal close is expected, not an error.
+      finish('aborted');
+    } else if (code === 0) {
       finish('done');
     } else {
       log.warn('chats: headless run failed', { providerId, sessionId, code, stderrTail });
@@ -183,16 +221,34 @@ export async function sendHeadless(args: {
     }
   });
 
+  // A spawn that failed asynchronously (ENOENT, …) leaves a dead pipe; writing
+  // to it would raise an unhandled 'error' on stdin and crash the main process.
+  let childBroken = false;
+  child.on('error', () => {
+    childBroken = true;
+  });
+  child.stdin?.on('error', (e) => {
+    log.warn('chats: stdin write failed', { sessionId, error: String(e) });
+  });
+
   // The prompt goes over stdin — it never touches the command line.
-  child.stdin?.write(text);
-  child.stdin?.end();
+  if (!childBroken) {
+    child.stdin?.write(text);
+    child.stdin?.end();
+  }
 
   return { ok: true, actualSessionId: null };
+}
+
+/** Windows double-quote quoting for the cmd.exe branch (args are validated ids/literals). */
+function quoteWinArg(value: string): string {
+  return `"${value.replace(/"/g, '')}"`;
 }
 
 export function abortHeadless(sessionId: string): boolean {
   const run = runs.get(sessionId);
   if (!run) return false;
+  run.aborted = true;
   try {
     run.child.kill();
   } catch (e) {

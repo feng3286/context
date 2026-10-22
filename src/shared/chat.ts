@@ -37,6 +37,9 @@ export interface ChatMessage {
   blocks: ChatBlock[];
   timestamp: string;
   tokens?: { input: number; output: number };
+  /** Renderer-only: an optimistic user bubble whose run failed before the CLI
+   * accepted it — never written by parsers, so it never comes from a reload. */
+  failed?: boolean;
 }
 
 /**

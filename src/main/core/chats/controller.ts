@@ -30,6 +30,20 @@ import { readContextUsage } from './context-usage';
  * directories, history reads, and headless send/abort.
  */
 
+/** True when `file` is really inside `root` — not merely a string prefix
+ * (startsWith would accept `~/.claude-evil/x.jsonl` for root `~/.claude`). */
+function underTranscriptRoot(root: string, file: string): boolean {
+  const rel = path.relative(root, file);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+function underAnyTranscriptRoot(file: string): boolean {
+  return (
+    underTranscriptRoot(claudeTranscriptRoot(), file) ||
+    underTranscriptRoot(codexTranscriptRoot(), file)
+  );
+}
+
 export const chatsController = createRPCController({
   listSessions: async (args?: { cwdPrefix?: string }) => {
     try {
@@ -42,9 +56,7 @@ export const chatsController = createRPCController({
   getHistory: async (args: { providerId: string; file: string }) => {
     try {
       // Defense in depth: only files under the providers' transcript roots.
-      const allowed =
-        args.file.startsWith(claudeTranscriptRoot()) || args.file.startsWith(codexTranscriptRoot());
-      if (!allowed) return err({ type: 'forbidden' as const });
+      if (!underAnyTranscriptRoot(args.file)) return err({ type: 'forbidden' as const });
       await fs.access(args.file);
       const messages = await transcriptService.readSessionFile(args.providerId, args.file);
       const result: ChatMessagesResult = { messages, capability: 'transcript', hasMore: false };
@@ -77,9 +89,7 @@ export const chatsController = createRPCController({
   /** Delete a session's transcript file and drop it from the index. */
   deleteSession: async (args: { providerId: string; file: string }) => {
     try {
-      const allowed =
-        args.file.startsWith(claudeTranscriptRoot()) || args.file.startsWith(codexTranscriptRoot());
-      if (!allowed) return err({ type: 'forbidden' as const });
+      if (!underAnyTranscriptRoot(args.file)) return err({ type: 'forbidden' as const });
       const base = path.basename(args.file, '.jsonl');
       const match = base.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
       const sid = match?.[1] ?? base;
@@ -146,13 +156,17 @@ export const chatsController = createRPCController({
   /** Approximate context fill for the meter, read from the transcript tail. */
   getContextUsage: async (args: { providerId: string; file: string }) => {
     try {
-      const allowed =
-        args.file.startsWith(claudeTranscriptRoot()) || args.file.startsWith(codexTranscriptRoot());
-      if (!allowed) return err({ type: 'forbidden' as const });
+      if (!underAnyTranscriptRoot(args.file)) return err({ type: 'forbidden' as const });
       return ok(await readContextUsage(args.providerId, args.file));
     } catch (e) {
       return err({ type: 'internal' as const, message: String(e) });
     }
+  },
+
+  /** Whether a conversation (TUI) terminal currently owns this session — used
+   * to warn before deleting a transcript the CLI is still writing to. */
+  isSessionInTerminal: async (args: { sessionId: string }) => {
+    return ok(ptySessionRegistry.hasConversationSession(args.sessionId));
   },
 
   /** Slash commands for the chat input autocomplete: built-ins + custom files. */

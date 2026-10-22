@@ -81,10 +81,9 @@ export const chatsController = createRPCController({
       const base = path.basename(args.file, '.jsonl');
       const match = base.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
       const sid = match?.[1] ?? base;
+      // Only an in-flight headless run blocks deletion — a conversation tab's
+      // mere existence must not (its transcript stays deletable on request).
       if (isHeadlessRunning(sid)) return err({ type: 'busy' as const });
-      if (ptySessionRegistry.hasConversationSession(sid)) {
-        return err({ type: 'live_in_terminal' as const });
-      }
       await fs.rm(args.file, { force: true });
       forgetSession(args.file);
       return ok({ deleted: true });

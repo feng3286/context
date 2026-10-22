@@ -183,6 +183,8 @@ export class TaskSessionsStore {
   /** Null = the conversation's own session (default selection). */
   selectedExternal: ChatSessionSummary | null = null;
   externalChat: SessionChatStore | null = null;
+  /** Last session-deletion failure, shown in the rail until dismissed. */
+  deleteError: string | null = null;
 
   private workDir: string | null = null;
 
@@ -288,12 +290,18 @@ export class TaskSessionsStore {
         providerId: session.providerId,
         file: session.file,
       });
-      if (!result.success) return;
+      if (!result.success) {
+        runInAction(() => {
+          this.deleteError = describeDeleteError(result.error);
+        });
+        return;
+      }
     } else {
       // No transcript yet — retire the persisted stub instead.
       await rpc.chats.removePendingSessions({ ids: [session.sessionId] });
     }
     runInAction(() => {
+      this.deleteError = null;
       this.localSessions = this.localSessions.filter((s) => s !== session);
       this.sessions = this.sessions.filter((s) => s !== session);
     });
@@ -318,5 +326,16 @@ export function describeSendError(error: { type: string; message?: string }): st
       return `Failed to start the agent CLI${error.message ? `: ${error.message}` : ''}`;
     default:
       return error.message ?? 'Failed to send the message.';
+  }
+}
+
+function describeDeleteError(error: { type: string; message?: string }): string {
+  switch (error.type) {
+    case 'busy':
+      return 'Session is still running — stop it before deleting.';
+    case 'forbidden':
+      return 'That transcript path is outside the session directories.';
+    default:
+      return error.message ?? 'Failed to delete the session.';
   }
 }

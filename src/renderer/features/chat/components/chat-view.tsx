@@ -309,6 +309,16 @@ const SessionsRail = observer(function SessionsRail({
           ))}
         </div>
       ) : null}
+      {store.deleteError ? (
+        <button
+          type="button"
+          className="mx-1.5 mb-1 rounded-md bg-red-500/10 px-2 py-1 text-left text-[10px] leading-relaxed text-red-500"
+          onClick={() => (store.deleteError = null)}
+          title="Click to dismiss"
+        >
+          {store.deleteError}
+        </button>
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
         <PinnedSessionItem
           conversation={conversation}
@@ -455,22 +465,29 @@ const PinnedSessionItem = observer(function PinnedSessionItem({
         {' · this task'}
       </span>
       {onDelete ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            'absolute right-1 top-1 size-5',
-            armed ? 'text-red-500 opacity-100' : 'opacity-0 group-hover:opacity-100'
-          )}
-          aria-label={armed ? 'Confirm delete' : 'Delete conversation'}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (armed) void onDelete();
-            else setArmed(true);
-          }}
-        >
-          <Trash2 className="size-3" />
-        </Button>
+        <>
+          {armed ? (
+            <span className="pointer-events-none absolute right-6 top-1.5 rounded bg-red-500/10 px-1 py-px text-[9px] whitespace-nowrap text-red-500">
+              deletes the whole conversation
+            </span>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'absolute right-1 top-1 size-5',
+              armed ? 'text-red-500 opacity-100' : 'opacity-0 group-hover:opacity-100'
+            )}
+            aria-label={armed ? 'Confirm delete' : 'Delete conversation'}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (armed) void onDelete();
+              else setArmed(true);
+            }}
+          >
+            <Trash2 className="size-3" />
+          </Button>
+        </>
       ) : null}
     </div>
   );

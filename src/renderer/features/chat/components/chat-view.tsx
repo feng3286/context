@@ -1,4 +1,4 @@
-import { Loader2, MessageSquareOff, RefreshCw, SendHorizontal, Square } from 'lucide-react';
+import { Loader2, MessageSquareOff, Plus, RefreshCw, SendHorizontal, Square } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatMessage, ChatSessionSummary } from '@shared/chat';
@@ -8,7 +8,12 @@ import { pastePromptInjection } from '@renderer/lib/pty/prompt-injection';
 import { Button } from '@renderer/lib/ui/button';
 import { Spinner } from '@renderer/lib/ui/spinner';
 import { cn } from '@renderer/utils/utils';
-import { SessionChatStore, supportsHeadlessChat, TaskSessionsStore } from '../session-chat-store';
+import {
+  describeSendError,
+  SessionChatStore,
+  supportsHeadlessChat,
+  TaskSessionsStore,
+} from '../session-chat-store';
 import { MessageBubble } from './message-bubble';
 
 export const AutoResizingTextarea = forwardRef<
@@ -50,17 +55,32 @@ const ChatInputBar = observer(function ChatInputBar({
     setText('');
     setSending(true);
     try {
-      await pastePromptInjection({
-        providerId: conversation.data.providerId,
-        text: value,
-        sendInput: async (data) => {
-          const result = await rpc.pty.sendInput(conversation.session.sessionId, data);
-          // The PTY is gone (crashed / never started) — failing loudly here
-          // keeps the message from being silently dropped.
-          if (!result.success) throw new Error('send_failed');
-        },
-      });
-      conversation.setWorking();
+      if (conversation.session.status === 'ready') {
+        // TUI alive: inject into the PTY so the terminal stays authoritative.
+        await pastePromptInjection({
+          providerId: conversation.data.providerId,
+          text: value,
+          sendInput: async (data) => {
+            const result = await rpc.pty.sendInput(conversation.session.sessionId, data);
+            // Failing loudly keeps the message from being silently dropped.
+            if (!result.success) throw new Error('send_failed');
+          },
+        });
+        conversation.setWorking();
+      } else {
+        // No live TUI: drive the CLI headlessly with --resume.
+        const result = await rpc.chats.sendToConversation({
+          taskId: conversation.taskId,
+          conversationId: conversation.data.id,
+          text: value,
+        });
+        if (!result.success) {
+          setText((prev) => (prev ? prev : value));
+          setSendError(describeSendError(result.error));
+        } else {
+          conversation.setWorking();
+        }
+      }
     } catch {
       setText((prev) => (prev ? prev : value));
       setSendError('Message not delivered — the agent terminal is not running.');
@@ -109,6 +129,26 @@ const ChatInputBar = observer(function ChatInputBar({
   );
 });
 
+function StreamingBubble({ text, thinking }: { text: string; thinking: string }) {
+  return (
+    <div className="px-4 py-1.5">
+      {thinking ? (
+        <div className="mb-1 border-l-2 border-border pl-2 text-xs whitespace-pre-wrap text-muted-foreground italic">
+          {thinking}
+        </div>
+      ) : null}
+      {text ? (
+        <div className="text-sm whitespace-pre-wrap">
+          {text}
+          <span className="animate-pulse">▍</span>
+        </div>
+      ) : (
+        <span className="animate-pulse text-xs text-muted-foreground">thinking…</span>
+      )}
+    </div>
+  );
+}
+
 function formatRelative(ms: number): string {
   const diff = Date.now() - ms;
   const minutes = Math.floor(diff / 60_000);
@@ -129,9 +169,11 @@ function formatRelative(ms: number): string {
  */
 export const ChatView = observer(function ChatView({
   conversation,
+  projectDir,
   workDir,
 }: {
   conversation: ConversationStore;
+  projectDir?: string;
   workDir?: string;
 }) {
   const sessionsStore = useMemo(() => new TaskSessionsStore(), []);
@@ -163,7 +205,14 @@ export const ChatView = observer(function ChatView({
 
   return (
     <div className="flex h-full min-h-0 flex-1 bg-background-secondary-1">
-      {workDir ? <SessionsRail store={sessionsStore} conversation={conversation} /> : null}
+      {workDir ? (
+        <SessionsRail
+          store={sessionsStore}
+          conversation={conversation}
+          workDir={workDir}
+          projectDir={projectDir}
+        />
+      ) : null}
       {sessionsStore.selectedExternal && externalChat ? (
         <ExternalSessionPane key={externalChat.session.file} store={externalChat} />
       ) : (
@@ -176,14 +225,25 @@ export const ChatView = observer(function ChatView({
 const SessionsRail = observer(function SessionsRail({
   store,
   conversation,
+  workDir,
+  projectDir,
 }: {
   store: TaskSessionsStore;
   conversation: ConversationStore;
+  workDir: string;
+  projectDir?: string;
 }) {
   // Claude's file name IS the conversation id — dedupe the pinned item.
-  const external = store.sessions.filter(
+  const external = store.railSessions.filter(
     (s) => !(s.providerId === conversation.data.providerId && s.sessionId === conversation.data.id)
   );
+  const [choosingContext, setChoosingContext] = useState(false);
+  const contextOptions = [
+    ...(projectDir && projectDir.toLowerCase() !== workDir.toLowerCase()
+      ? [{ label: `Project · ${projectDir.split(/[\/]/).pop()}`, path: projectDir }]
+      : []),
+    { label: 'Task directory', path: workDir },
+  ];
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border">
@@ -191,21 +251,50 @@ const SessionsRail = observer(function SessionsRail({
         <span className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
           Sessions
         </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-5"
-          disabled={store.loading}
-          onClick={() => void store.refresh()}
-          aria-label="Refresh sessions"
-        >
-          {store.loading ? (
-            <Loader2 className="size-3 animate-spin" />
-          ) : (
-            <RefreshCw className="size-3" />
-          )}
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-5"
+            onClick={() => setChoosingContext((v) => !v)}
+            aria-label="New session"
+          >
+            <Plus className="size-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-5"
+            disabled={store.loading}
+            onClick={() => void store.refresh()}
+            aria-label="Refresh sessions"
+          >
+            {store.loading ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3" />
+            )}
+          </Button>
+        </div>
       </div>
+      {choosingContext ? (
+        <div className="mx-1.5 mb-1 rounded-md border border-border bg-background-1 p-1">
+          <div className="px-1.5 pb-1 text-[10px] text-muted-foreground">Context directory</div>
+          {contextOptions.map((option) => (
+            <button
+              key={option.path}
+              type="button"
+              className="block w-full truncate rounded px-1.5 py-1 text-left text-xs hover:bg-background-1/80"
+              onClick={() => {
+                setChoosingContext(false);
+                store.createLocalSession(conversation.data.providerId, option.path);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
         <button
           type="button"
@@ -363,7 +452,15 @@ const ConversationPane = observer(function ConversationPane({
         {chat.messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
+        {chat.running || chat.streamText || chat.streamThinking ? (
+          <StreamingBubble text={chat.streamText} thinking={chat.streamThinking} />
+        ) : null}
       </div>
+      {chat.runError ? (
+        <div className="mx-3 mb-1 rounded-md bg-red-500/10 px-3 py-1.5 text-xs text-red-500">
+          {chat.runError}
+        </div>
+      ) : null}
       <ChatInputBar conversation={conversation} />
     </div>
   );
@@ -431,21 +528,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
           <MessageBubble key={message.id} message={message} />
         ))}
         {showStream ? (
-          <div className="px-4 py-1.5">
-            {store.streamThinking ? (
-              <div className="mb-1 border-l-2 border-border pl-2 text-xs whitespace-pre-wrap text-muted-foreground italic">
-                {store.streamThinking}
-              </div>
-            ) : null}
-            {store.streamText ? (
-              <div className="text-sm whitespace-pre-wrap">
-                {store.streamText}
-                <span className="animate-pulse">▍</span>
-              </div>
-            ) : (
-              <span className="animate-pulse text-xs text-muted-foreground">thinking…</span>
-            )}
-          </div>
+          <StreamingBubble text={store.streamText} thinking={store.streamThinking} />
         ) : null}
       </div>
       {store.runError ? (

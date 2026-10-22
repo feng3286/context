@@ -158,6 +158,7 @@ export class ConversationManagerStore {
 
 export class ConversationStore {
   data: Conversation;
+  readonly taskId: string;
   session: PtySession;
   status: AgentStatus = 'idle';
   seen = true;
@@ -167,6 +168,7 @@ export class ConversationStore {
 
   constructor(conversation: Conversation, taskId: string) {
     this.data = conversation;
+    this.taskId = taskId;
     this.session = new PtySession(makeConversationSessionId(taskId, conversation.id));
     makeObservable(this, {
       data: observable,

@@ -8,6 +8,8 @@ import {
   codexTranscriptRoot,
   listSessions,
 } from '@main/core/chats/session-index';
+import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
+import { resolveContext } from '@main/core/transcripts/controller';
 import { transcriptService } from '@main/core/transcripts/transcript-service';
 
 /**
@@ -39,7 +41,13 @@ export const chatsController = createRPCController({
     }
   },
 
-  send: async (args: { providerId: string; sessionId: string; cwd: string; text: string }) => {
+  send: async (args: {
+    providerId: string;
+    sessionId: string;
+    cwd: string;
+    text: string;
+    newSession?: boolean;
+  }) => {
     try {
       const result = await sendHeadless(args);
       if (!result.ok) return err(result.error);
@@ -51,5 +59,51 @@ export const chatsController = createRPCController({
 
   abort: async (args: { sessionId: string }) => {
     return ok({ aborted: abortHeadless(args.sessionId) });
+  },
+
+  /**
+   * Send a message to an app-owned conversation without its TUI: falls back
+   * to a headless `--resume` run in the conversation's spawn cwd. When the
+   * TUI is still running we refuse — the renderer injects into the PTY
+   * instead, keeping a single writer to the transcript.
+   */
+  sendToConversation: async (args: { taskId: string; conversationId: string; text: string }) => {
+    try {
+      const syntheticId = `conversation:${args.taskId}:${args.conversationId}`;
+      if (ptySessionRegistry.get(syntheticId)) {
+        return err({ type: 'live_in_terminal' as const });
+      }
+      const ctx = await resolveContext(syntheticId);
+      if (!ctx) return err({ type: 'unknown_session' as const });
+
+      let providerSessionId = args.conversationId;
+      if (ctx.providerId === 'codex') {
+        // Codex resumes by its own rollout uuid, not the app conversation id.
+        const file = await transcriptService.getResolvedFile(syntheticId, ctx);
+        const match = file?.match(
+          /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i
+        );
+        if (!match) {
+          return err({
+            type: 'unsupported' as const,
+            message:
+              'No codex session found for this conversation yet — start it in the terminal once.',
+          });
+        }
+        providerSessionId = match[1];
+      }
+
+      const result = await sendHeadless({
+        providerId: ctx.providerId,
+        sessionId: providerSessionId,
+        cwd: ctx.workDir,
+        text: args.text,
+        topic: syntheticId,
+      });
+      if (!result.ok) return err(result.error);
+      return ok({ sessionId: syntheticId });
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
   },
 });

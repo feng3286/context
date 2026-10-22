@@ -62,7 +62,7 @@ export class SessionChatStore {
           this.streamText = '';
           this.streamThinking = '';
         });
-        void this.reload();
+        if (this.session.file) void this.reload();
       },
       this.session.sessionId
     );
@@ -77,6 +77,8 @@ export class SessionChatStore {
   }
 
   async reload(): Promise<void> {
+    // Pending local sessions have no transcript until the first run lands.
+    if (!this.session.file) return;
     this.loading = this.messages.length === 0;
     try {
       const result = await rpc.chats.getHistory({
@@ -109,6 +111,8 @@ export class SessionChatStore {
         sessionId: this.session.sessionId,
         cwd: this.session.cwd,
         text: value,
+        // Pending local sessions have no transcript yet — start a fresh one.
+        newSession: !this.session.file,
       });
       if (!result.success) {
         runInAction(() => {
@@ -143,7 +147,10 @@ export class SessionChatStore {
 
 /** Sessions under one task's working directory + which one is open. */
 export class TaskSessionsStore {
+  /** Sessions discovered from provider transcript dirs (cwd-filtered). */
   sessions: ChatSessionSummary[] = [];
+  /** Sessions created in this view that have no transcript yet. */
+  localSessions: ChatSessionSummary[] = [];
   loading = false;
   loaded = false;
   /** Null = the conversation's own session (default selection). */
@@ -156,6 +163,28 @@ export class TaskSessionsStore {
     makeAutoObservable(this);
   }
 
+  /** Everything the rail should render, local pending items first. */
+  get railSessions(): ChatSessionSummary[] {
+    return [...this.localSessions, ...this.sessions];
+  }
+
+  /** A brand-new chat session for the tab's agent, bound to a context dir. */
+  createLocalSession(providerId: string, cwd: string): ChatSessionSummary {
+    const session: ChatSessionSummary = {
+      sessionId: crypto.randomUUID(),
+      providerId,
+      cwd,
+      title: 'New session',
+      updatedAt: Date.now(),
+      file: '',
+    };
+    runInAction(() => {
+      this.localSessions.push(session);
+    });
+    this.selectExternal(session);
+    return session;
+  }
+
   async load(workDir: string): Promise<void> {
     this.workDir = workDir;
     this.loading = true;
@@ -165,11 +194,16 @@ export class TaskSessionsStore {
         runInAction(() => {
           this.sessions = result.data;
           this.loaded = true;
+          // Local pending items that materialized in the index are dropped —
+          // the discovered entry replaces them.
+          this.localSessions = this.localSessions.filter(
+            (local) => !result.data.some((discovered) => discovered.sessionId === local.sessionId)
+          );
           // Drop the selection if the session disappeared from the index.
-          if (
-            this.selectedExternal &&
-            !result.data.some((s) => s.file === this.selectedExternal?.file)
-          ) {
+          const stillThere =
+            !this.selectedExternal ||
+            this.railSessions.some((s) => s.file === this.selectedExternal?.file);
+          if (!stillThere) {
             this.selectExternal(null);
           }
         });
@@ -203,7 +237,7 @@ export class TaskSessionsStore {
   }
 }
 
-function describeSendError(error: { type: string; message?: string }): string {
+export function describeSendError(error: { type: string; message?: string }): string {
   switch (error.type) {
     case 'busy':
       return 'The agent is still responding — wait for it to finish or press Stop.';

@@ -105,6 +105,33 @@ class TranscriptService {
   }
 
   /**
+   * The transcript file a watcher resolved for this session, or — when no live
+   * watcher exists — the first existing candidate. Used to recover a codex
+   * rollout id for headless resume.
+   */
+  async getResolvedFile(sessionId: string, ctx: TranscriptContext): Promise<string | null> {
+    const state = this.states.get(sessionId);
+    if (state?.file) return state.file;
+    const parser = getParser(ctx.providerId);
+    if (!parser) return null;
+    let candidates: string[] = [];
+    try {
+      candidates = await parser.resolve(ctx);
+    } catch {
+      return null;
+    }
+    for (const file of candidates) {
+      try {
+        const stat = await fs.stat(file);
+        if (stat.isFile()) return file;
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Parse one transcript file directly (chat center history for sessions that
    * are not app-owned conversations). The file path comes from the session
    * index, which discovered it under the provider's own config directory.

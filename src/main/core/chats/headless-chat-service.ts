@@ -40,15 +40,22 @@ export async function sendHeadless(args: {
   sessionId: string;
   cwd: string;
   text: string;
+  /** Event topic; defaults to the provider session id. App-owned conversations
+   * pass their synthetic `conversation:<task>:<id>` id so existing chat
+   * subscriptions receive the deltas. */
+  topic?: string;
+  /** Start a fresh session (claude --session-id / codex exec) instead of
+   * resuming an existing one. */
+  newSession?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: HeadlessSendError }> {
-  const { providerId, sessionId, cwd, text } = args;
+  const { providerId, sessionId, cwd, text, topic = sessionId, newSession } = args;
   if (providerId !== 'claude' && providerId !== 'codex') {
     return { ok: false, error: { type: 'unsupported' } };
   }
-  if (!sessionId) {
+  if (!sessionId && !newSession) {
     return { ok: false, error: { type: 'unsupported' } };
   }
-  if (runs.has(sessionId)) {
+  if (!newSession && runs.has(sessionId)) {
     return { ok: false, error: { type: 'busy' } };
   }
   if (ptySessionRegistry.hasConversationSession(sessionId)) {
@@ -61,7 +68,9 @@ export async function sendHeadless(args: {
   if (providerId === 'claude') {
     // stream-json in print mode requires --verbose; partial messages give us
     // real token-level streaming deltas.
-    const resumeOrSession = `--resume ${quoteShellArg(sessionId)}`;
+    const resumeOrSession = newSession
+      ? `--session-id ${quoteShellArg(sessionId)}`
+      : `--resume ${quoteShellArg(sessionId)}`;
     commandLine = [
       quoteShellArg(cli),
       '--print',
@@ -77,8 +86,7 @@ export async function sendHeadless(args: {
       'exec',
       '--json',
       '--skip-git-repo-check',
-      'resume',
-      quoteShellArg(sessionId),
+      ...(newSession ? [] : ['resume', quoteShellArg(sessionId)]),
       '-',
     ].join(' ');
   }
@@ -100,7 +108,7 @@ export async function sendHeadless(args: {
   const run: HeadlessRun = { sessionId, providerId, child };
   runs.set(sessionId, run);
 
-  events.emit(chatRunChannel, { sessionId, status: 'running' }, sessionId);
+  events.emit(chatRunChannel, { sessionId: topic, status: 'running' }, topic);
 
   const stdoutBuffer: string[] = [];
   let stdoutText = '';
@@ -108,7 +116,7 @@ export async function sendHeadless(args: {
 
   const emitDelta = (kind: 'text' | 'thinking', deltaText: string) => {
     if (!deltaText) return;
-    events.emit(chatDeltaChannel, { sessionId, kind, text: deltaText }, sessionId);
+    events.emit(chatDeltaChannel, { sessionId: topic, kind, text: deltaText }, topic);
   };
 
   const flushStdout = () => {
@@ -118,7 +126,7 @@ export async function sendHeadless(args: {
     const lines = combined.split('\n');
     const pending = lines.pop() ?? '';
     stdoutText = pending;
-    for (const line of lines) handleStreamLine(providerId, sessionId, line, emitDelta);
+    for (const line of lines) handleStreamLine(providerId, topic, line, emitDelta);
   };
 
   child.stdout?.setEncoding('utf8');
@@ -144,7 +152,7 @@ export async function sendHeadless(args: {
       flushStdout();
     }
     runs.delete(sessionId);
-    events.emit(chatRunChannel, { sessionId, status, error }, sessionId);
+    events.emit(chatRunChannel, { sessionId: topic, status, error }, topic);
   };
 
   child.on('error', (e) => {
@@ -222,7 +230,7 @@ type DeltaEmit = (kind: 'text' | 'thinking', text: string) => void;
 
 function handleStreamLine(
   providerId: string,
-  sessionId: string,
+  topic: string,
   line: string,
   emitDelta: DeltaEmit
 ): void {
@@ -236,13 +244,13 @@ function handleStreamLine(
   }
 
   if (providerId === 'claude') {
-    handleClaudeLine(row as ClaudeStreamLine, sessionId, emitDelta);
+    handleClaudeLine(row as ClaudeStreamLine, topic, emitDelta);
   } else {
-    handleCodexLine(row as CodexExecLine, sessionId);
+    handleCodexLine(row as CodexExecLine, topic);
   }
 }
 
-function handleClaudeLine(row: ClaudeStreamLine, sessionId: string, emitDelta: DeltaEmit): void {
+function handleClaudeLine(row: ClaudeStreamLine, topic: string, emitDelta: DeltaEmit): void {
   if (row.type === 'stream_event' && row.event?.type === 'content_block_delta') {
     const delta = row.event.delta;
     if (delta?.type === 'text_delta' && delta.text) emitDelta('text', delta.text);
@@ -277,15 +285,11 @@ function handleClaudeLine(row: ClaudeStreamLine, sessionId: string, emitDelta: D
           ? { input: usage.input_tokens ?? 0, output: usage.output_tokens ?? 0 }
           : undefined,
     };
-    events.emit(
-      chatMessageChannel,
-      { sessionId: row.session_id ?? sessionId, messages: [message] },
-      sessionId
-    );
+    events.emit(chatMessageChannel, { sessionId: topic, messages: [message] }, topic);
   }
 }
 
-function handleCodexLine(row: CodexExecLine, sessionId: string): void {
+function handleCodexLine(row: CodexExecLine, topic: string): void {
   if (row.type === 'item.completed' && row.item) {
     const item = row.item;
     if (item.type === 'agent_message' && item.text?.trim()) {
@@ -295,7 +299,7 @@ function handleCodexLine(row: CodexExecLine, sessionId: string): void {
         blocks: [{ kind: 'text', text: item.text.trim() }],
         timestamp: new Date().toISOString(),
       };
-      events.emit(chatMessageChannel, { sessionId, messages: [message] }, sessionId);
+      events.emit(chatMessageChannel, { sessionId: topic, messages: [message] }, topic);
     } else if (item.type === 'reasoning') {
       const text = (item.summary ?? [])
         .map((part) => part.text ?? '')
@@ -308,7 +312,7 @@ function handleCodexLine(row: CodexExecLine, sessionId: string): void {
           blocks: [{ kind: 'thinking', text }],
           timestamp: new Date().toISOString(),
         };
-        events.emit(chatMessageChannel, { sessionId, messages: [message] }, sessionId);
+        events.emit(chatMessageChannel, { sessionId: topic, messages: [message] }, topic);
       }
     }
   }

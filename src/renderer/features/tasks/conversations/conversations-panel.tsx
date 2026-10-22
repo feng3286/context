@@ -83,6 +83,9 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
             s.viewMode === 'chat' ? (
               <ChatView
                 conversation={s}
+                projectDir={
+                  mountedProject?.data.type === 'local' ? mountedProject.data.path : undefined
+                }
                 workDir={provisioned._taskData.workDir ?? provisioned.path}
               />
             ) : (

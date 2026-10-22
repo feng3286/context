@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { ChatCapability, ChatMessage } from '@shared/chat';
-import { chatMessageChannel } from '@shared/events/chatEvents';
+import { chatDeltaChannel, chatMessageChannel, chatRunChannel } from '@shared/events/chatEvents';
 import { events, rpc } from '@renderer/lib/ipc';
 
 const PAGE_SIZE = 200;
@@ -18,6 +18,11 @@ export class ChatStore {
   capability: ChatCapability = 'pending';
   hasOlder = false;
   loading = true;
+  /** Live headless run for this conversation (no-TUI fallback path). */
+  running = false;
+  streamText = '';
+  streamThinking = '';
+  runError: string | null = null;
 
   private inited = false;
   private retryCount = 0;
@@ -42,6 +47,50 @@ export class ChatStore {
         this.sessionId
       )
     );
+    this.disposers.push(
+      events.on(
+        chatDeltaChannel,
+        (payload) => {
+          if (payload.sessionId !== this.sessionId) return;
+          runInAction(() => {
+            if (payload.kind === 'text') this.streamText += payload.text;
+            else this.streamThinking += payload.text;
+          });
+        },
+        this.sessionId
+      )
+    );
+    this.disposers.push(
+      events.on(
+        chatRunChannel,
+        (payload) => {
+          void this.handleRun(payload);
+        },
+        this.sessionId
+      )
+    );
+    await this.fetch();
+  }
+
+  private async handleRun(payload: {
+    sessionId: string;
+    status: 'running' | 'done' | 'error';
+    error?: string;
+  }): Promise<void> {
+    if (payload.sessionId !== this.sessionId) return;
+    if (payload.status === 'running') {
+      runInAction(() => {
+        this.running = true;
+      });
+      return;
+    }
+    runInAction(() => {
+      this.running = false;
+      this.runError = payload.status === 'error' ? (payload.error ?? 'Run failed') : null;
+      this.streamText = '';
+      this.streamThinking = '';
+    });
+    // The transcript is authoritative once the run's writes land.
     await this.fetch();
   }
 

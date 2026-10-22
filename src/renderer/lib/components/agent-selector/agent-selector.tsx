@@ -37,6 +37,8 @@ interface AgentSelectorProps {
   installable?: boolean;
   customAgents?: CustomAgentEntry[];
   customAgentConnectedIds?: Set<string>;
+  /** Agents that must not be pickable (e.g. already used in this task). */
+  excludeAgentIds?: string[];
 }
 
 export const AgentSelector: React.FC<AgentSelectorProps> = observer(
@@ -49,6 +51,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
     installable = true,
     customAgents,
     customAgentConnectedIds,
+    excludeAgentIds,
   }) => {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
@@ -58,6 +61,16 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
       customAgents,
       customAgentConnectedIds,
     });
+    // One tab per agent: agents already in use are not offered again.
+    const selectableGroups = useMemo(() => {
+      if (!excludeAgentIds?.length) return groups;
+      return groups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => !excludeAgentIds.includes(item.agentId)),
+        }))
+        .filter((group) => group.items.length > 0);
+    }, [groups, excludeAgentIds]);
     const allOptions = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
     const selectedConfig = value ? agentConfig[value as keyof typeof agentConfig] : null;
@@ -72,7 +85,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = observer(
     return (
       <div className={cn('relative block min-w-0', className)}>
         <Combobox
-          items={groups}
+          items={selectableGroups}
           value={selectedOption ?? null}
           onValueChange={handleValueChange}
           open={open}

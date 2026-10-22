@@ -13,7 +13,7 @@ import { transcriptService } from './transcript-service';
  * the worktree root while the CLI actually runs inside a project subdirectory,
  * and transcript paths are cwd-derived.
  */
-async function resolveContext(sessionId: string): Promise<TranscriptContext | null> {
+export async function resolveContext(sessionId: string): Promise<TranscriptContext | null> {
   const parts = sessionId.split(':');
   if (parts.length !== 3 || parts[0] !== 'conversation') return null;
   const taskId = parts[1];

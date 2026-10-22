@@ -148,6 +148,11 @@ export const CreateConversationModal = observer(function CreateConversationModal
   const taskStore = getTaskStore(projectId, taskId);
   const provisioned = taskStore ? asProvisioned(taskStore) : undefined;
   const conversationMgr = provisioned?.conversations;
+  // One tab per agent: hide agents that already have a conversation here.
+  const agentsInUse = useMemo(
+    () => Array.from(conversationMgr?.conversations.values() ?? []).map((c) => c.data.providerId),
+    [conversationMgr]
+  );
   const projectContexts = provisioned?.projectContexts;
   const projectOptions = projectContexts
     ? Array.from(projectContexts.projects.values())
@@ -204,6 +209,7 @@ export const CreateConversationModal = observer(function CreateConversationModal
               connectionId={connectionId}
               customAgents={customAgents}
               customAgentConnectedIds={customConnectedIds}
+              excludeAgentIds={agentsInUse}
             />
           </Field>
           <Field>

@@ -67,10 +67,11 @@ export class SessionChatStore {
           this.streamThinking = '';
         });
         // A pending (new) session now has a transcript: adopt the CLI's own
-        // session id (codex picks its rollout uuid at run time) and resolve
-        // the transcript path, so later messages resume instead of starting
-        // yet another fresh session.
+        // session id (codex picks its rollout uuid at run time), retire the
+        // pending stub, and resolve the transcript path so later messages
+        // resume instead of starting yet another fresh session.
         if (!this.session.file) {
+          void rpc.chats.removePendingSessions({ ids: [this.topic] });
           if (payload.actualSessionId) {
             runInAction(() => {
               (this.session as { sessionId: string }).sessionId = payload.actualSessionId as string;
@@ -207,6 +208,14 @@ export class TaskSessionsStore {
     runInAction(() => {
       this.localSessions.push(session);
     });
+    // Persist the stub so the session survives restarts before its first run.
+    void rpc.chats.addPendingSession({
+      sessionId: session.sessionId,
+      providerId,
+      cwd,
+      title: session.title,
+      createdAt: session.updatedAt,
+    });
     this.selectExternal(session);
     return session;
   }
@@ -215,16 +224,31 @@ export class TaskSessionsStore {
     this.workDir = workDir;
     this.loading = true;
     try {
-      const result = await rpc.chats.listSessions({ cwdPrefix: workDir });
+      const [result, pending] = await Promise.all([
+        rpc.chats.listSessions({ cwdPrefix: workDir }),
+        rpc.chats.listPendingSessions({ cwdPrefix: workDir }),
+      ]);
       if (result.success) {
+        const stubs: ChatSessionSummary[] = (pending.success ? pending.data : []).map((stub) => ({
+          sessionId: stub.sessionId,
+          providerId: stub.providerId,
+          cwd: stub.cwd,
+          title: stub.title || 'New session',
+          updatedAt: stub.createdAt,
+          file: '',
+        }));
+        // Stubs whose transcript materialized are retired — the discovered
+        // entry replaces them.
+        const materialized = stubs
+          .filter((stub) => result.data.some((d) => d.sessionId === stub.sessionId))
+          .map((stub) => stub.sessionId);
+        if (materialized.length > 0) {
+          void rpc.chats.removePendingSessions({ ids: materialized });
+        }
         runInAction(() => {
           this.sessions = result.data;
           this.loaded = true;
-          // Local pending items that materialized in the index are dropped —
-          // the discovered entry replaces them.
-          this.localSessions = this.localSessions.filter(
-            (local) => !result.data.some((discovered) => discovered.sessionId === local.sessionId)
-          );
+          this.localSessions = stubs.filter((stub) => !materialized.includes(stub.sessionId));
           // Drop the selection if the session disappeared from the index.
           const stillThere =
             !this.selectedExternal ||
@@ -265,6 +289,9 @@ export class TaskSessionsStore {
         file: session.file,
       });
       if (!result.success) return;
+    } else {
+      // No transcript yet — retire the persisted stub instead.
+      await rpc.chats.removePendingSessions({ ids: [session.sessionId] });
     }
     runInAction(() => {
       this.localSessions = this.localSessions.filter((s) => s !== session);

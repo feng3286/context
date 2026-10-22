@@ -179,10 +179,13 @@ export const ChatView = observer(function ChatView({
   conversation,
   projectDir,
   workDir,
+  onDeleteConversation,
 }: {
   conversation: ConversationStore;
   projectDir?: string;
   workDir?: string;
+  /** Deletes the task conversation itself (the pinned "this task" entry). */
+  onDeleteConversation?: () => Promise<void>;
 }) {
   const sessionsStore = useMemo(() => new TaskSessionsStore(), []);
   const externalChat = sessionsStore.externalChat;
@@ -219,6 +222,7 @@ export const ChatView = observer(function ChatView({
           conversation={conversation}
           workDir={workDir}
           projectDir={projectDir}
+          onDeleteConversation={onDeleteConversation}
         />
       ) : null}
       {sessionsStore.selectedExternal && externalChat ? (
@@ -235,11 +239,13 @@ const SessionsRail = observer(function SessionsRail({
   conversation,
   workDir,
   projectDir,
+  onDeleteConversation,
 }: {
   store: TaskSessionsStore;
   conversation: ConversationStore;
   workDir: string;
   projectDir?: string;
+  onDeleteConversation?: () => Promise<void>;
 }) {
   // Claude's file name IS the conversation id — dedupe the pinned item.
   const external = store.railSessions.filter(
@@ -304,24 +310,12 @@ const SessionsRail = observer(function SessionsRail({
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
-        <button
-          type="button"
-          onClick={() => store.selectExternal(null)}
-          className={cn(
-            'mb-0.5 flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors',
-            !store.selectedExternal ? 'bg-background-1 shadow-sm' : 'hover:bg-background-1/60'
-          )}
-        >
-          <span className="line-clamp-2 text-xs leading-snug">
-            {conversation.data.title || 'Current conversation'}
-          </span>
-          <span className="text-[10px] text-muted-foreground">
-            <span className="rounded bg-background-1 px-1 py-px font-medium">
-              {conversation.data.providerId}
-            </span>
-            {' · this task'}
-          </span>
-        </button>
+        <PinnedSessionItem
+          conversation={conversation}
+          active={!store.selectedExternal}
+          onSelect={() => store.selectExternal(null)}
+          onDelete={onDeleteConversation}
+        />
         {external.map((session) => (
           <RailSessionItem
             key={session.sessionId}
@@ -407,6 +401,80 @@ function RailSessionItem({
     </div>
   );
 }
+
+/**
+ * The task conversation's own entry, pinned first. Deleting it deletes the
+ * whole conversation (tab + terminal + transcript projection).
+ */
+const PinnedSessionItem = observer(function PinnedSessionItem({
+  conversation,
+  active,
+  onSelect,
+  onDelete,
+}: {
+  conversation: ConversationStore;
+  active: boolean;
+  onSelect: () => void;
+  onDelete?: () => Promise<void>;
+}) {
+  // Two-step delete: arm on first click, confirm on the second.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 2500);
+    return () => clearTimeout(timer);
+  }, [armed]);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        setArmed(false);
+        onSelect();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setArmed(false);
+          onSelect();
+        }
+      }}
+      className={cn(
+        'group relative mb-0.5 flex w-full cursor-pointer flex-col gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors',
+        active ? 'bg-background-1 shadow-sm' : 'hover:bg-background-1/60'
+      )}
+    >
+      <span className="line-clamp-2 pr-5 text-xs leading-snug">
+        {conversation.data.title || 'Current conversation'}
+      </span>
+      <span className="text-[10px] text-muted-foreground">
+        <span className="rounded bg-background-1 px-1 py-px font-medium">
+          {conversation.data.providerId}
+        </span>
+        {' · this task'}
+      </span>
+      {onDelete ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            'absolute right-1 top-1 size-5',
+            armed ? 'text-red-500 opacity-100' : 'opacity-0 group-hover:opacity-100'
+          )}
+          aria-label={armed ? 'Confirm delete' : 'Delete conversation'}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (armed) void onDelete();
+            else setArmed(true);
+          }}
+        >
+          <Trash2 className="size-3" />
+        </Button>
+      ) : null}
+    </div>
+  );
+});
 
 /** The conversation's own session — transcript projection + PTY input. */
 const ConversationPane = observer(function ConversationPane({

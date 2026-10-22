@@ -54,3 +54,17 @@ export interface ChatSessionSummary {
   /** Absolute transcript path (provider-root validated before use). */
   file: string;
 }
+
+/**
+ * A session created in the chat UI that has no transcript yet. Persisted
+ * app-side so it survives restarts; dropped once its first run materializes
+ * the transcript (or the user deletes it).
+ */
+export interface ChatPendingSession {
+  sessionId: string;
+  providerId: string;
+  cwd: string;
+  title: string;
+  /** Creation time (epoch ms). */
+  createdAt: number;
+}

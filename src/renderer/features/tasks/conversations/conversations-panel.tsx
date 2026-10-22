@@ -87,6 +87,7 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
                   mountedProject?.data.type === 'local' ? mountedProject.data.path : undefined
                 }
                 workDir={provisioned._taskData.workDir ?? provisioned.path}
+                onDeleteConversation={() => provisioned.conversations.deleteConversation(s.data.id)}
               />
             ) : (
               defaultPane

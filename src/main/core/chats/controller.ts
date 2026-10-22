@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { ChatMessagesResult } from '@shared/chat';
+import type { ChatMessagesResult, ChatPendingSession } from '@shared/chat';
 import { createRPCController } from '@shared/ipc/rpc';
 import { err, ok } from '@shared/result';
 import {
@@ -8,6 +8,11 @@ import {
   isHeadlessRunning,
   sendHeadless,
 } from '@main/core/chats/headless-chat-service';
+import {
+  addPendingSession,
+  listPendingSessions,
+  removePendingSessions,
+} from '@main/core/chats/pending-sessions';
 import {
   claudeTranscriptRoot,
   codexTranscriptRoot,
@@ -90,6 +95,32 @@ export const chatsController = createRPCController({
 
   abort: async (args: { sessionId: string }) => {
     return ok({ aborted: abortHeadless(args.sessionId) });
+  },
+
+  listPendingSessions: async (args?: { cwdPrefix?: string }) => {
+    try {
+      return ok(await listPendingSessions(args));
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
+  },
+
+  addPendingSession: async (args: ChatPendingSession) => {
+    try {
+      await addPendingSession(args);
+      return ok({ added: true });
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
+  },
+
+  removePendingSessions: async (args: { ids: string[] }) => {
+    try {
+      await removePendingSessions(args.ids);
+      return ok({ removed: true });
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
   },
 
   /**

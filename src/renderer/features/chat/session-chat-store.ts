@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { ChatMessage, ChatSessionSummary } from '@shared/chat';
-import { chatDeltaChannel, chatRunChannel } from '@shared/events/chatEvents';
+import type { ChatContextUsage, ChatMessage, ChatSessionSummary } from '@shared/chat';
+import { chatDeltaChannel, chatMessageChannel, chatRunChannel } from '@shared/events/chatEvents';
 import { events, rpc } from '@renderer/lib/ipc';
 
 const HISTORY_PAGE = 400;
@@ -25,9 +25,11 @@ export class SessionChatStore {
   streamThinking = '';
   runError: string | null = null;
   sendPending = false;
+  contextUsage: ChatContextUsage | null = null;
 
   private deltasOff: (() => void) | null = null;
   private runsOff: (() => void) | null = null;
+  private messagesOff: (() => void) | null = null;
   /** Stable event topic. Pending sessions adopt the CLI's own session id when
    * the first run lands, but subscriptions must keep receiving events. */
   private readonly topic: string;
@@ -46,6 +48,21 @@ export class SessionChatStore {
         runInAction(() => {
           if (payload.kind === 'text') this.streamText += payload.text;
           else this.streamThinking += payload.text;
+        });
+      },
+      this.topic
+    );
+    // Final messages (assistant replies, compaction notices) land live instead
+    // of waiting for the end-of-run transcript reload.
+    this.messagesOff = events.on(
+      chatMessageChannel,
+      (payload) => {
+        if (payload.sessionId !== this.topic) return;
+        runInAction(() => {
+          for (const message of payload.messages) {
+            if (this.messages.some((m) => m.id === message.id)) continue;
+            this.messages.push(message);
+          }
         });
       },
       this.topic
@@ -98,8 +115,10 @@ export class SessionChatStore {
   dispose(): void {
     this.deltasOff?.();
     this.runsOff?.();
+    this.messagesOff?.();
     this.deltasOff = null;
     this.runsOff = null;
+    this.messagesOff = null;
   }
 
   async reload(): Promise<void> {
@@ -107,16 +126,25 @@ export class SessionChatStore {
     if (!this.session.file) return;
     this.loading = this.messages.length === 0;
     try {
-      const result = await rpc.chats.getHistory({
-        providerId: this.session.providerId,
-        file: this.session.file,
-      });
+      const [result, usage] = await Promise.all([
+        rpc.chats.getHistory({
+          providerId: this.session.providerId,
+          file: this.session.file,
+        }),
+        rpc.chats.getContextUsage({
+          providerId: this.session.providerId,
+          file: this.session.file,
+        }),
+      ]);
       runInAction(() => {
         if (result.success) {
           this.messages = result.data.messages.slice(-HISTORY_PAGE);
           this.historyError = false;
         } else {
           this.historyError = true;
+        }
+        if (usage.success) {
+          this.contextUsage = usage.data;
         }
       });
     } finally {

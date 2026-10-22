@@ -5,6 +5,7 @@ import { chatDeltaChannel, chatMessageChannel, chatRunChannel } from '@shared/ev
 import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
 import { resolveShell } from '@main/core/pty/spawn-utils';
 import { providerOverrideSettings } from '@main/core/settings/provider-settings-service';
+import { formatCompactNotice } from '@main/core/transcripts/parsers/claude';
 import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
 import { quoteShellArg } from '@main/utils/shellEscape';
@@ -210,7 +211,9 @@ export function isHeadlessRunning(sessionId: string): boolean {
 
 interface ClaudeStreamLine {
   type?: string;
+  subtype?: string;
   session_id?: string;
+  compactMetadata?: { trigger?: string; preTokens?: number; postTokens?: number };
   event?: {
     type?: string;
     delta?: { type?: string; text?: string; thinking?: string };
@@ -273,6 +276,17 @@ function handleClaudeLine(
   onSessionId: (id: string) => void
 ): void {
   if (row.type === 'system' && row.session_id) onSessionId(row.session_id);
+  if (row.type === 'system' && row.subtype === 'compact_boundary') {
+    // Surface compaction live — the transcript reload at run end replays it too.
+    const message: ChatMessage = {
+      id: `hl-compact-${randomUUID()}`,
+      role: 'system',
+      blocks: [{ kind: 'system', text: formatCompactNotice(row.compactMetadata) }],
+      timestamp: new Date().toISOString(),
+    };
+    events.emit(chatMessageChannel, { sessionId: topic, messages: [message] }, topic);
+    return;
+  }
   if (row.type === 'stream_event' && row.event?.type === 'content_block_delta') {
     const delta = row.event.delta;
     if (delta?.type === 'text_delta' && delta.text) emitDelta('text', delta.text);

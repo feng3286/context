@@ -1,4 +1,4 @@
-import { Brain, ChevronRight, User, Wrench } from 'lucide-react';
+import { Brain, ChevronRight, Sparkles, User, Wrench } from 'lucide-react';
 import type { ChatBlock, ChatMessage } from '@shared/chat';
 import { MarkdownRenderer } from '@renderer/lib/ui/markdown-renderer';
 import { cn } from '@renderer/utils/utils';
@@ -90,6 +90,24 @@ function ChatBlockView({ block }: { block: ChatBlock }) {
 
 export const MessageBubble = function MessageBubble({ message }: { message: ChatMessage }) {
   const time = formatTime(message.timestamp);
+
+  // System events (e.g. context compaction) render as centered timeline dividers.
+  if (message.role === 'system') {
+    const text = message.blocks
+      .map((block) => (block.kind === 'system' ? block.text : ''))
+      .filter(Boolean)
+      .join(' · ');
+    return (
+      <div className="flex items-center gap-2 px-6 py-2" title={time}>
+        <div className="h-px flex-1 bg-border" />
+        <span className="flex items-center gap-1.5 text-[11px] whitespace-nowrap text-muted-foreground">
+          <Sparkles className="size-3 shrink-0" />
+          {text}
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+    );
+  }
 
   if (message.role === 'user') {
     return (

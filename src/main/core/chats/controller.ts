@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
+import { homedir } from 'node:os';
 import path from 'node:path';
-import type { ChatMessagesResult, ChatPendingSession } from '@shared/chat';
+import type { ChatCommandInfo, ChatMessagesResult, ChatPendingSession } from '@shared/chat';
 import { createRPCController } from '@shared/ipc/rpc';
 import { err, ok } from '@shared/result';
 import {
@@ -22,6 +23,7 @@ import {
 import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
 import { transcriptService } from '@main/core/transcripts/transcript-service';
 import { getChatTabs, setChatTabs } from './chat-tab-registry';
+import { readContextUsage } from './context-usage';
 
 /**
  * Chat center RPC: session discovery over the providers' own transcript
@@ -141,6 +143,27 @@ export const chatsController = createRPCController({
     return ok(null);
   },
 
+  /** Approximate context fill for the meter, read from the transcript tail. */
+  getContextUsage: async (args: { providerId: string; file: string }) => {
+    try {
+      const allowed =
+        args.file.startsWith(claudeTranscriptRoot()) || args.file.startsWith(codexTranscriptRoot());
+      if (!allowed) return err({ type: 'forbidden' as const });
+      return ok(await readContextUsage(args.providerId, args.file));
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
+  },
+
+  /** Slash commands for the chat input autocomplete: built-ins + custom files. */
+  listCommands: async (args: { providerId: string; cwd?: string }) => {
+    try {
+      return ok(await listChatCommands(args.providerId, args.cwd));
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
+  },
+
   /** Open agent chat tabs per task (persisted UI state). */
   getChatTabs: async () => {
     try {
@@ -161,3 +184,89 @@ export const chatsController = createRPCController({
     }
   },
 });
+
+/** Built-in slash commands worth exposing in headless chat (passed through). */
+const BUILTIN_COMMANDS: Record<string, ChatCommandInfo[]> = {
+  claude: [
+    { name: 'compact', description: 'Compact the conversation context', source: 'builtin' },
+    { name: 'context', description: 'Show context usage breakdown', source: 'builtin' },
+    { name: 'cost', description: 'Show token usage and cost', source: 'builtin' },
+    { name: 'model', description: 'Switch the AI model', source: 'builtin' },
+    { name: 'status', description: 'Show session and system status', source: 'builtin' },
+    { name: 'memory', description: 'Edit CLAUDE.md memory files', source: 'builtin' },
+    { name: 'init', description: 'Generate a project CLAUDE.md', source: 'builtin' },
+    { name: 'review', description: 'Request a code review', source: 'builtin' },
+  ],
+  codex: [{ name: 'init', description: 'Generate an AGENTS.md for the repo', source: 'builtin' }],
+};
+
+async function listChatCommands(providerId: string, cwd?: string): Promise<ChatCommandInfo[]> {
+  const out: ChatCommandInfo[] = [...(BUILTIN_COMMANDS[providerId] ?? [])];
+  const dirs: string[] = [];
+  if (providerId === 'claude') {
+    const claudeDir = process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude');
+    dirs.push(path.join(claudeDir, 'commands'));
+    if (cwd) dirs.push(path.join(cwd, '.claude', 'commands'));
+  } else if (providerId === 'codex') {
+    dirs.push(path.join(homedir(), '.codex', 'prompts'));
+  }
+
+  for (const dir of dirs) {
+    let names: string[];
+    try {
+      names = await fs.readdir(dir);
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      const file = path.join(dir, name);
+      let stat;
+      try {
+        stat = await fs.stat(file);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) {
+        // One level of namespacing, mirroring how the CLIs expose subfolders.
+        let nested: string[];
+        try {
+          nested = (await fs.readdir(file)).filter((f) => f.endsWith('.md'));
+        } catch {
+          continue;
+        }
+        for (const n of nested) {
+          out.push({
+            name: `${name}:${n.slice(0, -3)}`,
+            description: await commandDescription(path.join(file, n)),
+            source: 'custom',
+          });
+        }
+        continue;
+      }
+      if (!name.endsWith('.md')) continue;
+      out.push({
+        name: name.slice(0, -3),
+        description: await commandDescription(file),
+        source: 'custom',
+      });
+    }
+  }
+  return out;
+}
+
+async function commandDescription(file: string): Promise<string | undefined> {
+  try {
+    const buf = Buffer.alloc(2048);
+    const fh = await fs.open(file, 'r');
+    try {
+      const { bytesRead } = await fh.read(buf, 0, buf.length, 0);
+      const head = buf.toString('utf8', 0, bytesRead);
+      const match = head.match(/^description:\s*(.+)$/m);
+      return match?.[1]?.trim() || undefined;
+    } finally {
+      await fh.close();
+    }
+  } catch {
+    return undefined;
+  }
+}

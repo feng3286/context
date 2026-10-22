@@ -41,10 +41,23 @@ interface ClaudeUsage {
 
 interface ClaudeLine {
   type?: string;
+  subtype?: string;
   isSidechain?: boolean;
   uuid?: string;
   timestamp?: string;
   message?: { role?: string; content?: string | ClaudeBlock[]; usage?: ClaudeUsage };
+  compactMetadata?: { trigger?: string; preTokens?: number; postTokens?: number };
+}
+
+/** Human-readable notice for a context compaction boundary line. */
+export function formatCompactNotice(meta?: {
+  trigger?: string;
+  preTokens?: number;
+  postTokens?: number;
+}): string {
+  if (!meta) return 'Context compacted';
+  const fmt = (n?: number) => (n != null ? `${Math.round(n / 100) / 10}k` : '?');
+  return `Context compacted (${meta.trigger ?? 'auto'}): ${fmt(meta.preTokens)} → ${fmt(meta.postTokens)} tokens`;
 }
 
 /** Injected/user-invisible payloads that must not render as user messages. */
@@ -79,6 +92,17 @@ export const claudeParser: TranscriptParser = {
     // Sidechain rows are subagent internals — skip to keep the timeline readable.
     if (row.isSidechain) return null;
     const ts = row.timestamp ?? new Date(0).toISOString();
+
+    if (row.type === 'system' && row.subtype === 'compact_boundary') {
+      return [
+        {
+          id: row.uuid ?? `sys-${ts}`,
+          role: 'system',
+          blocks: [{ kind: 'system', text: formatCompactNotice(row.compactMetadata) }],
+          timestamp: ts,
+        },
+      ];
+    }
 
     if (row.type === 'user') {
       const content = row.message?.content;

@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatMessage, ChatSessionSummary } from '@shared/chat';
+import type { ChatCommandInfo, ChatMessage, ChatSessionSummary } from '@shared/chat';
+import { rpc } from '@renderer/lib/ipc';
 import { Button } from '@renderer/lib/ui/button';
 import { Spinner } from '@renderer/lib/ui/spinner';
 import { cn } from '@renderer/utils/utils';
@@ -99,7 +100,16 @@ export const ChatTabView = observer(function ChatTabView({
         projectDir={projectDir}
       />
       {sessionsStore.selectedExternal && externalChat ? (
-        <ExternalSessionPane key={externalChat.session.file} store={externalChat} />
+        <ExternalSessionPane
+          key={externalChat.session.file}
+          store={externalChat}
+          onNewSession={() => {
+            sessionsStore.createLocalSession(
+              chatTab.providerId,
+              sessionsStore.selectedExternal?.cwd ?? workDir
+            );
+          }}
+        />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
           <MessageSquare className="size-6 text-muted-foreground" />
@@ -284,12 +294,17 @@ function RailSessionItem({
 /** A session from the rail — headless send with streaming replies. */
 const ExternalSessionPane = observer(function ExternalSessionPane({
   store,
+  onNewSession,
 }: {
   store: SessionChatStore;
+  onNewSession?: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const [text, setText] = useState('');
+  const [commands, setCommands] = useState<ChatCommandInfo[]>([]);
+  const [highlight, setHighlight] = useState(0);
+  const [slashHidden, setSlashHidden] = useState(false);
   const session = store.session;
   const canSend = supportsHeadless(session.providerId) && !!session.cwd;
 
@@ -298,14 +313,64 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
     if (el && nearBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [store.messages.length, store.streamText, store.streamThinking, store]);
 
+  // Agent slash commands (built-ins + custom files) for the autocomplete menu.
+  useEffect(() => {
+    let cancelled = false;
+    void rpc.chats
+      .listCommands({ providerId: session.providerId, cwd: session.cwd || undefined })
+      .then((result) => {
+        if (cancelled || !result.success) return;
+        const list = [...result.data];
+        if (onNewSession) {
+          list.unshift({
+            name: 'new',
+            description: 'Start a fresh session in this tab',
+            source: 'app',
+          });
+        }
+        setCommands(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [session.providerId, session.cwd, onNewSession]);
+
+  // Slash autocomplete while the whole input is a `/query` fragment; a trailing
+  // space (after completing) no longer matches, so Enter then sends.
+  const slashQuery = text.match(/^\/([a-zA-Z0-9:_-]*)$/)?.[1] ?? null;
+  const slashMatches = useMemo(() => {
+    if (slashQuery == null) return [];
+    const query = slashQuery.toLowerCase();
+    return commands.filter((c) => c.name.toLowerCase().startsWith(query)).slice(0, 8);
+  }, [commands, slashQuery]);
+  const slashOpen = slashMatches.length > 0 && !slashHidden;
+
+  useEffect(() => {
+    setHighlight(0);
+  }, [slashQuery]);
+
+  const completeSlash = (cmd: ChatCommandInfo) => {
+    setText(`/${cmd.name} `);
+  };
+
   const send = async () => {
     const value = text.trim();
     if (!value || store.running || store.sendPending) return;
+    if (value === '/new' && onNewSession) {
+      setText('');
+      onNewSession();
+      return;
+    }
     if (await store.send(value)) setText('');
   };
 
   const showStream =
     store.running || store.streamText.length > 0 || store.streamThinking.length > 0;
+
+  const usage = store.contextUsage;
+  const usagePct = usage?.contextWindow ? usage.tokens / usage.contextWindow : 0;
+  const fmtTokens = (n: number) => (n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -313,6 +378,22 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
         <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
           {session.cwd || 'unknown directory'}
         </span>
+        {usage ? (
+          <span
+            title="Approximate context window usage (from the transcript tail)"
+            className={cn(
+              'shrink-0 rounded px-1.5 py-px text-[10px] font-medium',
+              usagePct > 0.95
+                ? 'bg-red-500/15 text-red-500'
+                : usagePct > 0.8
+                  ? 'bg-amber-500/15 text-amber-500'
+                  : 'bg-background-1 text-muted-foreground'
+            )}
+          >
+            ctx {fmtTokens(usage.tokens)}
+            {usage.contextWindow ? `/${fmtTokens(usage.contextWindow)}` : ''}
+          </span>
+        ) : null}
         {store.running ? <Spinner className="size-3" /> : null}
       </div>
       <div
@@ -352,21 +433,73 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
         </div>
       ) : null}
       <div className="shrink-0 border-t border-border p-2">
+        {slashOpen ? (
+          <div className="mb-1 overflow-hidden rounded-lg border border-border bg-background-1 shadow-md">
+            {slashMatches.map((cmd, i) => (
+              <button
+                key={`${cmd.source}:${cmd.name}`}
+                type="button"
+                className={cn(
+                  'flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-xs',
+                  i === highlight ? 'bg-background-2' : ''
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  completeSlash(cmd);
+                }}
+                onMouseEnter={() => setHighlight(i)}
+              >
+                <span className="shrink-0 font-medium">/{cmd.name}</span>
+                {cmd.description ? (
+                  <span className="truncate text-muted-foreground">{cmd.description}</span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="flex items-end gap-2 rounded-lg border border-border bg-background-1 px-2 py-1.5">
           <AutoResizingTextarea
             rows={1}
             value={text}
             placeholder={
               canSend
-                ? 'Send a message…'
+                ? 'Send a message… ( / for commands )'
                 : session.cwd
                   ? 'Headless chat is not available for this provider'
                   : 'Cannot send — the session directory is unknown'
             }
             disabled={!canSend}
             className="max-h-40 min-h-6 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              setSlashHidden(false);
+            }}
             onKeyDown={(e) => {
+              if (slashOpen) {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setHighlight((h) => (h + 1) % slashMatches.length);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setHighlight((h) => (h - 1 + slashMatches.length) % slashMatches.length);
+                  return;
+                }
+                if (
+                  e.key === 'Tab' ||
+                  (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing)
+                ) {
+                  e.preventDefault();
+                  completeSlash(slashMatches[highlight] ?? slashMatches[0]);
+                  return;
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setSlashHidden(true);
+                  return;
+                }
+              }
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 void send();

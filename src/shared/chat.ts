@@ -6,13 +6,29 @@
  * transcript files remain the single source of truth.
  */
 
-export type ChatRole = 'user' | 'assistant' | 'tool';
+export type ChatRole = 'user' | 'assistant' | 'tool' | 'system';
 
 export type ChatBlock =
   | { kind: 'text'; text: string }
   | { kind: 'thinking'; text: string }
   | { kind: 'tool_use'; name: string; input?: unknown; toolUseId: string }
-  | { kind: 'tool_result'; toolUseId: string; content: string; isError?: boolean };
+  | { kind: 'tool_result'; toolUseId: string; content: string; isError?: boolean }
+  /** Provider system event (e.g. context compaction) rendered as a divider. */
+  | { kind: 'system'; text: string };
+
+/** A slash command offered by the chat input autocomplete. */
+export interface ChatCommandInfo {
+  /** Without the leading slash. */
+  name: string;
+  description?: string;
+  source: 'builtin' | 'custom' | 'app';
+}
+
+/** Approximate context fill of a session, read from its transcript tail. */
+export interface ChatContextUsage {
+  tokens: number;
+  contextWindow?: number;
+}
 
 export interface ChatMessage {
   /** Stable within one transcript file (provider-native id, call id or line ordinal). */

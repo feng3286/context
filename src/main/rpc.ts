@@ -1,6 +1,7 @@
 import { createRPCRouter } from '../shared/ipc/rpc';
 import { accountController } from './core/account/controller';
 import { appController } from './core/app/controller';
+import { chatsController } from './core/chats/controller';
 import { conversationController } from './core/conversations/controller';
 import { dependenciesController } from './core/dependencies/controller';
 import { editorBufferController } from './core/editor/controller';
@@ -58,6 +59,7 @@ export const rpcRouter = createRPCRouter({
   conversations: conversationController,
   terminals: terminalsController,
   transcripts: transcriptsController,
+  chats: chatsController,
   git: gitController,
   dependencies: dependenciesController,
   mcp: mcpController,

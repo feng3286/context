@@ -36,3 +36,21 @@ export interface ChatMessagesResult {
   /** True when older messages exist beyond the returned window. */
   hasMore: boolean;
 }
+
+/**
+ * One entry in the chat center's session list, discovered by scanning the
+ * providers' own transcript files (no app-side session registry).
+ */
+export interface ChatSessionSummary {
+  /** The provider's own session id (claude session uuid / codex rollout uuid). */
+  sessionId: string;
+  providerId: string;
+  /** Working directory the session ran in — headless resume must spawn here. */
+  cwd: string;
+  /** First user message (truncated) — the de-facto session title. */
+  title: string;
+  /** Last file modification time (epoch ms). */
+  updatedAt: number;
+  /** Absolute transcript path (provider-root validated before use). */
+  file: string;
+}

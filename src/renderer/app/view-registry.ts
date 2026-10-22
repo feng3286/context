@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import { homeView } from '@renderer/app/home-view';
+import { chatCenterView } from '@renderer/features/chat/chat-center/chat-center-view';
 import { mcpView } from '@renderer/features/mcp/mcp-view';
 import { projectDetailView } from '@renderer/features/projects/project-detail-view';
 import { projectView } from '@renderer/features/projects/view';
@@ -13,6 +14,7 @@ import { workspaceListView } from '@renderer/features/workspaces/workspace-list-
 export const views = {
   home: workspaceListView,
   workspace: workspaceDetailView,
+  chat: chatCenterView,
   skills: skillsView,
   mcp: mcpView,
   project: projectView,

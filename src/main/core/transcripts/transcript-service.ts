@@ -104,6 +104,33 @@ class TranscriptService {
     return { ...tailSlice(state.messages, opts), capability: 'transcript' };
   }
 
+  /**
+   * Parse one transcript file directly (chat center history for sessions that
+   * are not app-owned conversations). The file path comes from the session
+   * index, which discovered it under the provider's own config directory.
+   */
+  async readSessionFile(providerId: string, file: string): Promise<ChatMessage[]> {
+    const parser = getParser(providerId);
+    if (!parser) return [];
+    try {
+      const stat = await fs.stat(file);
+      if (!stat.isFile()) return [];
+      const buf = Buffer.alloc(stat.size);
+      const fh = await fs.open(file, 'r');
+      let text: string;
+      try {
+        await fh.read(buf, 0, buf.length, 0);
+        text = buf.toString('utf8');
+      } finally {
+        await fh.close();
+      }
+      return capMessages(parseLines(parser, text)).messages;
+    } catch (e) {
+      log.warn('transcripts: readSessionFile failed', { file, error: String(e) });
+      return [];
+    }
+  }
+
   /** Resolve + fully parse a transcript without registering a watcher. */
   private async readOnce(
     ctx: TranscriptContext,

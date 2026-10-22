@@ -83,6 +83,18 @@ export class PtySessionRegistry {
   }
 
   /**
+   * Whether any live PTY owns a conversation session whose provider session id
+   * matches. Used to prevent two writers to the same transcript: headless chat
+   * must not drive a session whose interactive TUI is still running.
+   */
+  hasConversationSession(providerSessionId: string): boolean {
+    for (const key of this.ptyMap.keys()) {
+      if (key.startsWith('conversation:') && key.endsWith(`:${providerSessionId}`)) return true;
+    }
+    return false;
+  }
+
+  /**
    * Atomically snapshot the ring buffer and register a consumer for future
    * IPC delivery. Returns the current ring buffer without deleting it.
    * Safe: runs in one synchronous tick — no PTY data can arrive between

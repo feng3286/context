@@ -22,7 +22,7 @@ export interface SpawnParams {
  */
 let cachedShell: string | undefined;
 
-function resolveShell(): string {
+export function resolveShell(): string {
   if (cachedShell) return cachedShell;
   cachedShell = doResolveShell();
   return cachedShell;

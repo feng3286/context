@@ -9,7 +9,7 @@ import { Spinner } from '@renderer/lib/ui/spinner';
 import { cn } from '@renderer/utils/utils';
 import { MessageBubble } from './message-bubble';
 
-const AutoResizingTextarea = forwardRef<
+export const AutoResizingTextarea = forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
 >(function AutoResizingTextarea(props, ref) {

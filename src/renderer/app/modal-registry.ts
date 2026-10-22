@@ -1,3 +1,4 @@
+import { CreateChatTabModal } from '@renderer/features/chat/create-chat-tab-modal';
 import { IntegrationSetupModal } from '@renderer/features/integrations/integration-setup-modal';
 import { McpModal } from '@renderer/features/mcp/components/McpModal';
 import { AddProjectModal } from '@renderer/features/projects/components/add-project-modal/add-project-modal';
@@ -45,6 +46,7 @@ export const modalRegistry = {
   confirmActionModal: createModal(ConfirmActionDialog, { size: 'xs' }),
   alertWarningDialog: createModal(AlertWarningDialog, { size: 'xs' }),
   createConversationModal: createModal(CreateConversationModal),
+  createChatTabModal: createModal(CreateChatTabModal, { size: 'sm' }),
   feedbackModal: createModal(FeedbackModal),
   mcpServerModal: createModal(McpModal),
   createSkillModal: createModal(CreateSkillModal),

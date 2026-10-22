@@ -20,7 +20,6 @@ import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
 import { resolveSpawnParams } from '@main/core/pty/spawn-utils';
 import { killTmuxSession, makeTmuxSessionName } from '@main/core/pty/tmux-session-name';
 import { appSettingsService } from '@main/core/settings/settings-service';
-import { transcriptService } from '@main/core/transcripts/transcript-service';
 import type { ExecFn } from '@main/core/utils/exec';
 import { events } from '@main/lib/events';
 import { log } from '@main/lib/logger';
@@ -34,7 +33,6 @@ const MAX_RESPAWNS = 2;
 export class LocalConversationProvider implements ConversationProvider {
   private sessions = new Map<string, Pty>();
   private knownSessionIds = new Set<string>();
-  private spawnCwds = new Map<string, string>();
   private respawnCounts = new Map<string, number>();
   private readonly taskWorkDir: string;
   private readonly taskId: string;
@@ -78,7 +76,6 @@ export class LocalConversationProvider implements ConversationProvider {
     if (this.sessions.has(sessionId)) return;
 
     const cwd = conversation.workDir ?? this.taskWorkDir;
-    this.spawnCwds.set(conversation.id, cwd);
 
     await claudeTrustService.maybeAutoTrustLocal({
       providerId: conversation.providerId,
@@ -176,8 +173,6 @@ export class LocalConversationProvider implements ConversationProvider {
         taskId: conversation.taskId,
         exitCode,
       });
-      // Stop polling the transcript (parsed history stays available for replay).
-      transcriptService.stop(sessionId);
       if (shouldRespawn && !this.tmux) {
         const count = (this.respawnCounts.get(sessionId) ?? 0) + 1;
         this.respawnCounts.set(sessionId, count);
@@ -210,24 +205,11 @@ export class LocalConversationProvider implements ConversationProvider {
 
     ptySessionRegistry.register(sessionId, pty);
     this.sessions.set(sessionId, pty);
-    // Follow the CLI's own transcript so the chat view can render this session.
-    void transcriptService.start({
-      sessionId,
-      taskId: conversation.taskId,
-      conversationId: conversation.id,
-      providerId: effectiveProviderId,
-      workDir: cwd,
-      sinceEpochMs: Date.now(),
-    });
     capture('agent_run_started', {
       provider: effectiveProviderId,
       task_id: conversation.taskId,
       conversation_id: conversation.id,
     });
-  }
-
-  getSpawnCwd(conversationId: string): string | undefined {
-    return this.spawnCwds.get(conversationId);
   }
 
   /**

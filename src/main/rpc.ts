@@ -28,7 +28,6 @@ import { sshController } from './core/ssh/controller';
 import { taskController } from './core/tasks/controller';
 import { telemetryController } from './core/telemetry/controller';
 import { terminalsController } from './core/terminals/controller';
-import { transcriptsController } from './core/transcripts/controller';
 import { updateController } from './core/updates/controller';
 import { viewStateController } from './core/view-state/controller';
 import { workspaceController } from './core/workspaces/controller';
@@ -58,7 +57,6 @@ export const rpcRouter = createRPCRouter({
   tasks: taskController,
   conversations: conversationController,
   terminals: terminalsController,
-  transcripts: transcriptsController,
   chats: chatsController,
   git: gitController,
   dependencies: dependenciesController,

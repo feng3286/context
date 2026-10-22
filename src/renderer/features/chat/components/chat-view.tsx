@@ -1,6 +1,6 @@
 import {
   Loader2,
-  MessageSquareOff,
+  MessageSquare,
   Plus,
   RefreshCw,
   SendHorizontal,
@@ -10,18 +10,11 @@ import {
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatMessage, ChatSessionSummary } from '@shared/chat';
-import type { ConversationStore } from '@renderer/features/tasks/conversations/conversation-manager';
-import { rpc } from '@renderer/lib/ipc';
-import { pastePromptInjection } from '@renderer/lib/pty/prompt-injection';
 import { Button } from '@renderer/lib/ui/button';
 import { Spinner } from '@renderer/lib/ui/spinner';
 import { cn } from '@renderer/utils/utils';
-import {
-  describeSendError,
-  SessionChatStore,
-  supportsHeadlessChat,
-  TaskSessionsStore,
-} from '../session-chat-store';
+import type { ChatTab } from '../chat-tabs-store';
+import { SessionChatStore, TaskSessionsStore } from '../session-chat-store';
 import { MessageBubble } from './message-bubble';
 
 export const AutoResizingTextarea = forwardRef<
@@ -39,101 +32,6 @@ export const AutoResizingTextarea = forwardRef<
         el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
       }}
     />
-  );
-});
-
-const ChatInputBar = observer(function ChatInputBar({
-  conversation,
-}: {
-  conversation: ConversationStore;
-}) {
-  const [text, setText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
-
-  const send = async () => {
-    const value = text.trim();
-    if (!value || sending) return;
-    setSendError(null);
-    setText('');
-    setSending(true);
-    try {
-      if (conversation.session.status === 'ready') {
-        // TUI alive: inject into the PTY so the terminal stays authoritative.
-        await pastePromptInjection({
-          providerId: conversation.data.providerId,
-          text: value,
-          sendInput: async (data) => {
-            const result = await rpc.pty.sendInput(conversation.session.sessionId, data);
-            // Failing loudly keeps the message from being silently dropped.
-            if (!result.success) throw new Error('send_failed');
-          },
-        });
-        conversation.setWorking();
-      } else {
-        // No live TUI: drive the CLI headlessly with --resume.
-        const result = await rpc.chats.sendToConversation({
-          taskId: conversation.taskId,
-          conversationId: conversation.data.id,
-          text: value,
-        });
-        if (!result.success) {
-          setText((prev) => (prev ? prev : value));
-          setSendError(describeSendError(result.error));
-        } else {
-          conversation.setWorking();
-        }
-      }
-    } catch {
-      setText((prev) => (prev ? prev : value));
-      setSendError('Message not delivered — the agent terminal is not running.');
-    } finally {
-      setSending(false);
-      textareaRef.current?.focus();
-    }
-  };
-
-  return (
-    <div className="shrink-0 border-t border-border p-2">
-      <div className="flex items-end gap-2 rounded-lg border border-border bg-background-1 px-2 py-1.5">
-        <AutoResizingTextarea
-          ref={textareaRef}
-          rows={1}
-          value={text}
-          placeholder="Send a message to the agent…"
-          className="max-h-40 min-h-6 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-7 shrink-0"
-          disabled={!text.trim() || sending}
-          onClick={() => void send()}
-        >
-          {sending ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <SendHorizontal className="size-3.5" />
-          )}
-        </Button>
-      </div>
-      {sendError ? <div className="pt-1 text-[10px] text-red-500">{sendError}</div> : null}
-      <div className="pt-1 text-[10px] text-muted-foreground">
-        Enter to send · Shift+Enter for a new line
-      </div>
-    </div>
   );
 });
 
@@ -170,65 +68,46 @@ function formatRelative(ms: number): string {
 }
 
 /**
- * Chat mode of a task conversation. Left rail: the sessions recorded under the
- * task's working directory (the conversation itself pinned first). Right: the
- * selected session — the conversation's own transcript with PTY input, or an
- * external session driven headlessly with streaming replies.
+ * One agent chat tab: left rail lists the agent's sessions recorded under the
+ * task's working directory, right pane chats with the selected session
+ * headlessly. Fully decoupled from conversation (TUI) tabs — nothing here
+ * touches a terminal PTY.
  */
-export const ChatView = observer(function ChatView({
-  conversation,
-  projectDir,
+export const ChatTabView = observer(function ChatTabView({
+  chatTab,
   workDir,
-  onDeleteConversation,
+  projectDir,
 }: {
-  conversation: ConversationStore;
+  chatTab: ChatTab;
+  workDir: string;
   projectDir?: string;
-  workDir?: string;
-  /** Deletes the task conversation itself (the pinned "this task" entry). */
-  onDeleteConversation?: () => Promise<void>;
 }) {
   const sessionsStore = useMemo(() => new TaskSessionsStore(), []);
   const externalChat = sessionsStore.externalChat;
-
-  useEffect(() => {
-    conversation.ensureChat();
-  }, [conversation]);
 
   useEffect(() => {
     if (workDir) void sessionsStore.load(workDir);
     return () => sessionsStore.dispose();
   }, [sessionsStore, workDir]);
 
-  if (conversation.chat?.capability === 'unsupported' && !sessionsStore.selectedExternal) {
-    return (
-      <div className="flex h-full flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <MessageSquareOff className="size-6 text-muted-foreground" />
-        <div className="text-sm font-medium">
-          Structured chat is not available for {conversation.data.providerId} yet
-        </div>
-        <div className="max-w-xs text-xs text-muted-foreground">
-          This agent does not expose a parseable session transcript. Use the terminal to interact
-          with it.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full min-h-0 flex-1 bg-background-secondary-1">
-      {workDir ? (
-        <SessionsRail
-          store={sessionsStore}
-          conversation={conversation}
-          workDir={workDir}
-          projectDir={projectDir}
-          onDeleteConversation={onDeleteConversation}
-        />
-      ) : null}
+      <SessionsRail
+        store={sessionsStore}
+        chatTab={chatTab}
+        workDir={workDir}
+        projectDir={projectDir}
+      />
       {sessionsStore.selectedExternal && externalChat ? (
         <ExternalSessionPane key={externalChat.session.file} store={externalChat} />
       ) : (
-        <ConversationPane conversation={conversation} />
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+          <MessageSquare className="size-6 text-muted-foreground" />
+          <div className="text-sm font-medium">No session selected</div>
+          <div className="max-w-xs text-xs text-muted-foreground">
+            Create a new session with the + button in the sidebar, or pick one from the list.
+          </div>
+        </div>
       )}
     </div>
   );
@@ -236,21 +115,17 @@ export const ChatView = observer(function ChatView({
 
 const SessionsRail = observer(function SessionsRail({
   store,
-  conversation,
+  chatTab,
   workDir,
   projectDir,
-  onDeleteConversation,
 }: {
   store: TaskSessionsStore;
-  conversation: ConversationStore;
+  chatTab: ChatTab;
   workDir: string;
   projectDir?: string;
-  onDeleteConversation?: () => Promise<void>;
 }) {
-  // Claude's file name IS the conversation id — dedupe the pinned item.
-  const external = store.railSessions.filter(
-    (s) => !(s.providerId === conversation.data.providerId && s.sessionId === conversation.data.id)
-  );
+  // Only this tab's agent sessions — one tab per agent.
+  const external = store.railSessions.filter((s) => s.providerId === chatTab.providerId);
   const [choosingContext, setChoosingContext] = useState(false);
   const contextOptions = [
     ...(projectDir && projectDir.toLowerCase() !== workDir.toLowerCase()
@@ -301,7 +176,7 @@ const SessionsRail = observer(function SessionsRail({
               className="block w-full truncate rounded px-1.5 py-1 text-left text-xs hover:bg-background-1/80"
               onClick={() => {
                 setChoosingContext(false);
-                store.createLocalSession(conversation.data.providerId, option.path);
+                store.createLocalSession(chatTab.providerId, option.path);
               }}
             >
               {option.label}
@@ -320,12 +195,6 @@ const SessionsRail = observer(function SessionsRail({
         </button>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
-        <PinnedSessionItem
-          conversation={conversation}
-          active={!store.selectedExternal}
-          onSelect={() => store.selectExternal(null)}
-          onDelete={onDeleteConversation}
-        />
         {external.map((session) => (
           <RailSessionItem
             key={session.sessionId}
@@ -337,7 +206,7 @@ const SessionsRail = observer(function SessionsRail({
         ))}
         {store.loaded && external.length === 0 ? (
           <div className="px-2 py-3 text-[10px] leading-relaxed text-muted-foreground/70">
-            No other sessions found under this working directory.
+            No sessions found under this working directory yet.
           </div>
         ) : null}
       </div>
@@ -412,194 +281,7 @@ function RailSessionItem({
   );
 }
 
-/**
- * The task conversation's own entry, pinned first. Deleting it deletes the
- * whole conversation (tab + terminal + transcript projection).
- */
-const PinnedSessionItem = observer(function PinnedSessionItem({
-  conversation,
-  active,
-  onSelect,
-  onDelete,
-}: {
-  conversation: ConversationStore;
-  active: boolean;
-  onSelect: () => void;
-  onDelete?: () => Promise<void>;
-}) {
-  // Two-step delete: arm on first click, confirm on the second.
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!armed) return;
-    const timer = setTimeout(() => setArmed(false), 2500);
-    return () => clearTimeout(timer);
-  }, [armed]);
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => {
-        setArmed(false);
-        onSelect();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setArmed(false);
-          onSelect();
-        }
-      }}
-      className={cn(
-        'group relative mb-0.5 flex w-full cursor-pointer flex-col gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors',
-        active ? 'bg-background-1 shadow-sm' : 'hover:bg-background-1/60'
-      )}
-    >
-      <span className="line-clamp-2 pr-5 text-xs leading-snug">
-        {conversation.data.title || 'Current conversation'}
-      </span>
-      <span className="text-[10px] text-muted-foreground">
-        <span className="rounded bg-background-1 px-1 py-px font-medium">
-          {conversation.data.providerId}
-        </span>
-        {' · this task'}
-      </span>
-      {onDelete ? (
-        <>
-          {armed ? (
-            <span className="pointer-events-none absolute right-6 top-1.5 rounded bg-red-500/10 px-1 py-px text-[9px] whitespace-nowrap text-red-500">
-              deletes the whole conversation
-            </span>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'absolute right-1 top-1 size-5',
-              armed ? 'text-red-500 opacity-100' : 'opacity-0 group-hover:opacity-100'
-            )}
-            aria-label={armed ? 'Confirm delete' : 'Delete conversation'}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (armed) void onDelete();
-              else setArmed(true);
-            }}
-          >
-            <Trash2 className="size-3" />
-          </Button>
-        </>
-      ) : null}
-    </div>
-  );
-});
-
-/** The conversation's own session — transcript projection + PTY input. */
-const ConversationPane = observer(function ConversationPane({
-  conversation,
-}: {
-  conversation: ConversationStore;
-}) {
-  const chat = conversation.chat;
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const nearBottomRef = useRef(true);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el && nearBottomRef.current) el.scrollTop = el.scrollHeight;
-  }, [chat?.messages.length, chat]);
-
-  if (!chat) {
-    return (
-      <div className="flex min-h-0 flex-1 items-center justify-center">
-        <Spinner className="size-5" />
-      </div>
-    );
-  }
-
-  const awaitingPermission =
-    conversation.status === 'awaiting-input' && conversation.lastNotificationType != null;
-
-  return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-      {awaitingPermission ? (
-        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-amber-500/10 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400">
-          <span className="flex-1">
-            The agent is waiting for input or permission — handle it in the terminal.
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={() => conversation.setViewMode('terminal')}
-          >
-            Open terminal
-          </Button>
-        </div>
-      ) : null}
-      <div
-        ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-        className="min-h-0 flex-1 overflow-y-auto py-2"
-      >
-        {chat.hasOlder ? (
-          <div className="flex justify-center pb-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-xs text-muted-foreground"
-              disabled={chat.loading}
-              onClick={() => void chat.loadOlder()}
-            >
-              Load earlier messages
-            </Button>
-          </div>
-        ) : null}
-        {chat.messages.length === 0 && chat.loading ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
-            <Spinner className="size-4" />
-            Loading conversation…
-          </div>
-        ) : null}
-        {chat.messages.length === 0 && !chat.loading && chat.capability === 'pending' ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <div className="text-xs text-muted-foreground">
-              Waiting for the agent to write its session transcript…
-            </div>
-            <div className="max-w-xs text-[11px] text-muted-foreground/70">
-              The transcript appears once the agent processes its first message. If you already sent
-              one, it may not have reached the agent — check the terminal.
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => conversation.setViewMode('terminal')}
-            >
-              Open terminal
-            </Button>
-          </div>
-        ) : null}
-        {chat.messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
-        {chat.running || chat.streamText || chat.streamThinking ? (
-          <StreamingBubble text={chat.streamText} thinking={chat.streamThinking} />
-        ) : null}
-      </div>
-      {chat.runError ? (
-        <div className="mx-3 mb-1 rounded-md bg-red-500/10 px-3 py-1.5 text-xs text-red-500">
-          {chat.runError}
-        </div>
-      ) : null}
-      <ChatInputBar conversation={conversation} />
-    </div>
-  );
-});
-
-/** An external session from the rail — headless send with streaming replies. */
+/** A session from the rail — headless send with streaming replies. */
 const ExternalSessionPane = observer(function ExternalSessionPane({
   store,
 }: {
@@ -609,7 +291,7 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
   const nearBottomRef = useRef(true);
   const [text, setText] = useState('');
   const session = store.session;
-  const canSend = supportsHeadlessChat(session.providerId) && !!session.cwd;
+  const canSend = supportsHeadless(session.providerId) && !!session.cwd;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -726,31 +408,6 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
   );
 });
 
-/** Small helper reused by the toolbar toggle. */
-export function ToggleOption({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors',
-        active
-          ? 'bg-background-1 text-foreground shadow-sm'
-          : 'text-muted-foreground hover:text-foreground'
-      )}
-    >
-      {icon}
-      {label}
-    </button>
-  );
+function supportsHeadless(providerId: string): boolean {
+  return providerId === 'claude' || providerId === 'codex';
 }

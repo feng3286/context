@@ -1,9 +1,9 @@
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { MessageSquare } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
-import { ChatTerminalToggle } from '@renderer/features/chat/components/chat-terminal-toggle';
-import { ChatView } from '@renderer/features/chat/components/chat-view';
+import { useEffect, useMemo, useState } from 'react';
+import { ChatTabsStore } from '@renderer/features/chat/chat-tabs-store';
+import { ChatTabView } from '@renderer/features/chat/components/chat-view';
 import { asMounted, getProjectStore } from '@renderer/features/projects/stores/project-selectors';
 import { useAppSettingsKey } from '@renderer/features/settings/use-app-settings-key';
 import { useIsActiveTask } from '@renderer/features/tasks/hooks/use-is-active-task';
@@ -27,6 +27,7 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
   const provisioned = useProvisionedTask();
   const conversationTabs = provisioned.taskView.conversationTabs;
   const showCreateConversationModal = useShowModal('createConversationModal');
+  const showCreateChatTabModal = useShowModal('createChatTabModal');
   const { value: keyboard } = useAppSettingsKey('keyboard');
   const isActive = useIsActiveTask(taskId);
   const [isPanelFocused, setIsPanelFocused] = useState(false);
@@ -37,6 +38,11 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
   const newConversationHotkey = getEffectiveHotkey('newConversation', keyboard);
 
   const autoFocus = isActive && provisioned.taskView.focusedRegion === 'main';
+
+  const chatTabs = useMemo(() => new ChatTabsStore(), []);
+  useEffect(() => {
+    void chatTabs.load(taskId);
+  }, [chatTabs, taskId]);
 
   const handleCreate = () =>
     showCreateConversationModal({
@@ -62,58 +68,58 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
     };
   }, [conversationTabs, isActive]);
 
+  const activeChatTab = chatTabs.activeTab;
+  const projectDir = mountedProject?.data.type === 'local' ? mountedProject.data.path : undefined;
+  const workDir = provisioned._taskData.workDir ?? provisioned.path;
+
   return (
     <div className="flex h-full flex-col">
+      <div className="shrink-0">
+        <ConversationsTabs projectId={projectId} taskId={taskId} chatTabs={chatTabs} />
+      </div>
       <div className="min-h-0 flex-1">
-        <TabbedPtyPanel<ConversationStore>
-          autoFocus={autoFocus}
-          onFocusChange={(focused) => {
-            setIsPanelFocused(focused);
-            if (focused) provisioned.taskView.setFocusedRegion('main');
-          }}
-          store={conversationTabs}
-          paneId="conversations"
-          getSession={(s) => s.session}
-          onEnterPress={shouldSetWorkingOnEnter ? (s) => s.setWorking() : undefined}
-          onInterruptPress={(s) => s.clearWorking()}
-          mapShiftEnterToCtrlJ
-          remoteConnectionId={remoteConnectionId}
-          toolbar={(s) => <ChatTerminalToggle conversation={s} />}
-          renderPane={(s, defaultPane) =>
-            s.viewMode === 'chat' ? (
-              <ChatView
-                conversation={s}
-                projectDir={
-                  mountedProject?.data.type === 'local' ? mountedProject.data.path : undefined
+        {activeChatTab ? (
+          <ChatTabView
+            key={activeChatTab.id}
+            chatTab={activeChatTab}
+            workDir={workDir}
+            projectDir={projectDir}
+          />
+        ) : (
+          <TabbedPtyPanel<ConversationStore>
+            autoFocus={autoFocus}
+            onFocusChange={(focused) => {
+              setIsPanelFocused(focused);
+              if (focused) provisioned.taskView.setFocusedRegion('main');
+            }}
+            store={conversationTabs}
+            paneId="conversations"
+            getSession={(s) => s.session}
+            onEnterPress={shouldSetWorkingOnEnter ? (s) => s.setWorking() : undefined}
+            onInterruptPress={(s) => s.clearWorking()}
+            mapShiftEnterToCtrlJ
+            remoteConnectionId={remoteConnectionId}
+            tabBar={null}
+            emptyState={
+              <EmptyState
+                icon={<MessageSquare className="h-5 w-5 text-muted-foreground" />}
+                label="No conversations yet"
+                description="Create one to open a terminal session for this task and work with an agent."
+                action={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCreate}
+                    className="flex items-center gap-2"
+                  >
+                    Create conversation
+                    <ShortcutHint settingsKey="newConversation" />
+                  </Button>
                 }
-                workDir={provisioned._taskData.workDir ?? provisioned.path}
-                onDeleteConversation={() => provisioned.conversations.deleteConversation(s.data.id)}
               />
-            ) : (
-              defaultPane
-            )
-          }
-          searchEnabled={conversationTabs.activeTab?.viewMode !== 'chat'}
-          tabBar={<ConversationsTabs projectId={projectId} taskId={taskId} />}
-          emptyState={
-            <EmptyState
-              icon={<MessageSquare className="h-5 w-5 text-muted-foreground" />}
-              label="No conversations yet"
-              description="Create one to open a terminal session for this task and work with an agent."
-              action={
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCreate}
-                  className="flex items-center gap-2"
-                >
-                  Create conversation
-                  <ShortcutHint settingsKey="newConversation" />
-                </Button>
-              }
-            />
-          }
-        />
+            }
+          />
+        )}
       </div>
       <ContextBar />
     </div>

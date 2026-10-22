@@ -62,6 +62,25 @@ export const chatsController = createRPCController({
   },
 
   /**
+   * Transcript path for a started session, once it shows up in the index.
+   * Pending (new) sessions call this after their first run so later messages
+   * can resume instead of re-creating the session.
+   */
+  resolveSessionFile: async (args: { providerId: string; sessionId: string; cwd: string }) => {
+    try {
+      const sessions = await listSessions();
+      const found = sessions.find((s) => s.sessionId === args.sessionId && s.file);
+      if (found) {
+        await fs.access(found.file);
+        return ok(found.file);
+      }
+    } catch {
+      // fall through
+    }
+    return ok(null);
+  },
+
+  /**
    * Send a message to an app-owned conversation without its TUI: falls back
    * to a headless `--resume` run in the conversation's spawn cwd. When the
    * TUI is still running we refuse — the renderer injects into the PTY

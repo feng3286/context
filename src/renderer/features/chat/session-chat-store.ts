@@ -48,7 +48,7 @@ export class SessionChatStore {
     );
     this.runsOff = events.on(
       chatRunChannel,
-      (payload) => {
+      async (payload) => {
         if (payload.sessionId !== this.session.sessionId) return;
         if (payload.status === 'running') {
           runInAction(() => {
@@ -62,6 +62,20 @@ export class SessionChatStore {
           this.streamText = '';
           this.streamThinking = '';
         });
+        // A pending (new) session has a transcript now — resolve its path so
+        // the next message resumes instead of re-creating the session.
+        if (!this.session.file) {
+          const resolved = await rpc.chats.resolveSessionFile({
+            providerId: this.session.providerId,
+            sessionId: this.session.sessionId,
+            cwd: this.session.cwd,
+          });
+          if (resolved.success && resolved.data) {
+            runInAction(() => {
+              (this.session as { file: string }).file = resolved.data as string;
+            });
+          }
+        }
         if (this.session.file) void this.reload();
       },
       this.session.sessionId

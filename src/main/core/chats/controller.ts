@@ -1,11 +1,17 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { ChatMessagesResult } from '@shared/chat';
 import { createRPCController } from '@shared/ipc/rpc';
 import { err, ok } from '@shared/result';
-import { abortHeadless, sendHeadless } from '@main/core/chats/headless-chat-service';
+import {
+  abortHeadless,
+  isHeadlessRunning,
+  sendHeadless,
+} from '@main/core/chats/headless-chat-service';
 import {
   claudeTranscriptRoot,
   codexTranscriptRoot,
+  forgetSession,
   listSessions,
 } from '@main/core/chats/session-index';
 import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
@@ -47,11 +53,36 @@ export const chatsController = createRPCController({
     cwd: string;
     text: string;
     newSession?: boolean;
+    /** Stable event topic for the caller's subscriptions — renderer session
+     * stores pass their construction-time id so adopting the CLI's own id
+     * mid-store doesn't break event delivery. */
+    topic?: string;
   }) => {
     try {
       const result = await sendHeadless(args);
       if (!result.ok) return err(result.error);
       return ok({ sessionId: args.sessionId });
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
+  },
+
+  /** Delete a session's transcript file and drop it from the index. */
+  deleteSession: async (args: { providerId: string; file: string }) => {
+    try {
+      const allowed =
+        args.file.startsWith(claudeTranscriptRoot()) || args.file.startsWith(codexTranscriptRoot());
+      if (!allowed) return err({ type: 'forbidden' as const });
+      const base = path.basename(args.file, '.jsonl');
+      const match = base.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+      const sid = match?.[1] ?? base;
+      if (isHeadlessRunning(sid)) return err({ type: 'busy' as const });
+      if (ptySessionRegistry.hasConversationSession(sid)) {
+        return err({ type: 'live_in_terminal' as const });
+      }
+      await fs.rm(args.file, { force: true });
+      forgetSession(args.file);
+      return ok({ deleted: true });
     } catch (e) {
       return err({ type: 'internal' as const, message: String(e) });
     }

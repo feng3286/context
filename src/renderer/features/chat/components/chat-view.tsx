@@ -1,4 +1,12 @@
-import { Loader2, MessageSquareOff, Plus, RefreshCw, SendHorizontal, Square } from 'lucide-react';
+import {
+  Loader2,
+  MessageSquareOff,
+  Plus,
+  RefreshCw,
+  SendHorizontal,
+  Square,
+  Trash2,
+} from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatMessage, ChatSessionSummary } from '@shared/chat';
@@ -316,10 +324,11 @@ const SessionsRail = observer(function SessionsRail({
         </button>
         {external.map((session) => (
           <RailSessionItem
-            key={session.file}
+            key={session.sessionId}
             session={session}
-            active={store.selectedExternal?.file === session.file}
+            active={store.selectedExternal?.sessionId === session.sessionId}
             onSelect={() => store.selectExternal(session)}
+            onDelete={() => void store.removeExternal(session)}
           />
         ))}
         {store.loaded && external.length === 0 ? (
@@ -336,27 +345,66 @@ function RailSessionItem({
   session,
   active,
   onSelect,
+  onDelete,
 }: {
   session: ChatSessionSummary;
   active: boolean;
   onSelect: () => void;
+  onDelete?: () => void;
 }) {
+  // Two-step delete: arm on first click, confirm on the second.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 2500);
+    return () => clearTimeout(timer);
+  }, [armed]);
+
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        setArmed(false);
+        onSelect();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setArmed(false);
+          onSelect();
+        }
+      }}
       className={cn(
-        'mb-0.5 flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors',
+        'group relative mb-0.5 flex w-full cursor-pointer flex-col gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors',
         active ? 'bg-background-1 shadow-sm' : 'hover:bg-background-1/60'
       )}
     >
-      <span className="line-clamp-2 text-xs leading-snug">{session.title}</span>
+      <span className="line-clamp-2 pr-5 text-xs leading-snug">{session.title}</span>
       <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
         <span className="rounded bg-background-1 px-1 py-px font-medium">{session.providerId}</span>
         {session.cwd ? <span className="truncate">{session.cwd.split(/[\\/]/).pop()}</span> : null}
         <span className="ml-auto shrink-0">{formatRelative(session.updatedAt)}</span>
       </span>
-    </button>
+      {onDelete ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            'absolute right-1 top-1 size-5',
+            armed ? 'text-red-500 opacity-100' : 'opacity-0 group-hover:opacity-100'
+          )}
+          aria-label={armed ? 'Confirm delete' : 'Delete session'}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (armed) onDelete();
+            else setArmed(true);
+          }}
+        >
+          <Trash2 className="size-3" />
+        </Button>
+      ) : null}
+    </div>
   );
 }
 

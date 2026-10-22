@@ -23,4 +23,7 @@ export const chatRunChannel = defineEvent<{
   sessionId: string;
   status: 'running' | 'done' | 'error';
   error?: string;
+  /** Session id the CLI itself reported (differs from our placeholder for
+   * codex new sessions, which pick their rollout uuid at run time). */
+  actualSessionId?: string;
 }>('chat:run');

@@ -47,7 +47,9 @@ export async function sendHeadless(args: {
   /** Start a fresh session (claude --session-id / codex exec) instead of
    * resuming an existing one. */
   newSession?: boolean;
-}): Promise<{ ok: true } | { ok: false; error: HeadlessSendError }> {
+}): Promise<
+  { ok: true; actualSessionId: string | null } | { ok: false; error: HeadlessSendError }
+> {
   const { providerId, sessionId, cwd, text, topic = sessionId, newSession } = args;
   if (providerId !== 'claude' && providerId !== 'codex') {
     return { ok: false, error: { type: 'unsupported' } };
@@ -113,6 +115,12 @@ export async function sendHeadless(args: {
   const stdoutBuffer: string[] = [];
   let stdoutText = '';
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
+  // The session id the CLI itself reports — codex picks its rollout uuid at
+  // run time, so a "new session" placeholder id must be corrected afterwards.
+  let actualSessionId: string | null = null;
+  const captureSessionId = (id: string) => {
+    actualSessionId = id;
+  };
 
   const emitDelta = (kind: 'text' | 'thinking', deltaText: string) => {
     if (!deltaText) return;
@@ -126,7 +134,9 @@ export async function sendHeadless(args: {
     const lines = combined.split('\n');
     const pending = lines.pop() ?? '';
     stdoutText = pending;
-    for (const line of lines) handleStreamLine(providerId, topic, line, emitDelta);
+    for (const line of lines) {
+      handleStreamLine(providerId, topic, line, emitDelta, captureSessionId);
+    }
   };
 
   child.stdout?.setEncoding('utf8');
@@ -152,7 +162,11 @@ export async function sendHeadless(args: {
       flushStdout();
     }
     runs.delete(sessionId);
-    events.emit(chatRunChannel, { sessionId: topic, status, error }, topic);
+    events.emit(
+      chatRunChannel,
+      { sessionId: topic, status, error, actualSessionId: actualSessionId ?? undefined },
+      topic
+    );
   };
 
   child.on('error', (e) => {
@@ -172,7 +186,7 @@ export async function sendHeadless(args: {
   child.stdin?.write(text);
   child.stdin?.end();
 
-  return { ok: true };
+  return { ok: true, actualSessionId: null };
 }
 
 export function abortHeadless(sessionId: string): boolean {
@@ -223,6 +237,7 @@ interface CodexExecLine {
     text?: string;
     summary?: Array<{ text?: string }>;
   };
+  msg?: { type?: string; session_id?: string };
   message?: string;
 }
 
@@ -232,7 +247,8 @@ function handleStreamLine(
   providerId: string,
   topic: string,
   line: string,
-  emitDelta: DeltaEmit
+  emitDelta: DeltaEmit,
+  onSessionId: (id: string) => void
 ): void {
   const trimmed = line.trim();
   if (!trimmed) return;
@@ -244,13 +260,19 @@ function handleStreamLine(
   }
 
   if (providerId === 'claude') {
-    handleClaudeLine(row as ClaudeStreamLine, topic, emitDelta);
+    handleClaudeLine(row as ClaudeStreamLine, topic, emitDelta, onSessionId);
   } else {
-    handleCodexLine(row as CodexExecLine, topic);
+    handleCodexLine(row as CodexExecLine, topic, onSessionId);
   }
 }
 
-function handleClaudeLine(row: ClaudeStreamLine, topic: string, emitDelta: DeltaEmit): void {
+function handleClaudeLine(
+  row: ClaudeStreamLine,
+  topic: string,
+  emitDelta: DeltaEmit,
+  onSessionId: (id: string) => void
+): void {
+  if (row.type === 'system' && row.session_id) onSessionId(row.session_id);
   if (row.type === 'stream_event' && row.event?.type === 'content_block_delta') {
     const delta = row.event.delta;
     if (delta?.type === 'text_delta' && delta.text) emitDelta('text', delta.text);
@@ -289,7 +311,16 @@ function handleClaudeLine(row: ClaudeStreamLine, topic: string, emitDelta: Delta
   }
 }
 
-function handleCodexLine(row: CodexExecLine, topic: string): void {
+function handleCodexLine(
+  row: CodexExecLine,
+  topic: string,
+  onSessionId: (id: string) => void
+): void {
+  // The rollout uuid only becomes known when codex announces it.
+  if (row.type === 'thread.started' && row.thread_id) onSessionId(row.thread_id);
+  else if (row.msg?.type === 'session_created' && row.msg.session_id) {
+    onSessionId(row.msg.session_id);
+  }
   if (row.type === 'item.completed' && row.item) {
     const item = row.item;
     if (item.type === 'agent_message' && item.text?.trim()) {

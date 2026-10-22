@@ -28,9 +28,13 @@ export class SessionChatStore {
 
   private deltasOff: (() => void) | null = null;
   private runsOff: (() => void) | null = null;
+  /** Stable event topic. Pending sessions adopt the CLI's own session id when
+   * the first run lands, but subscriptions must keep receiving events. */
+  private readonly topic: string;
 
   constructor(session: ChatSessionSummary) {
     this.session = session;
+    this.topic = session.sessionId;
     makeAutoObservable(this, { session: false });
   }
 
@@ -38,18 +42,18 @@ export class SessionChatStore {
     this.deltasOff = events.on(
       chatDeltaChannel,
       (payload) => {
-        if (payload.sessionId !== this.session.sessionId) return;
+        if (payload.sessionId !== this.topic) return;
         runInAction(() => {
           if (payload.kind === 'text') this.streamText += payload.text;
           else this.streamThinking += payload.text;
         });
       },
-      this.session.sessionId
+      this.topic
     );
     this.runsOff = events.on(
       chatRunChannel,
       async (payload) => {
-        if (payload.sessionId !== this.session.sessionId) return;
+        if (payload.sessionId !== this.topic) return;
         if (payload.status === 'running') {
           runInAction(() => {
             this.running = true;
@@ -62,9 +66,16 @@ export class SessionChatStore {
           this.streamText = '';
           this.streamThinking = '';
         });
-        // A pending (new) session has a transcript now — resolve its path so
-        // the next message resumes instead of re-creating the session.
+        // A pending (new) session now has a transcript: adopt the CLI's own
+        // session id (codex picks its rollout uuid at run time) and resolve
+        // the transcript path, so later messages resume instead of starting
+        // yet another fresh session.
         if (!this.session.file) {
+          if (payload.actualSessionId) {
+            runInAction(() => {
+              (this.session as { sessionId: string }).sessionId = payload.actualSessionId as string;
+            });
+          }
           const resolved = await rpc.chats.resolveSessionFile({
             providerId: this.session.providerId,
             sessionId: this.session.sessionId,
@@ -78,7 +89,7 @@ export class SessionChatStore {
         }
         if (this.session.file) void this.reload();
       },
-      this.session.sessionId
+      this.topic
     );
     await this.reload();
   }
@@ -127,6 +138,7 @@ export class SessionChatStore {
         text: value,
         // Pending local sessions have no transcript yet — start a fresh one.
         newSession: !this.session.file,
+        topic: this.topic,
       });
       if (!result.success) {
         runInAction(() => {
@@ -216,7 +228,7 @@ export class TaskSessionsStore {
           // Drop the selection if the session disappeared from the index.
           const stillThere =
             !this.selectedExternal ||
-            this.railSessions.some((s) => s.file === this.selectedExternal?.file);
+            this.railSessions.some((s) => s.sessionId === this.selectedExternal?.sessionId);
           if (!stillThere) {
             this.selectExternal(null);
           }
@@ -234,7 +246,7 @@ export class TaskSessionsStore {
   }
 
   selectExternal(session: ChatSessionSummary | null): void {
-    if (this.selectedExternal?.file === session?.file) return;
+    if (this.selectedExternal?.sessionId === session?.sessionId) return;
     this.externalChat?.dispose();
     this.selectedExternal = session;
     if (session) {
@@ -243,6 +255,22 @@ export class TaskSessionsStore {
     } else {
       this.externalChat = null;
     }
+  }
+
+  /** Delete a session: remove its transcript (if any) and drop it from the rail. */
+  async removeExternal(session: ChatSessionSummary): Promise<void> {
+    if (session.file) {
+      const result = await rpc.chats.deleteSession({
+        providerId: session.providerId,
+        file: session.file,
+      });
+      if (!result.success) return;
+    }
+    runInAction(() => {
+      this.localSessions = this.localSessions.filter((s) => s !== session);
+      this.sessions = this.sessions.filter((s) => s !== session);
+    });
+    if (this.selectedExternal === session) this.selectExternal(null);
   }
 
   dispose(): void {

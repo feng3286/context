@@ -65,6 +65,11 @@ function cwdMatches(cwd: string, prefixLower: string): boolean {
   return lower === prefixLower || lower.startsWith(prefixLower + path.sep.toLowerCase());
 }
 
+/** Drop a deleted transcript from the index cache so it leaves the list. */
+export function forgetSession(file: string): void {
+  cache.delete(file);
+}
+
 /** All top-level .jsonl files under every claude project (cwd hash) dir. */
 async function scanClaudeFiles(): Promise<string[]> {
   const root = claudeTranscriptRoot();

@@ -34,6 +34,7 @@ const MAX_RESPAWNS = 2;
 export class LocalConversationProvider implements ConversationProvider {
   private sessions = new Map<string, Pty>();
   private knownSessionIds = new Set<string>();
+  private spawnCwds = new Map<string, string>();
   private respawnCounts = new Map<string, number>();
   private readonly taskWorkDir: string;
   private readonly taskId: string;
@@ -77,6 +78,7 @@ export class LocalConversationProvider implements ConversationProvider {
     if (this.sessions.has(sessionId)) return;
 
     const cwd = conversation.workDir ?? this.taskWorkDir;
+    this.spawnCwds.set(conversation.id, cwd);
 
     await claudeTrustService.maybeAutoTrustLocal({
       providerId: conversation.providerId,
@@ -222,6 +224,10 @@ export class LocalConversationProvider implements ConversationProvider {
       task_id: conversation.taskId,
       conversation_id: conversation.id,
     });
+  }
+
+  getSpawnCwd(conversationId: string): string | undefined {
+    return this.spawnCwds.get(conversationId);
   }
 
   /**

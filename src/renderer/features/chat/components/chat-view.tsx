@@ -34,6 +34,7 @@ const ChatInputBar = observer(function ChatInputBar({
 }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -43,15 +44,24 @@ const ChatInputBar = observer(function ChatInputBar({
   const send = async () => {
     const value = text.trim();
     if (!value || sending) return;
+    setSendError(null);
     setText('');
     setSending(true);
     try {
       await pastePromptInjection({
         providerId: conversation.data.providerId,
         text: value,
-        sendInput: (data) => rpc.pty.sendInput(conversation.session.sessionId, data),
+        sendInput: async (data) => {
+          const result = await rpc.pty.sendInput(conversation.session.sessionId, data);
+          // The PTY is gone (crashed / never started) — failing loudly here
+          // keeps the message from being silently dropped.
+          if (!result.success) throw new Error('send_failed');
+        },
       });
       conversation.setWorking();
+    } catch {
+      setText((prev) => (prev ? prev : value));
+      setSendError('Message not delivered — the agent terminal is not running.');
     } finally {
       setSending(false);
       textareaRef.current?.focus();
@@ -89,6 +99,7 @@ const ChatInputBar = observer(function ChatInputBar({
           )}
         </Button>
       </div>
+      {sendError ? <div className="pt-1 text-[10px] text-red-500">{sendError}</div> : null}
       <div className="pt-1 text-[10px] text-muted-foreground">
         Enter to send · Shift+Enter for a new line
       </div>
@@ -185,8 +196,22 @@ export const ChatView = observer(function ChatView({
           </div>
         ) : null}
         {chat.messages.length === 0 && !chat.loading && chat.capability === 'pending' ? (
-          <div className="py-8 text-center text-xs text-muted-foreground">
-            Waiting for the agent to write its session transcript…
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <div className="text-xs text-muted-foreground">
+              Waiting for the agent to write its session transcript…
+            </div>
+            <div className="max-w-xs text-[11px] text-muted-foreground/70">
+              The transcript appears once the agent processes its first message. If you already sent
+              one, it may not have reached the agent — check the terminal.
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => conversation.setViewMode('terminal')}
+            >
+              Open terminal
+            </Button>
           </div>
         ) : null}
         {chat.messages.map((message) => (

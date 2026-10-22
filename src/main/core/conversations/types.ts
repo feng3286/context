@@ -10,6 +10,13 @@ export interface ConversationProvider {
   stopSession(conversationId: string): Promise<void>;
   destroyAll(): Promise<void>;
   detachAll(): Promise<void>;
+  /**
+   * The working directory the conversation's CLI was last spawned in. Used by
+   * consumers that must locate per-conversation artifacts (e.g. transcript
+   * files), where the task workDir is not precise enough for multi-project
+   * tasks. Optional — SSH providers may not track it.
+   */
+  getSpawnCwd?(conversationId: string): string | undefined;
 }
 
 export type ConversationConfig = {

@@ -8,8 +8,12 @@ import type { TranscriptContext, TranscriptParser } from './parsers/types';
 
 const POLL_INTERVAL_MS = 500;
 const MAX_CACHED_MESSAGES = 2000;
-/** How long (in poll ticks) to keep looking for a transcript file that has not appeared yet. */
-const MAX_RESOLVE_ATTEMPTS = 240; // ~2 minutes of polling
+/**
+ * How often (in poll ticks) to retry transcript resolution while no file has
+ * appeared. The transcript is only created when the agent processes its first
+ * message, which can take arbitrarily long — retry forever, just slower.
+ */
+const RESOLVE_RETRY_EVERY = 20; // 20 ticks × 500ms = every 10s
 
 interface WatchState {
   ctx: TranscriptContext;
@@ -137,11 +141,9 @@ class TranscriptService {
 
   private async locateAndLoad(state: WatchState): Promise<void> {
     state.resolveAttempts += 1;
-    if (state.resolveAttempts > MAX_RESOLVE_ATTEMPTS) {
-      if (state.timer) {
-        clearInterval(state.timer);
-        state.timer = null;
-      }
+    // Retry resolution at a lower frequency while waiting for the first write,
+    // but never give up — the session stays replayable whenever the file shows up.
+    if (state.resolveAttempts > 10 && state.resolveAttempts % RESOLVE_RETRY_EVERY !== 0) {
       return;
     }
 
@@ -171,11 +173,11 @@ class TranscriptService {
         if (!ownedBy(state.ctx, state.parser, text)) continue;
 
         const pendingText = state.pendingText;
-        state.pendingText = '';
         state.file = file;
         state.messages = [];
         state.hasOlderHistory = false;
-        const { messages, consumedBytes } = consumeText(state.parser, text, pendingText);
+        const { messages, consumedBytes, pending } = consumeText(state.parser, text, pendingText);
+        state.pendingText = pending;
         state.messages = capMessages(messages).messages;
         state.byteOffset = consumedBytes;
         return;
@@ -214,8 +216,12 @@ class TranscriptService {
         await fh.close();
       }
 
-      const { messages, consumedBytes } = consumeText(state.parser, text, state.pendingText);
-      state.pendingText = '';
+      const { messages, consumedBytes, pending } = consumeText(
+        state.parser,
+        text,
+        state.pendingText
+      );
+      state.pendingText = pending;
       state.byteOffset = startOffset + consumedBytes;
       const fresh = pushMessages(state, messages);
       if (fresh.length > 0) {

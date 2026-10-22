@@ -1,15 +1,17 @@
 import { eq } from 'drizzle-orm';
 import { createRPCController } from '@shared/ipc/rpc';
 import { err, ok } from '@shared/result';
+import { projectManager } from '@main/core/projects/project-manager';
 import { db } from '@main/db/client';
 import { conversations, tasks } from '@main/db/schema';
 import type { TranscriptContext } from './parsers/types';
 import { transcriptService } from './transcript-service';
 
 /**
- * Rebuild transcript context from a session ID (`conversation:<taskId>:<id>`)
- * by reading the conversation/task rows. Keeps the renderer free of
- * work-directory knowledge.
+ * Rebuild transcript context from a session ID (`conversation:<taskId>:<id>`).
+ * The spawn cwd is preferred: for multi-project tasks the DB task workDir is
+ * the worktree root while the CLI actually runs inside a project subdirectory,
+ * and transcript paths are cwd-derived.
  */
 async function resolveContext(sessionId: string): Promise<TranscriptContext | null> {
   const parts = sessionId.split(':');
@@ -23,7 +25,18 @@ async function resolveContext(sessionId: string): Promise<TranscriptContext | nu
   ]);
   const conversation = convRows[0];
   if (!conversation) return null;
-  const workDir = conversation.workDir ?? taskRows[0]?.workDir;
+
+  let workDir = conversation.workDir;
+  if (!workDir) {
+    for (const provider of projectManager.getAllProjects()) {
+      const spawnCwd = provider.getTask(taskId)?.conversations.getSpawnCwd?.(conversationId);
+      if (spawnCwd) {
+        workDir = spawnCwd;
+        break;
+      }
+    }
+  }
+  workDir = workDir ?? taskRows[0]?.workDir;
   if (!workDir) return null;
 
   const createdAtMs = conversation.createdAt ? Date.parse(conversation.createdAt) : NaN;

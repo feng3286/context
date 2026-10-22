@@ -4,6 +4,8 @@ import { chatMessageChannel } from '@shared/events/chatEvents';
 import { events, rpc } from '@renderer/lib/ipc';
 
 const PAGE_SIZE = 200;
+const PENDING_RETRY_MS = 3000;
+const PENDING_MAX_RETRIES = 60; // ~3 minutes of waiting for the first transcript write
 
 /**
  * Chat timeline for one conversation. Backed by the main process transcript
@@ -18,6 +20,8 @@ export class ChatStore {
   loading = true;
 
   private inited = false;
+  private retryCount = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private disposers: (() => void)[] = [];
 
   constructor(readonly sessionId: string) {
@@ -48,6 +52,10 @@ export class ChatStore {
   }
 
   dispose(): void {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
     for (const off of this.disposers) off();
     this.disposers = [];
   }
@@ -70,7 +78,10 @@ export class ChatStore {
         before,
         limit: PAGE_SIZE,
       });
-      if (!result.success) return;
+      if (!result.success) {
+        this.schedulePendingRetry();
+        return;
+      }
       runInAction(() => {
         this.capability = result.data.capability;
         this.hasOlder = result.data.hasMore;
@@ -88,10 +99,27 @@ export class ChatStore {
           this.messages = [...result.data.messages, ...newer];
         }
       });
+      if (result.data.capability === 'pending') this.schedulePendingRetry();
     } finally {
       runInAction(() => {
         this.loading = false;
       });
     }
+  }
+
+  /**
+   * The transcript file only appears once the agent processes its first
+   * message — until then keep polling at a low rate instead of showing a
+   * dead "waiting" state forever.
+   */
+  private schedulePendingRetry(): void {
+    if (this.retryTimer || this.retryCount >= PENDING_MAX_RETRIES) return;
+    this.retryCount += 1;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      if (this.capability === 'pending' && this.messages.length === 0) {
+        void this.fetch();
+      }
+    }, PENDING_RETRY_MS);
   }
 }

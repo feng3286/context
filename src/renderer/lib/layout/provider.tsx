@@ -64,7 +64,6 @@ const viewEvents: Record<
   | 'mcp_viewed'
   | 'workspace_viewed'
   | 'project_detail_viewed'
-  | 'chat_viewed'
 > = {
   home: 'home_viewed',
   project: 'project_viewed',
@@ -74,7 +73,6 @@ const viewEvents: Record<
   mcp: 'mcp_viewed',
   workspace: 'workspace_viewed',
   projectDetail: 'project_detail_viewed',
-  chat: 'chat_viewed',
 };
 
 export function WorkspaceViewProvider({ children }: { children: ReactNode }) {

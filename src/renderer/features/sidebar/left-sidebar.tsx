@@ -1,12 +1,4 @@
-import {
-  FolderPlus,
-  MessageSquareShare,
-  MessagesSquare,
-  Plug,
-  Plus,
-  Puzzle,
-  Settings,
-} from 'lucide-react';
+import { FolderPlus, MessageSquareShare, Plug, Plus, Puzzle, Settings } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -83,15 +75,6 @@ export const LeftSidebar: React.FC = observer(function LeftSidebar() {
               <ShortcutHint settingsKey="newProject" />
             </SidebarMenuButton>
           </div>
-          <SidebarMenuButton
-            isActive={isCurrentView(currentView, 'chat')}
-            onClick={() => navigate('chat')}
-            aria-label="Chats"
-            className="w-full justify-start"
-          >
-            <MessagesSquare className="h-5 w-5 sm:h-4 sm:w-4" />
-            Chats
-          </SidebarMenuButton>
           <SidebarMenuButton
             isActive={isCurrentView(currentView, 'skills')}
             onClick={() => navigate('skills')}

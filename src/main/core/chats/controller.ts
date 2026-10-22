@@ -16,9 +16,9 @@ import { transcriptService } from '@main/core/transcripts/transcript-service';
  */
 
 export const chatsController = createRPCController({
-  listSessions: async () => {
+  listSessions: async (args?: { cwdPrefix?: string }) => {
     try {
-      return ok(await listSessions());
+      return ok(await listSessions(args));
     } catch (e) {
       return err({ type: 'internal' as const, message: String(e) });
     }

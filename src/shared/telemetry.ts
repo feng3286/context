@@ -12,8 +12,7 @@ export type FocusView =
   | 'skills'
   | 'mcp'
   | 'workspace'
-  | 'projectDetail'
-  | 'chat';
+  | 'projectDetail';
 export type FocusMainPanel = 'agents' | 'editor' | 'diff';
 export type FocusRightPanel = 'changes' | 'terminals' | 'files';
 export type FocusedRegion = 'main' | 'right';
@@ -60,7 +59,6 @@ export type TelemetryEventProperties = {
   skills_viewed: { from_view: FocusView | null };
   mcp_viewed: { from_view: FocusView | null };
   workspace_viewed: { from_view: FocusView | null };
-  chat_viewed: { from_view: FocusView | null };
 
   project_added: { type: 'local' | 'ssh'; strategy: 'open' | 'create' | 'clone'; success: boolean };
   project_deleted: EmptyProps;

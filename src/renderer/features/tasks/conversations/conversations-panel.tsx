@@ -80,7 +80,14 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
           remoteConnectionId={remoteConnectionId}
           toolbar={(s) => <ChatTerminalToggle conversation={s} />}
           renderPane={(s, defaultPane) =>
-            s.viewMode === 'chat' ? <ChatView conversation={s} /> : defaultPane
+            s.viewMode === 'chat' ? (
+              <ChatView
+                conversation={s}
+                workDir={provisioned._taskData.workDir ?? provisioned.path}
+              />
+            ) : (
+              defaultPane
+            )
           }
           searchEnabled={conversationTabs.activeTab?.viewMode !== 'chat'}
           tabBar={<ConversationsTabs projectId={projectId} taskId={taskId} />}

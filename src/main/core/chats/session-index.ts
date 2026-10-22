@@ -38,7 +38,7 @@ export function codexTranscriptRoot(): string {
   return path.join(homedir(), '.codex', 'sessions');
 }
 
-export async function listSessions(): Promise<ChatSessionSummary[]> {
+export async function listSessions(opts?: { cwdPrefix?: string }): Promise<ChatSessionSummary[]> {
   const files = [...(await scanClaudeFiles()), ...(await scanCodexFiles())].slice(
     0,
     MAX_FILES_SCANNED
@@ -51,8 +51,18 @@ export async function listSessions(): Promise<ChatSessionSummary[]> {
       if (summary) summaries.push(summary);
     })
   );
-  summaries.sort((a, b) => b.updatedAt - a.updatedAt);
-  return summaries.slice(0, MAX_SESSIONS);
+
+  const prefix = opts?.cwdPrefix ? opts.cwdPrefix.toLowerCase() : null;
+  const filtered = prefix ? summaries.filter((s) => cwdMatches(s.cwd, prefix)) : summaries;
+  filtered.sort((a, b) => b.updatedAt - a.updatedAt);
+  return filtered.slice(0, MAX_SESSIONS);
+}
+
+/** Sessions of the directory itself or any subdirectory (multi-project tasks). */
+function cwdMatches(cwd: string, prefixLower: string): boolean {
+  if (!cwd) return false;
+  const lower = cwd.toLowerCase();
+  return lower === prefixLower || lower.startsWith(prefixLower + path.sep.toLowerCase());
 }
 
 /** All top-level .jsonl files under every claude project (cwd hash) dir. */

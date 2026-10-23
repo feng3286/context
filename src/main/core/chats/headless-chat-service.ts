@@ -17,6 +17,10 @@ import { adoptPendingSession } from './pending-sessions';
  * stream back as they are generated. No PTY, no TUI. The CLI still writes its
  * own transcript, which stays the single source of truth.
  *
+ * Permissions: runs at maximum — print/exec mode has no one to answer approval
+ * prompts, so without bypass every file/bash tool call is simply denied. The
+ * chat UI's Stop button is the interruption path, not a permission dialog.
+ *
  * Safety: a session whose interactive TUI is currently running is refused —
  * two writers to one transcript would corrupt the session.
  */
@@ -99,6 +103,8 @@ export async function sendHeadless(args: {
       'stream-json',
       '--verbose',
       '--include-partial-messages',
+      // Max permissions — otherwise print mode denies every Bash/Edit/Write.
+      '--dangerously-skip-permissions',
       ...(model ? ['--model', quote(model)] : []),
       resumeOrSession,
     ].join(' ');
@@ -108,6 +114,8 @@ export async function sendHeadless(args: {
       'exec',
       '--json',
       '--skip-git-repo-check',
+      // Max permissions — otherwise exec mode stays in its read-only sandbox.
+      '--dangerously-bypass-approvals-and-sandbox',
       ...(model ? ['-m', quote(model)] : []),
       ...(newSession ? [] : ['resume', quote(sessionId)]),
       '-',
@@ -130,6 +138,9 @@ export async function sendHeadless(args: {
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
         windowsVerbatimArguments: useCmd,
+        // POSIX: own process group so Stop can signal the whole tree; Windows
+        // has no group semantics and uses `taskkill /T` instead.
+        detached: process.platform !== 'win32',
       }
     );
   } catch (e) {
@@ -254,12 +265,38 @@ export function abortHeadless(sessionId: string): boolean {
   const run = runs.get(sessionId);
   if (!run) return false;
   run.aborted = true;
+  killProcessTree(run.child, sessionId);
+  return true;
+}
+
+/** Kill the whole CLI process tree. `child.kill()` alone only reaches the
+ * shell wrapper — the CLI itself would survive as an orphan and keep writing
+ * the transcript after the UI already shows the run as stopped. */
+function killProcessTree(child: ChildProcess, sessionId: string): void {
+  const pid = child.pid;
+  if (pid != null && process.platform === 'win32') {
+    try {
+      // /T = tree (shell wrapper + the CLI under it), /F = force.
+      spawn('taskkill', ['/pid', String(pid), '/T', '/F'], {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+    } catch (e) {
+      log.warn('chats: taskkill failed', { sessionId, error: String(e) });
+    }
+  }
+  if (pid != null && process.platform !== 'win32') {
+    try {
+      process.kill(-pid, 'SIGTERM'); // detached spawn → negative pid = group
+    } catch {
+      // group already gone — the direct kill below is enough
+    }
+  }
   try {
-    run.child.kill();
+    child.kill();
   } catch (e) {
     log.warn('chats: abort failed', { sessionId, error: String(e) });
   }
-  return true;
 }
 
 export function isHeadlessRunning(sessionId: string): boolean {

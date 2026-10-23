@@ -340,12 +340,21 @@ export class TaskSessionsStore {
             (stub) => !this.localSessions.some((local) => local.sessionId === stub.sessionId)
           );
           this.localSessions = [...merged, ...fresh];
-          // Drop the selection if the session disappeared from the index.
-          const stillThere =
-            !this.selectedExternal ||
-            this.railSessions.some((s) => s.sessionId === this.selectedExternal?.sessionId);
-          if (!stillThere) {
-            this.selectExternal(null);
+          // Rebind the selection to the freshly loaded instance — each load
+          // rebuilds the session objects, and a stale reference here made
+          // removeExternal's identity check miss, keeping a deleted session
+          // on screen.
+          const selected = this.selectedExternal;
+          if (selected) {
+            const fresh = this.railSessions.find((s) => s.sessionId === selected.sessionId) ?? null;
+            if (fresh && fresh !== selected) {
+              this.selectedExternal = fresh;
+              if (this.externalChat) {
+                (this.externalChat as { session: ChatSessionSummary }).session = fresh;
+              }
+            } else if (!fresh) {
+              this.selectExternal(null);
+            }
           }
         });
       }
@@ -442,7 +451,9 @@ export class TaskSessionsStore {
       this.localSessions = this.localSessions.filter((s) => s !== session);
       this.sessions = this.sessions.filter((s) => s !== session);
     });
-    if (this.selectedExternal === session) this.selectExternal(null);
+    // Compare by id: load() rebuilds session objects, so the selected
+    // reference may be an older instance of the same session.
+    if (this.selectedExternal?.sessionId === session.sessionId) this.selectExternal(null);
   }
 
   dispose(): void {

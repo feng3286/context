@@ -141,10 +141,7 @@ export const ChatTabView = observer(function ChatTabView({
           key={externalChat.session.file}
           store={externalChat}
           onNewSession={() => {
-            sessionsStore.createLocalSession(
-              chatTab.providerId,
-              sessionsStore.selectedExternal?.cwd ?? defaultCwd
-            );
+            sessionsStore.createLocalSession(chatTab.providerId, defaultCwd);
           }}
           onBranch={(source, messageId, text) => sessionsStore.branchFrom(source, messageId, text)}
         />
@@ -193,18 +190,13 @@ const SessionsRail = observer(function SessionsRail({
           {t('chat:sessions')}
         </span>
         <div className="flex items-center gap-0.5">
-          {/* One click creates + activates a session on the current context
-              dir; the context picker stays one chevron away. */}
+          {/* One click creates + activates a session on the TUI default
+              context dir; the context picker stays one chevron away. */}
           <Button
             variant="ghost"
             size="icon"
             className="size-5"
-            onClick={() =>
-              store.createLocalSession(
-                chatTab.providerId,
-                store.selectedExternal?.cwd ?? defaultCwd
-              )
-            }
+            onClick={() => store.createLocalSession(chatTab.providerId, defaultCwd)}
             aria-label={t('chat:newSession')}
           >
             <Plus className="size-3" />

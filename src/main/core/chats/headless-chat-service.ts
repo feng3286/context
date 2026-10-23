@@ -37,6 +37,15 @@ const runs = new Map<string, HeadlessRun>();
 
 const LINE_FLUSH_INTERVAL_MS = 33; // batch deltas ~30fps
 
+/** Core tools never appear in ToolSearch (it only indexes MCP add-ons), and
+ * some relay models treat that as "not mounted" and refuse to act — pointing
+ * them at the transcript write gets "只有浏览器调试工具" answers. Verified
+ * fix against a GLM-backed claude relay: name the core tools in the system
+ * prompt. ASCII-only, no quotes — safe under both shell quoting styles. */
+const coreToolsHint = `Core tools (Read, Write, Edit, Glob, Grep, and the shell tool - named ${
+  process.platform === 'win32' ? 'PowerShell' : 'Bash'
+} here) are always available in this session: call them directly by name. ToolSearch only indexes MCP add-on tools, not core tools.`;
+
 export type HeadlessSendError =
   | { type: 'unsupported' }
   | { type: 'busy' }
@@ -105,6 +114,8 @@ export async function sendHeadless(args: {
       '--include-partial-messages',
       // Max permissions — otherwise print mode denies every Bash/Edit/Write.
       '--dangerously-skip-permissions',
+      '--append-system-prompt',
+      quote(coreToolsHint),
       ...(model ? ['--model', quote(model)] : []),
       resumeOrSession,
     ].join(' ');

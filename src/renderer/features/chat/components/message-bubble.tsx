@@ -1,6 +1,7 @@
-import { Brain, ChevronRight, Sparkles, User, Wrench } from 'lucide-react';
+import { Brain, ChevronRight, GitBranch, Sparkles, User, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ChatBlock, ChatMessage } from '@shared/chat';
+import { Button } from '@renderer/lib/ui/button';
 import { MarkdownRenderer } from '@renderer/lib/ui/markdown-renderer';
 import { cn } from '@renderer/utils/utils';
 
@@ -90,7 +91,14 @@ function ChatBlockView({ block }: { block: ChatBlock }) {
   }
 }
 
-export const MessageBubble = function MessageBubble({ message }: { message: ChatMessage }) {
+export const MessageBubble = function MessageBubble({
+  message,
+  onBranch,
+}: {
+  message: ChatMessage;
+  /** Present when the message can be branched from — renders the hover button. */
+  onBranch?: () => void;
+}) {
   const { t } = useTranslation();
   const time = formatTime(message.timestamp);
 
@@ -126,8 +134,12 @@ export const MessageBubble = function MessageBubble({ message }: { message: Chat
   }
 
   if (message.role === 'user') {
+    const branchable =
+      !!onBranch &&
+      !message.failed &&
+      message.blocks.some((block) => block.kind === 'text' && block.text.trim());
     return (
-      <div className="px-3 py-1.5">
+      <div className="group/msg px-3 py-1.5">
         <div className="flex items-center gap-1.5 pb-1 text-[11px] text-muted-foreground">
           <User className="size-3" />
           {t('chat:you')}
@@ -136,17 +148,34 @@ export const MessageBubble = function MessageBubble({ message }: { message: Chat
             <span className="font-medium text-red-500">· {t('chat:notDelivered')}</span>
           ) : null}
         </div>
-        <div
-          className={cn(
-            'rounded-lg border bg-background-1 px-3 py-2',
-            message.failed ? 'border-red-500/60' : 'border-border'
-          )}
-        >
-          {message.blocks.map((block, i) =>
-            block.kind === 'text' ? (
-              <MarkdownRenderer key={i} content={block.text} variant="compact" />
-            ) : null
-          )}
+        <div className="flex items-start gap-1.5">
+          <div
+            className={cn(
+              'min-w-0 flex-1 rounded-lg border bg-background-1 px-3 py-2',
+              message.failed ? 'border-red-500/60' : 'border-border'
+            )}
+          >
+            {message.blocks.map((block, i) =>
+              block.kind === 'text' ? (
+                <MarkdownRenderer key={i} content={block.text} variant="compact" />
+              ) : null
+            )}
+          </div>
+          {branchable ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mt-0.5 size-6 shrink-0 opacity-0 group-hover/msg:opacity-100"
+              title={t('chat:branchAction')}
+              aria-label={t('chat:branchAction')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onBranch?.();
+              }}
+            >
+              <GitBranch className="size-3.5" />
+            </Button>
+          ) : null}
         </div>
       </div>
     );

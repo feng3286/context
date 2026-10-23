@@ -31,6 +31,13 @@ export interface ChatCommandInfo {
   source: 'builtin' | 'custom' | 'app';
 }
 
+/** Curated model options for the chat header picker (CLI-alias level — the
+ * CLIs accept more; those stay reachable via /model). */
+export const CHAT_MODEL_OPTIONS: Record<string, string[]> = {
+  claude: ['opus', 'sonnet', 'haiku'],
+  codex: ['gpt-5.5', 'gpt-5.3-codex'],
+};
+
 /** Approximate context fill of a session, read from its transcript tail. */
 export interface ChatContextUsage {
   tokens: number;

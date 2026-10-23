@@ -32,6 +32,9 @@ export interface TranscriptParser {
   /**
    * Parse one JSONL line into zero or more chat messages. Unknown/uninteresting
    * lines return null — parsers must never throw on unexpected shapes.
+   * `ordinal` is the line's index among non-blank lines, for providers whose
+   * message ids need a stable position (codex rollout rows stopped carrying
+   * their own ordinal field).
    */
-  parseLine(line: string): ChatMessage[] | null;
+  parseLine(line: string, ordinal?: number): ChatMessage[] | null;
 }

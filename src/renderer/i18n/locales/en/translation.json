@@ -1107,19 +1107,29 @@
     "noSessionSelected": "No session selected",
     "noSessionSelectedHint": "Create a new session with the + button in the sidebar, or pick one from the list.",
     "newSessionTitle": "New session",
-    "deleteErrorDismiss": "Click to dismiss",
+    "railErrorDismiss": "Click to dismiss",
     "deleteSession": "Delete session",
+    "renameSession": "Rename session",
     "confirmDelete": "Confirm delete",
     "clickAgainToDelete": "Click again to delete",
     "deleteLiveInTerminal": "Session is running in a terminal — delete anyway",
     "deleteLiveInTerminalDetail": "This session is running in a terminal — its CLI may recreate the transcript. Click again to delete anyway.",
     "unknownDirectory": "unknown directory",
     "ctxTitle": "Approximate context window usage (from the transcript tail)",
+    "compactTitle": "Click to compact context",
+    "modelTitle": "Model",
+    "exportMd": "Export Markdown",
+    "changes": "Changes",
+    "moreActions": "More actions",
     "loadingConversation": "Loading conversation…",
     "historyError": "Could not load this conversation's history.",
     "emptySession": "No messages in this session yet — send the first one below.",
     "thinking": "thinking…",
     "placeholder": "Send a message… ( / for commands )",
+    "placeholderBranch": "Edit this message and send — a branch session will start from here",
+    "branchHint": "Creating a branch session — edit this message and send. The original session stays untouched.",
+    "branchDismiss": "Cancel",
+    "branchAction": "Branch from here",
     "placeholderUnsupported": "Headless chat is not available for this provider",
     "placeholderNoCwd": "Cannot send — the session directory is unknown",
     "stop": "Stop",
@@ -1153,12 +1163,27 @@
       "spawn_failed": "Failed to start the agent CLI{{detail}}",
       "default": "Failed to send the message."
     },
-    "deleteErrors": {
+    "forkErrors": {
+      "notFound": "Could not find that message in the transcript.",
+      "forbidden": "That transcript path is outside the session directories.",
+      "empty": "Nothing to branch — that message is at the start of the session.",
+      "default": "Failed to create the branch session."
+    },
+    "commandGroups": {
+      "app": "App",
+      "common": "Common",
+      "custom": "Custom",
+      "all": "Built-in",
+      "showAll": "Show all {{n}} built-in commands"
+    },
+    "menuHint": "💡 resume is internalized — hover a message and use the branch action",
+    "railErrors": {
       "busy": "Session is still running — stop it before deleting.",
       "forbidden": "That transcript path is outside the session directories.",
       "default": "Failed to delete the session."
     },
     "ctx": "ctx",
+    "modelDefault": "Default",
     "tokensAbbrev": "{{n}}k tok"
   }
 }

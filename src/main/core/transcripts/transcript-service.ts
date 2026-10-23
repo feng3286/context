@@ -46,14 +46,18 @@ class TranscriptService {
 
 function parseLines(parser: ReturnType<typeof getParser>, text: string): ChatMessage[] {
   const messages: ChatMessage[] = [];
+  // Ordinal counts non-blank lines so codex message ids (m-<ordinal>) map
+  // back to file positions for branching.
+  let ordinal = 0;
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
     try {
-      const parsed = parser?.parseLine(line);
+      const parsed = parser?.parseLine(line, ordinal);
       if (parsed) messages.push(...parsed);
     } catch {
       // A single malformed line must never take down the reader.
     }
+    ordinal++;
   }
   return messages;
 }

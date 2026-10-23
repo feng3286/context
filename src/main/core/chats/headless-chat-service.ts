@@ -74,7 +74,10 @@ export async function sendHeadless(args: {
     return { ok: false, error: { type: 'unsupported' } };
   }
 
-  const cli = (await providerOverrideSettings.getItem(providerId))?.cli ?? providerId;
+  const override = await providerOverrideSettings.getItem(providerId);
+  const cli = override?.cli ?? providerId;
+  // Optional model override — empty/whitespace means the CLI's default.
+  const model = override?.model?.trim();
   const shell = resolveShell();
   const useCmd = isWindowsCmd(shell);
   // cmd.exe does not understand POSIX single-quote escaping. Only the cli
@@ -96,6 +99,7 @@ export async function sendHeadless(args: {
       'stream-json',
       '--verbose',
       '--include-partial-messages',
+      ...(model ? ['--model', quote(model)] : []),
       resumeOrSession,
     ].join(' ');
   } else {
@@ -104,6 +108,7 @@ export async function sendHeadless(args: {
       'exec',
       '--json',
       '--skip-git-repo-check',
+      ...(model ? ['-m', quote(model)] : []),
       ...(newSession ? [] : ['resume', quote(sessionId)]),
       '-',
     ].join(' ');

@@ -123,7 +123,7 @@ export const codexParser: TranscriptParser = {
     }
   },
 
-  parseLine(line: string): ChatMessage[] | null {
+  parseLine(line: string, ordinal?: number): ChatMessage[] | null {
     let row: CodexLine;
     try {
       row = JSON.parse(line) as CodexLine;
@@ -133,7 +133,9 @@ export const codexParser: TranscriptParser = {
     if (row.type !== 'response_item') return null;
     const payload = row.payload ?? {};
     const ts = row.timestamp ?? new Date(0).toISOString();
-    const ordinal = String(row.ordinal ?? 'x');
+    // Rollout rows stopped carrying their own ordinal — fall back to the
+    // caller's non-blank line index so ids stay stable and position-mapped.
+    const idOrdinal = String(ordinal ?? row.ordinal ?? 'x');
 
     switch (payload.type) {
       case 'message': {
@@ -146,7 +148,7 @@ export const codexParser: TranscriptParser = {
         if (role === 'assistant') {
           return [
             {
-              id: `m-${ordinal}`,
+              id: `m-${idOrdinal}`,
               role: 'assistant',
               blocks: [{ kind: 'text', text }],
               timestamp: ts,
@@ -155,7 +157,7 @@ export const codexParser: TranscriptParser = {
         }
         if (role === 'user') {
           return [
-            { id: `m-${ordinal}`, role: 'user', blocks: [{ kind: 'text', text }], timestamp: ts },
+            { id: `m-${idOrdinal}`, role: 'user', blocks: [{ kind: 'text', text }], timestamp: ts },
           ];
         }
         return null; // developer / system
@@ -163,14 +165,14 @@ export const codexParser: TranscriptParser = {
       case 'function_call':
         return [
           {
-            id: `fc-${payload.call_id ?? ordinal}`,
+            id: `fc-${payload.call_id ?? idOrdinal}`,
             role: 'tool',
             blocks: [
               {
                 kind: 'tool_use',
                 name: payload.name ?? 'tool',
                 input: safeJsonParse(payload.arguments),
-                toolUseId: payload.call_id ?? ordinal,
+                toolUseId: payload.call_id ?? idOrdinal,
               },
             ],
             timestamp: ts,
@@ -179,14 +181,14 @@ export const codexParser: TranscriptParser = {
       case 'custom_tool_call':
         return [
           {
-            id: `fc-${payload.call_id ?? ordinal}`,
+            id: `fc-${payload.call_id ?? idOrdinal}`,
             role: 'tool',
             blocks: [
               {
                 kind: 'tool_use',
                 name: payload.name ?? 'tool',
                 input: payload.input,
-                toolUseId: payload.call_id ?? ordinal,
+                toolUseId: payload.call_id ?? idOrdinal,
               },
             ],
             timestamp: ts,
@@ -198,9 +200,11 @@ export const codexParser: TranscriptParser = {
         const text = typeof output === 'string' ? output : JSON.stringify(output ?? '');
         return [
           {
-            id: `fo-${payload.call_id ?? ordinal}`,
+            id: `fo-${payload.call_id ?? idOrdinal}`,
             role: 'tool',
-            blocks: [{ kind: 'tool_result', toolUseId: payload.call_id ?? ordinal, content: text }],
+            blocks: [
+              { kind: 'tool_result', toolUseId: payload.call_id ?? idOrdinal, content: text },
+            ],
             timestamp: ts,
           },
         ];
@@ -214,7 +218,7 @@ export const codexParser: TranscriptParser = {
         if (!summary) return null;
         return [
           {
-            id: `r-${ordinal}`,
+            id: `r-${idOrdinal}`,
             role: 'assistant',
             blocks: [{ kind: 'thinking', text: summary }],
             timestamp: ts,

@@ -240,7 +240,7 @@ export class TaskSessionsStore {
   selectedExternal: ChatSessionSummary | null = null;
   externalChat: SessionChatStore | null = null;
   /** Last session-deletion failure, shown in the rail until dismissed. */
-  deleteError: string | null = null;
+  railError: string | null = null;
 
   private workDir: string | null = null;
 
@@ -306,7 +306,19 @@ export class TaskSessionsStore {
         runInAction(() => {
           this.sessions = result.data;
           this.loaded = true;
-          this.localSessions = stubs.filter((stub) => !materialized.includes(stub.sessionId));
+          // Merge, don't rebuild: sessions created this lifetime survive even
+          // when their addPendingSession RPC has not landed in the KV yet —
+          // a plain rebuild dropped them and cleared the selection mid-flight.
+          const known = new Map(
+            stubs
+              .filter((stub) => !materialized.includes(stub.sessionId))
+              .map((stub) => [stub.sessionId, stub])
+          );
+          const merged = this.localSessions.map((local) => known.get(local.sessionId) ?? local);
+          const fresh = [...known.values()].filter(
+            (stub) => !this.localSessions.some((local) => local.sessionId === stub.sessionId)
+          );
+          this.localSessions = [...merged, ...fresh];
           // Drop the selection if the session disappeared from the index.
           const stillThere =
             !this.selectedExternal ||
@@ -339,6 +351,54 @@ export class TaskSessionsStore {
     }
   }
 
+  /** Branch a session at an earlier message: fork its transcript (original
+   * untouched), open the branch, and send `text` there — the branch point's
+   * text, editable by the caller before passing it in. */
+  async branchFrom(source: ChatSessionSummary, messageId: string, text: string): Promise<boolean> {
+    if (!source.file || !text.trim()) return false;
+    const result = await rpc.chats.forkSession({
+      providerId: source.providerId,
+      file: source.file,
+      messageId,
+      sourceTitle: source.title,
+    });
+    if (!result.success) {
+      runInAction(() => {
+        this.railError = describeForkError(result.error);
+      });
+      return false;
+    }
+    const branch: ChatSessionSummary = {
+      sessionId: result.data.sessionId,
+      providerId: source.providerId,
+      cwd: source.cwd,
+      title: source.title,
+      updatedAt: Date.now(),
+      file: result.data.file,
+    };
+    runInAction(() => {
+      this.sessions = [branch, ...this.sessions];
+    });
+    this.selectExternal(branch);
+    await this.externalChat?.send(text);
+    return true;
+  }
+
+  /** App-owned display title (override); empty string falls back to derived. */
+  async renameSession(session: ChatSessionSummary, title: string): Promise<void> {
+    const trimmed = title.trim();
+    const result = await rpc.chats.renameSession({ sessionId: session.sessionId, title: trimmed });
+    if (!result.success) {
+      runInAction(() => {
+        this.railError = result.error.message ?? i18n.t('chat:railErrors.default');
+      });
+      return;
+    }
+    runInAction(() => {
+      session.title = trimmed;
+    });
+  }
+
   /** Delete a session: remove its transcript (if any) and drop it from the rail. */
   async removeExternal(session: ChatSessionSummary): Promise<void> {
     if (session.file) {
@@ -348,7 +408,7 @@ export class TaskSessionsStore {
       });
       if (!result.success) {
         runInAction(() => {
-          this.deleteError = describeDeleteError(result.error);
+          this.railError = describeDeleteError(result.error);
         });
         return;
       }
@@ -357,7 +417,7 @@ export class TaskSessionsStore {
       await rpc.chats.removePendingSessions({ ids: [session.sessionId] });
     }
     runInAction(() => {
-      this.deleteError = null;
+      this.railError = null;
       this.localSessions = this.localSessions.filter((s) => s !== session);
       this.sessions = this.sessions.filter((s) => s !== session);
     });
@@ -390,10 +450,23 @@ export function describeSendError(error: { type: string; message?: string }): st
 function describeDeleteError(error: { type: string; message?: string }): string {
   switch (error.type) {
     case 'busy':
-      return i18n.t('chat:deleteErrors.busy');
+      return i18n.t('chat:railErrors.busy');
     case 'forbidden':
-      return i18n.t('chat:deleteErrors.forbidden');
+      return i18n.t('chat:railErrors.forbidden');
     default:
-      return error.message ?? i18n.t('chat:deleteErrors.default');
+      return error.message ?? i18n.t('chat:railErrors.default');
+  }
+}
+
+function describeForkError(error: { type: string; message?: string }): string {
+  switch (error.type) {
+    case 'not_found':
+      return i18n.t('chat:forkErrors.notFound');
+    case 'forbidden':
+      return i18n.t('chat:forkErrors.forbidden');
+    case 'empty':
+      return i18n.t('chat:forkErrors.empty');
+    default:
+      return error.message ?? i18n.t('chat:forkErrors.default');
   }
 }

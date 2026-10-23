@@ -24,6 +24,8 @@ import { ptySessionRegistry } from '@main/core/pty/pty-session-registry';
 import { transcriptService } from '@main/core/transcripts/transcript-service';
 import { getChatTabs, setChatTabs } from './chat-tab-registry';
 import { readContextUsage } from './context-usage';
+import { FORK_TITLE_PREFIX, forkTranscript } from './fork-session';
+import { getSessionOverrides, setSessionOverride } from './session-overrides';
 
 /**
  * Chat center RPC: session discovery over the providers' own transcript
@@ -47,7 +49,16 @@ function underAnyTranscriptRoot(file: string): boolean {
 export const chatsController = createRPCController({
   listSessions: async (args?: { cwdPrefix?: string }) => {
     try {
-      return ok(await listSessions(args));
+      const sessions = await listSessions(args);
+      // App-owned display titles (renames, branch labels) win over the
+      // provider-derived ones; the transcripts themselves stay untouched.
+      const overrides = await getSessionOverrides();
+      return ok(
+        sessions.map((s) => {
+          const title = overrides[s.sessionId]?.title;
+          return title ? { ...s, title } : s;
+        })
+      );
     } catch (e) {
       return err({ type: 'internal' as const, message: String(e) });
     }
@@ -98,6 +109,8 @@ export const chatsController = createRPCController({
       if (isHeadlessRunning(sid)) return err({ type: 'busy' as const });
       await fs.rm(args.file, { force: true });
       forgetSession(args.file);
+      // Drop any app-owned title override with the session.
+      await setSessionOverride(sid, null).catch(() => {});
       return ok({ deleted: true });
     } catch (e) {
       return err({ type: 'internal' as const, message: String(e) });
@@ -106,6 +119,43 @@ export const chatsController = createRPCController({
 
   abort: async (args: { sessionId: string }) => {
     return ok({ aborted: abortHeadless(args.sessionId) });
+  },
+
+  /** Branch a session at an earlier message: copies the transcript prefix to
+   * a fresh session file (original untouched) and returns its identity — the
+   * renderer resumes that and lets the user edit+resend the chosen message. */
+  forkSession: async (args: {
+    providerId: string;
+    file: string;
+    messageId: string;
+    sourceTitle?: string;
+  }) => {
+    try {
+      if (!underAnyTranscriptRoot(args.file)) return err({ type: 'forbidden' as const });
+      const result = await forkTranscript(args);
+      if ('sessionId' in result) {
+        if (args.sourceTitle) {
+          await setSessionOverride(result.sessionId, {
+            title: FORK_TITLE_PREFIX + args.sourceTitle.slice(0, 80),
+          }).catch(() => {});
+        }
+        return ok(result);
+      }
+      return err(result);
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
+  },
+
+  /** App-owned display title; empty string falls back to the derived one. */
+  renameSession: async (args: { sessionId: string; title: string }) => {
+    try {
+      const title = args.title.trim();
+      await setSessionOverride(args.sessionId, { title: title || undefined });
+      return ok({ renamed: true });
+    } catch (e) {
+      return err({ type: 'internal' as const, message: String(e) });
+    }
   },
 
   listPendingSessions: async (args?: { cwdPrefix?: string }) => {

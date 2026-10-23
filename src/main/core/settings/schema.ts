@@ -77,6 +77,8 @@ export const keyboardSettingsSchema = z
 
 export const providerCustomConfigEntrySchema = z.object({
   cli: z.string().optional(),
+  /** Model override passed to headless chat runs (--model / -m). Empty = CLI default. */
+  model: z.string().optional(),
   resumeFlag: z.string().optional(),
   defaultArgs: z.array(z.string()).optional(),
   /** When true, defaultArgs go before resume/session/prompt args (launcher-prefix style). */

@@ -1,6 +1,12 @@
 import {
+  ChevronDown,
+  Download,
+  FileDiff,
+  GitBranch,
   Loader2,
   MessageSquare,
+  MoreHorizontal,
+  Pencil,
   Plus,
   RefreshCw,
   SendHorizontal,
@@ -10,12 +16,28 @@ import {
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ChatCommandInfo, ChatMessage, ChatSessionSummary } from '@shared/chat';
+import {
+  CHAT_MODEL_OPTIONS,
+  type ChatCommandInfo,
+  type ChatMessage,
+  type ChatSessionSummary,
+} from '@shared/chat';
+import { useProviderSettings } from '@renderer/features/settings/use-provider-settings';
+import { useTaskViewNavigation } from '@renderer/features/tasks/hooks/use-task-view-navigation';
 import { rpc } from '@renderer/lib/ipc';
 import { Button } from '@renderer/lib/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@renderer/lib/ui/dropdown-menu';
 import { Spinner } from '@renderer/lib/ui/spinner';
 import { cn } from '@renderer/utils/utils';
 import type { ChatTab } from '../chat-tabs-store';
+import { buildChatMarkdown, downloadChatMarkdown } from '../export-chat';
 import { SessionChatStore, TaskSessionsStore } from '../session-chat-store';
 import { MessageBubble } from './message-bubble';
 
@@ -115,6 +137,7 @@ export const ChatTabView = observer(function ChatTabView({
               sessionsStore.selectedExternal?.cwd ?? workDir
             );
           }}
+          onBranch={(source, messageId, text) => sessionsStore.branchFrom(source, messageId, text)}
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
@@ -144,8 +167,9 @@ const SessionsRail = observer(function SessionsRail({
   const external = store.railSessions.filter((s) => s.providerId === chatTab.providerId);
   const { t } = useTranslation();
   const [choosingContext, setChoosingContext] = useState(false);
+  const hasContextChoice = !!(projectDir && projectDir.toLowerCase() !== workDir.toLowerCase());
   const contextOptions = [
-    ...(projectDir && projectDir.toLowerCase() !== workDir.toLowerCase()
+    ...(hasContextChoice
       ? [
           {
             label: t('chat:projectContext', { name: projectDir.split(/[\/]/).pop() }),
@@ -163,15 +187,30 @@ const SessionsRail = observer(function SessionsRail({
           {t('chat:sessions')}
         </span>
         <div className="flex items-center gap-0.5">
+          {/* One click creates + activates a session on the current context
+              dir; the context picker stays one chevron away. */}
           <Button
             variant="ghost"
             size="icon"
             className="size-5"
-            onClick={() => setChoosingContext((v) => !v)}
+            onClick={() =>
+              store.createLocalSession(chatTab.providerId, store.selectedExternal?.cwd ?? workDir)
+            }
             aria-label={t('chat:newSession')}
           >
             <Plus className="size-3" />
           </Button>
+          {hasContextChoice ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-5"
+              onClick={() => setChoosingContext((v) => !v)}
+              aria-label={t('chat:contextDirectory')}
+            >
+              <ChevronDown className="size-3" />
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"
@@ -208,14 +247,14 @@ const SessionsRail = observer(function SessionsRail({
           ))}
         </div>
       ) : null}
-      {store.deleteError ? (
+      {store.railError ? (
         <button
           type="button"
           className="mx-1.5 mb-1 rounded-md bg-red-500/10 px-2 py-1 text-left text-[10px] leading-relaxed text-red-500"
-          onClick={() => (store.deleteError = null)}
-          title={t('chat:deleteErrorDismiss')}
+          onClick={() => (store.railError = null)}
+          title={t('chat:railErrorDismiss')}
         >
-          {store.deleteError}
+          {store.railError}
         </button>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
@@ -226,6 +265,7 @@ const SessionsRail = observer(function SessionsRail({
             active={store.selectedExternal?.sessionId === session.sessionId}
             onSelect={() => store.selectExternal(session)}
             onDelete={() => void store.removeExternal(session)}
+            onRename={(title) => void store.renameSession(session, title)}
           />
         ))}
         {store.loaded && external.length === 0 ? (
@@ -243,15 +283,19 @@ function RailSessionItem({
   active,
   onSelect,
   onDelete,
+  onRename,
 }: {
   session: ChatSessionSummary;
   active: boolean;
   onSelect: () => void;
   onDelete?: () => void;
+  onRename?: (title: string) => void;
 }) {
   // Two-step delete: arm on first click, confirm on the second.
   const { t } = useTranslation();
   const [armed, setArmed] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
   // The transcript may belong to a TUI session that is still running — the
   // CLI keeps writing (claude even recreates the file), so say so up front.
   const [liveInTerminal, setLiveInTerminal] = useState(false);
@@ -263,6 +307,16 @@ function RailSessionItem({
     }, 2500);
     return () => clearTimeout(timer);
   }, [armed]);
+
+  const startRename = () => {
+    setDraft(session.title);
+    setEditing(true);
+  };
+  const commitRename = () => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== session.title) onRename?.(trimmed);
+  };
 
   return (
     <div
@@ -284,15 +338,58 @@ function RailSessionItem({
         active ? 'bg-background-1 shadow-sm' : 'hover:bg-background-1/60'
       )}
     >
-      <span className="line-clamp-2 pr-5 text-xs leading-snug">
-        {/* Pending stubs keep a placeholder title as data — localize it at render. */}
-        {session.title === 'New session' ? t('chat:newSessionTitle') : session.title}
-      </span>
+      {active ? (
+        <span
+          aria-hidden
+          className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-primary"
+        />
+      ) : null}
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitRename}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') commitRename();
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          className="w-full rounded bg-background-2 px-1 py-0.5 text-xs outline-none"
+        />
+      ) : (
+        <span
+          className="line-clamp-2 pr-5 text-xs leading-snug"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            if (onRename) startRename();
+          }}
+        >
+          {/* Pending stubs keep a placeholder title as data — localize it at render. */}
+          {session.title === 'New session' ? t('chat:newSessionTitle') : session.title}
+        </span>
+      )}
       <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
         <span className="rounded bg-background-1 px-1 py-px font-medium">{session.providerId}</span>
         {session.cwd ? <span className="truncate">{session.cwd.split(/[\\/]/).pop()}</span> : null}
         <span className="ml-auto shrink-0">{formatRelative(session.updatedAt, t)}</span>
       </span>
+      {onRename && !editing ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-1 right-6 size-5 opacity-0 group-hover:opacity-100"
+          aria-label={t('chat:renameSession')}
+          title={t('chat:renameSession')}
+          onClick={(e) => {
+            e.stopPropagation();
+            startRename();
+          }}
+        >
+          <Pencil className="size-3" />
+        </Button>
+      ) : null}
       {onDelete ? (
         <Button
           variant="ghost"
@@ -336,21 +433,80 @@ function RailSessionItem({
   );
 }
 
+/** Header model picker — persisted as a provider override, sent as
+ * `--model` / `-m` on every headless run. */
+const ModelPicker = observer(function ModelPicker({ providerId }: { providerId: string }) {
+  const { t } = useTranslation();
+  const providerSettings = useProviderSettings(providerId);
+  const options = CHAT_MODEL_OPTIONS[providerId] ?? [];
+  const model = providerSettings.value?.model?.trim() ?? '';
+  if (options.length === 0) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger>
+        <Button
+          variant="ghost"
+          className="h-5 shrink-0 gap-0.5 rounded px-1.5 text-[10px] font-medium text-muted-foreground"
+          title={t('chat:modelTitle')}
+        >
+          {model || t('chat:modelDefault')}
+          <ChevronDown className="size-2.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup
+          value={model || '__default__'}
+          onValueChange={(value) =>
+            providerSettings.update({ model: value === '__default__' ? '' : String(value) })
+          }
+        >
+          <DropdownMenuRadioItem value="__default__">
+            {t('chat:modelDefault')}
+          </DropdownMenuRadioItem>
+          {options.map((option) => (
+            <DropdownMenuRadioItem key={option} value={option}>
+              {option}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+});
+
+/** Empty `/` shows a curated palette; typing searches everything. */
+const INTERNALIZED_COMMANDS = new Set(['resume', 'rewind', 'diff', 'export', 'copy', 'cost']);
+const PINNED_COMMANDS: Record<string, string[]> = {
+  claude: ['compact', 'model', 'context', 'review', 'init', 'memory', 'mcp', 'usage'],
+  codex: ['compact', 'model', 'review', 'init', 'mcp', 'status', 'plan'],
+};
+
+type CommandGroup = 'app' | 'common' | 'custom' | 'all';
+type CommandEntry = ChatCommandInfo & { group: CommandGroup };
+
 /** A session from the rail — headless send with streaming replies. */
 const ExternalSessionPane = observer(function ExternalSessionPane({
   store,
   onNewSession,
+  onBranch,
 }: {
   store: SessionChatStore;
   onNewSession?: () => void;
+  onBranch: (source: ChatSessionSummary, messageId: string, text: string) => Promise<boolean>;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const { t } = useTranslation();
+  const { openDiffView } = useTaskViewNavigation();
   const [text, setText] = useState('');
   const [commands, setCommands] = useState<ChatCommandInfo[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [slashHidden, setSlashHidden] = useState(false);
+  const [showAllCommands, setShowAllCommands] = useState(false);
+  // Set when the user picks "branch from here" on an earlier message: the
+  // message text lands in the input (editable), and sending forks the
+  // transcript at that point instead of continuing the live session.
+  const [branchBase, setBranchBase] = useState<{ messageId: string; text: string } | null>(null);
   const session = store.session;
   const canSend = supportsHeadless(session.providerId) && !!session.cwd;
 
@@ -380,24 +536,71 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
     return () => {
       cancelled = true;
     };
-  }, [session.providerId, session.cwd, onNewSession]);
+  }, [session.providerId, session.cwd, onNewSession, t]);
 
   // Slash autocomplete while the whole input is a `/query` fragment; a trailing
   // space (after completing) no longer matches, so Enter then sends.
   const slashQuery = text.match(/^\/([a-zA-Z0-9:_-]*)$/)?.[1] ?? null;
+  const groupedMenu = slashQuery === '';
   const slashMatches = useMemo(() => {
     if (slashQuery == null) return [];
     const query = slashQuery.toLowerCase();
-    return commands.filter((c) => c.name.toLowerCase().startsWith(query)).slice(0, 8);
-  }, [commands, slashQuery]);
+    const matching = commands.filter((c) => c.name.toLowerCase().startsWith(query));
+    if (!groupedMenu) {
+      // Typing searches everything, internalized commands included.
+      return matching.slice(0, 8).map((c) => ({ ...c, group: 'all' as CommandGroup }));
+    }
+    const withGroup = (c: ChatCommandInfo, group: CommandGroup): CommandEntry => ({
+      ...c,
+      group,
+    });
+    const app = matching.filter((c) => c.source === 'app').map((c) => withGroup(c, 'app'));
+    const pinnedNames = PINNED_COMMANDS[session.providerId] ?? [];
+    const common = matching
+      .filter(
+        (c) =>
+          c.source === 'builtin' &&
+          pinnedNames.includes(c.name) &&
+          !INTERNALIZED_COMMANDS.has(c.name)
+      )
+      .map((c) => withGroup(c, 'common'));
+    const custom = matching.filter((c) => c.source === 'custom').map((c) => withGroup(c, 'custom'));
+    const rest = matching
+      .filter(
+        (c) =>
+          c.source === 'builtin' &&
+          !pinnedNames.includes(c.name) &&
+          !INTERNALIZED_COMMANDS.has(c.name)
+      )
+      .map((c) => withGroup(c, 'all'));
+    return [...app, ...common, ...custom, ...(showAllCommands ? rest : [])];
+  }, [commands, slashQuery, groupedMenu, session.providerId, showAllCommands]);
   const slashOpen = slashMatches.length > 0 && !slashHidden;
+  const hiddenBuiltinCount = commands.filter(
+    (c) =>
+      c.source === 'builtin' &&
+      !INTERNALIZED_COMMANDS.has(c.name) &&
+      !(PINNED_COMMANDS[session.providerId] ?? []).includes(c.name)
+  ).length;
 
   useEffect(() => {
     setHighlight(0);
-  }, [slashQuery]);
+  }, [slashQuery, showAllCommands]);
 
   const completeSlash = (cmd: ChatCommandInfo) => {
     setText(`/${cmd.name} `);
+  };
+
+  const startBranch = (message: ChatMessage) => {
+    const block = message.blocks.find((b) => b.kind === 'text');
+    const source = block && block.kind === 'text' ? block.text : '';
+    if (!source) return;
+    setBranchBase({ messageId: message.id, text: source });
+    setText(source);
+  };
+  const cancelBranch = () => {
+    setBranchBase(null);
+    setText('');
   };
 
   const send = async () => {
@@ -408,6 +611,16 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
       onNewSession();
       return;
     }
+    if (branchBase) {
+      // The branch flow re-sends the (possibly edited) message text into a
+      // forked copy of the transcript; this pane is replaced by the branch's.
+      const source = store.session;
+      const base = branchBase;
+      setText('');
+      setBranchBase(null);
+      void onBranch(source, base.messageId, value).catch(() => {});
+      return;
+    }
     if (await store.send(value)) setText('');
   };
 
@@ -416,31 +629,68 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
 
   const usage = store.contextUsage;
   const usagePct = usage?.contextWindow ? usage.tokens / usage.contextWindow : 0;
+  const compactRecommended = usagePct > 0.8;
   const fmtTokens = (n: number) => (n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-1.5">
         <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
           {session.cwd || t('chat:unknownDirectory')}
         </span>
         {usage ? (
-          <span
-            title={t('chat:ctxTitle')}
+          <Button
+            variant="ghost"
             className={cn(
-              'shrink-0 rounded px-1.5 py-px text-[10px] font-medium',
+              'h-5 shrink-0 rounded px-1.5 text-[10px] font-medium',
               usagePct > 0.95
                 ? 'bg-red-500/15 text-red-500'
                 : usagePct > 0.8
                   ? 'bg-amber-500/15 text-amber-500'
                   : 'bg-background-1 text-muted-foreground'
             )}
+            title={compactRecommended ? t('chat:compactTitle') : t('chat:ctxTitle')}
+            onClick={() => void store.send('/compact')}
           >
             {t('chat:ctx')} {fmtTokens(usage.tokens)}
             {usage.contextWindow ? `/${fmtTokens(usage.contextWindow)}` : ''}
-          </span>
+          </Button>
         ) : null}
         {store.running ? <Spinner className="size-3" /> : null}
+        <ModelPicker providerId={session.providerId} />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-5 shrink-0"
+          onClick={openDiffView}
+          aria-label={t('chat:changes')}
+          title={t('chat:changes')}
+        >
+          <FileDiff className="size-3" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-5 shrink-0"
+              aria-label={t('chat:moreActions')}
+            >
+              <MoreHorizontal className="size-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                const content = buildChatMarkdown(session.title, store.messages, t);
+                downloadChatMarkdown(session.title, content);
+              }}
+            >
+              <Download className="size-3.5" />
+              {t('chat:exportMd')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div
         ref={scrollRef}
@@ -465,7 +715,11 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
           </div>
         ) : null}
         {store.messages.map((message: ChatMessage) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble
+            key={message.id}
+            message={message}
+            onBranch={message.role === 'user' && canSend ? () => startBranch(message) : undefined}
+          />
         ))}
         {showStream ? (
           <StreamingBubble text={store.streamText} thinking={store.streamThinking} />
@@ -477,44 +731,84 @@ const ExternalSessionPane = observer(function ExternalSessionPane({
         </div>
       ) : null}
       <div className="shrink-0 border-t border-border p-2">
+        {branchBase ? (
+          <div className="mb-1 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-500">
+            <GitBranch className="size-3 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{t('chat:branchHint')}</span>
+            <button
+              type="button"
+              className="shrink-0 underline-offset-2 hover:underline"
+              onClick={cancelBranch}
+            >
+              {t('chat:branchDismiss')}
+            </button>
+          </div>
+        ) : null}
         {slashOpen ? (
           <div className="mb-1 overflow-hidden rounded-lg border border-border bg-background-1 shadow-md">
-            {slashMatches.map((cmd, i) => (
+            {slashMatches.map((cmd, i) => {
+              const previous = i > 0 ? slashMatches[i - 1] : null;
+              const showLabel = groupedMenu && (!previous || previous.group !== cmd.group);
+              return (
+                <div key={`${cmd.group}:${cmd.source}:${cmd.name}`}>
+                  {showLabel ? (
+                    <div className="bg-background-1/60 px-3 pt-1.5 pb-0.5 text-[9px] font-semibold tracking-wide text-muted-foreground/70 uppercase">
+                      {t(`chat:commandGroups.${cmd.group}`)}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-xs',
+                      i === highlight ? 'bg-background-2' : ''
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      completeSlash(cmd);
+                    }}
+                    onMouseEnter={() => setHighlight(i)}
+                  >
+                    <span className="shrink-0 font-medium">/{cmd.name}</span>
+                    {cmd.description ? (
+                      <span className="truncate text-muted-foreground">
+                        {/* Builtin descriptions localize by command name; custom
+                            commands keep their frontmatter text as the fallback. */}
+                        {t(`chat:commands.${cmd.name}`, { defaultValue: cmd.description })}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+              );
+            })}
+            {groupedMenu && !showAllCommands && hiddenBuiltinCount > 0 ? (
               <button
-                key={`${cmd.source}:${cmd.name}`}
                 type="button"
-                className={cn(
-                  'flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-xs',
-                  i === highlight ? 'bg-background-2' : ''
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  completeSlash(cmd);
-                }}
-                onMouseEnter={() => setHighlight(i)}
+                className="w-full border-t border-border px-3 py-1.5 text-left text-[10px] text-muted-foreground hover:bg-background-2"
+                onClick={() => setShowAllCommands(true)}
               >
-                <span className="shrink-0 font-medium">/{cmd.name}</span>
-                {cmd.description ? (
-                  <span className="truncate text-muted-foreground">
-                    {/* Builtin descriptions localize by command name; custom
-                        commands keep their frontmatter text as the fallback. */}
-                    {t(`chat:commands.${cmd.name}`, { defaultValue: cmd.description })}
-                  </span>
-                ) : null}
+                {t('chat:commandGroups.showAll', { n: hiddenBuiltinCount })}
               </button>
-            ))}
+            ) : null}
+            {groupedMenu ? (
+              <div className="border-t border-border px-3 py-1 text-[9px] text-muted-foreground/60">
+                {t('chat:menuHint')}
+              </div>
+            ) : null}
           </div>
         ) : null}
         <div className="flex items-end gap-2 rounded-lg border border-border bg-background-1 px-2 py-1.5">
           <AutoResizingTextarea
             rows={1}
+            autoFocus
             value={text}
             placeholder={
-              canSend
-                ? t('chat:placeholder')
-                : session.cwd
-                  ? t('chat:placeholderUnsupported')
-                  : t('chat:placeholderNoCwd')
+              branchBase
+                ? t('chat:placeholderBranch')
+                : canSend
+                  ? t('chat:placeholder')
+                  : session.cwd
+                    ? t('chat:placeholderUnsupported')
+                    : t('chat:placeholderNoCwd')
             }
             disabled={!canSend}
             className="max-h-40 min-h-6 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"

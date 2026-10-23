@@ -243,6 +243,10 @@ export class TaskSessionsStore {
   railError: string | null = null;
 
   private workDir: string | null = null;
+  /** Optional second scan root: sessions created under the project context
+   * dir live outside the task worktree and would vanish from the rail on
+   * restart if only workDir were scanned. */
+  private projectDir: string | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -278,33 +282,50 @@ export class TaskSessionsStore {
     return session;
   }
 
-  async load(workDir: string): Promise<void> {
+  async load(workDir: string, projectDir?: string): Promise<void> {
     this.workDir = workDir;
+    this.projectDir = projectDir ?? null;
     this.loading = true;
     try {
-      const [result, pending] = await Promise.all([
-        rpc.chats.listSessions({ cwdPrefix: workDir }),
-        rpc.chats.listPendingSessions({ cwdPrefix: workDir }),
+      const prefixes = [...new Set(projectDir ? [workDir, projectDir] : [workDir])];
+      const [sessionLists, pendingLists] = await Promise.all([
+        Promise.all(prefixes.map((prefix) => rpc.chats.listSessions({ cwdPrefix: prefix }))),
+        Promise.all(prefixes.map((prefix) => rpc.chats.listPendingSessions({ cwdPrefix: prefix }))),
       ]);
-      if (result.success) {
-        const stubs: ChatSessionSummary[] = (pending.success ? pending.data : []).map((stub) => ({
-          sessionId: stub.sessionId,
-          providerId: stub.providerId,
-          cwd: stub.cwd,
-          title: stub.title || i18n.t('chat:newSessionTitle'),
-          updatedAt: stub.createdAt,
-          file: '',
-        }));
+      if (sessionLists.every((r) => r.success)) {
+        // Merge across scan roots; one session has exactly one cwd, so the
+        // dedupe only guards nested-prefix overlap.
+        const discovered = new Map<string, ChatSessionSummary>();
+        for (const r of sessionLists) {
+          for (const s of r.success ? r.data : []) {
+            if (!discovered.has(s.sessionId)) discovered.set(s.sessionId, s);
+          }
+        }
+        const discoveredList = [...discovered.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+        const stubs: ChatSessionSummary[] = [];
+        for (const r of pendingLists) {
+          for (const stub of r.success ? r.data : []) {
+            if (stubs.some((s) => s.sessionId === stub.sessionId)) continue;
+            stubs.push({
+              sessionId: stub.sessionId,
+              providerId: stub.providerId,
+              cwd: stub.cwd,
+              title: stub.title || i18n.t('chat:newSessionTitle'),
+              updatedAt: stub.createdAt,
+              file: '',
+            });
+          }
+        }
         // Stubs whose transcript materialized are retired — the discovered
         // entry replaces them.
         const materialized = stubs
-          .filter((stub) => result.data.some((d) => d.sessionId === stub.sessionId))
+          .filter((stub) => discovered.has(stub.sessionId))
           .map((stub) => stub.sessionId);
         if (materialized.length > 0) {
           void rpc.chats.removePendingSessions({ ids: materialized });
         }
         runInAction(() => {
-          this.sessions = result.data;
+          this.sessions = discoveredList;
           this.loaded = true;
           // Merge, don't rebuild: sessions created this lifetime survive even
           // when their addPendingSession RPC has not landed in the KV yet —
@@ -336,7 +357,7 @@ export class TaskSessionsStore {
   }
 
   async refresh(): Promise<void> {
-    if (this.workDir) await this.load(this.workDir);
+    if (this.workDir) await this.load(this.workDir, this.projectDir ?? undefined);
   }
 
   selectExternal(session: ChatSessionSummary | null): void {

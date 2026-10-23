@@ -115,9 +115,9 @@ export const ChatTabView = observer(function ChatTabView({
   const externalChat = sessionsStore.externalChat;
 
   useEffect(() => {
-    if (workDir) void sessionsStore.load(workDir);
+    if (workDir) void sessionsStore.load(workDir, projectDir);
     return () => sessionsStore.dispose();
-  }, [sessionsStore, workDir]);
+  }, [sessionsStore, workDir, projectDir]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 bg-background-secondary-1">
@@ -134,7 +134,9 @@ export const ChatTabView = observer(function ChatTabView({
           onNewSession={() => {
             sessionsStore.createLocalSession(
               chatTab.providerId,
-              sessionsStore.selectedExternal?.cwd ?? workDir
+              // New sessions default to the project context dir; the selected
+              // session's own cwd wins so a run of sessions stays in one place.
+              sessionsStore.selectedExternal?.cwd ?? projectDir ?? workDir
             );
           }}
           onBranch={(source, messageId, text) => sessionsStore.branchFrom(source, messageId, text)}
@@ -194,7 +196,10 @@ const SessionsRail = observer(function SessionsRail({
             size="icon"
             className="size-5"
             onClick={() =>
-              store.createLocalSession(chatTab.providerId, store.selectedExternal?.cwd ?? workDir)
+              store.createLocalSession(
+                chatTab.providerId,
+                store.selectedExternal?.cwd ?? projectDir ?? workDir
+              )
             }
             aria-label={t('chat:newSession')}
           >

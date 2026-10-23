@@ -91,7 +91,11 @@ export async function sendHeadless(args: {
   const cli = override?.cli ?? providerId;
   // Optional model override — empty/whitespace means the CLI's default.
   const model = override?.model?.trim();
-  const shell = resolveShell();
+  // Windows: always cmd.exe. resolveShell() honors $SHELL — launching the app
+  // from an MSYS/Git-Bash terminal leaks e.g. SHELL=/bin/bash.exe into the
+  // main process, and that bash's PATH lacks the .cmd shims → "claude: command
+  // not found". The run only needs to launch one CLI, which cmd resolves.
+  const shell = process.platform === 'win32' ? (process.env.ComSpec ?? 'cmd.exe') : resolveShell();
   const useCmd = isWindowsCmd(shell);
   // cmd.exe does not understand POSIX single-quote escaping. Only the cli
   // path and the (validated) session id reach the line — the prompt itself

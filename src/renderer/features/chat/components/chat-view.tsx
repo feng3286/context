@@ -118,6 +118,10 @@ export const ChatTabView = observer(function ChatTabView({
   const externalChat = sessionsStore.externalChat;
   // Stable key so the scan re-runs only when the option set really changes.
   const contextDirKey = (contextProjects ?? []).map((p) => p.path).join('|');
+  // Same effective cwd the TUI conversation provider falls back to
+  // (local-project-provider): a single-context-project task works inside that
+  // project's worktree, not the task container dir.
+  const defaultCwd = contextProjects?.length === 1 ? contextProjects[0].path : workDir;
 
   useEffect(() => {
     if (workDir) void sessionsStore.load(workDir, contextDirKey ? contextDirKey.split('|') : []);
@@ -139,7 +143,7 @@ export const ChatTabView = observer(function ChatTabView({
           onNewSession={() => {
             sessionsStore.createLocalSession(
               chatTab.providerId,
-              sessionsStore.selectedExternal?.cwd ?? workDir
+              sessionsStore.selectedExternal?.cwd ?? defaultCwd
             );
           }}
           onBranch={(source, messageId, text) => sessionsStore.branchFrom(source, messageId, text)}
@@ -175,6 +179,8 @@ const SessionsRail = observer(function SessionsRail({
   // Same gate as the TUI conversation modal: only offer a choice when there
   // is more than one context project; otherwise everything runs in task dir.
   const hasContextChoice = (contextProjects?.length ?? 0) > 1;
+  // Same effective cwd as the TUI provider fallback (see ChatTabView).
+  const defaultCwd = contextProjects?.length === 1 ? contextProjects[0].path : workDir;
   const contextOptions = [
     { label: t('chat:taskDirectory'), path: workDir },
     ...(contextProjects ?? []).map((p) => ({ label: p.name, path: p.path })),
@@ -194,7 +200,10 @@ const SessionsRail = observer(function SessionsRail({
             size="icon"
             className="size-5"
             onClick={() =>
-              store.createLocalSession(chatTab.providerId, store.selectedExternal?.cwd ?? workDir)
+              store.createLocalSession(
+                chatTab.providerId,
+                store.selectedExternal?.cwd ?? defaultCwd
+              )
             }
             aria-label={t('chat:newSession')}
           >

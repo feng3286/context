@@ -149,6 +149,10 @@ export async function sendHeadless(args: {
 
   const run: HeadlessRun = { sessionId, providerId, child };
   runs.set(sessionId, run);
+  // The command line carries flags that silently change behavior (model,
+  // permissions) — log it so stale-build "why is it denied" mysteries take
+  // one look instead of a spike session. The prompt never appears here.
+  log.info('chats: headless spawn', { providerId, sessionId, pid: child.pid, commandLine });
 
   events.emit(chatRunChannel, { sessionId: topic, status: 'running' }, topic);
 

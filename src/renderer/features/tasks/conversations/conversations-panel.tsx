@@ -69,8 +69,16 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
   }, [conversationTabs, isActive]);
 
   const activeChatTab = chatTabs.activeTab;
-  const projectDir = mountedProject?.data.type === 'local' ? mountedProject.data.path : undefined;
   const workDir = provisioned._taskData.workDir ?? provisioned.path;
+  // Same options the create-conversation modal offers: every context project
+  // with a worktree, named by its project.
+  const contextProjects = useMemo(
+    () =>
+      Array.from(provisioned.projectContexts?.projects.values() ?? [])
+        .filter((ctx) => ctx.worktreePath)
+        .map((ctx) => ({ name: ctx.projectName, path: ctx.worktreePath as string })),
+    [provisioned.projectContexts]
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -83,7 +91,7 @@ export const ConversationsPanel = observer(function ConversationsPanel() {
             key={activeChatTab.id}
             chatTab={activeChatTab}
             workDir={workDir}
-            projectDir={projectDir}
+            contextProjects={contextProjects}
           />
         ) : (
           <TabbedPtyPanel<ConversationStore>

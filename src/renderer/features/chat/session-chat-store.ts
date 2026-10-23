@@ -243,10 +243,10 @@ export class TaskSessionsStore {
   railError: string | null = null;
 
   private workDir: string | null = null;
-  /** Optional second scan root: sessions created under the project context
-   * dir live outside the task worktree and would vanish from the rail on
-   * restart if only workDir were scanned. */
-  private projectDir: string | null = null;
+  /** Extra scan roots: sessions created under a context project's worktree
+   * live outside the task worktree and would vanish from the rail on restart
+   * if only workDir were scanned. Mirrors the TUI conversation cwd options. */
+  private extraScanDirs: string[] = [];
 
   constructor() {
     makeAutoObservable(this);
@@ -282,12 +282,12 @@ export class TaskSessionsStore {
     return session;
   }
 
-  async load(workDir: string, projectDir?: string): Promise<void> {
+  async load(workDir: string, extraDirs: string[] = []): Promise<void> {
     this.workDir = workDir;
-    this.projectDir = projectDir ?? null;
+    this.extraScanDirs = extraDirs;
     this.loading = true;
     try {
-      const prefixes = [...new Set(projectDir ? [workDir, projectDir] : [workDir])];
+      const prefixes = [...new Set([workDir, ...extraDirs])];
       const [sessionLists, pendingLists] = await Promise.all([
         Promise.all(prefixes.map((prefix) => rpc.chats.listSessions({ cwdPrefix: prefix }))),
         Promise.all(prefixes.map((prefix) => rpc.chats.listPendingSessions({ cwdPrefix: prefix }))),
@@ -357,7 +357,7 @@ export class TaskSessionsStore {
   }
 
   async refresh(): Promise<void> {
-    if (this.workDir) await this.load(this.workDir, this.projectDir ?? undefined);
+    if (this.workDir) await this.load(this.workDir, this.extraScanDirs);
   }
 
   selectExternal(session: ChatSessionSummary | null): void {

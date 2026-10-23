@@ -104,20 +104,25 @@ function formatRelative(
 export const ChatTabView = observer(function ChatTabView({
   chatTab,
   workDir,
-  projectDir,
+  contextProjects,
 }: {
   chatTab: ChatTab;
   workDir: string;
-  projectDir?: string;
+  /** Context projects the task can run against — same options the TUI
+   * conversation modal offers, mirrored so chat sessions land in the same
+   * directories. */
+  contextProjects?: Array<{ name: string; path: string }>;
 }) {
   const sessionsStore = useMemo(() => new TaskSessionsStore(), []);
   const { t } = useTranslation();
   const externalChat = sessionsStore.externalChat;
+  // Stable key so the scan re-runs only when the option set really changes.
+  const contextDirKey = (contextProjects ?? []).map((p) => p.path).join('|');
 
   useEffect(() => {
-    if (workDir) void sessionsStore.load(workDir, projectDir);
+    if (workDir) void sessionsStore.load(workDir, contextDirKey ? contextDirKey.split('|') : []);
     return () => sessionsStore.dispose();
-  }, [sessionsStore, workDir, projectDir]);
+  }, [sessionsStore, workDir, contextDirKey]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 bg-background-secondary-1">
@@ -125,7 +130,7 @@ export const ChatTabView = observer(function ChatTabView({
         store={sessionsStore}
         chatTab={chatTab}
         workDir={workDir}
-        projectDir={projectDir}
+        contextProjects={contextProjects}
       />
       {sessionsStore.selectedExternal && externalChat ? (
         <ExternalSessionPane
@@ -134,9 +139,7 @@ export const ChatTabView = observer(function ChatTabView({
           onNewSession={() => {
             sessionsStore.createLocalSession(
               chatTab.providerId,
-              // New sessions default to the project context dir; the selected
-              // session's own cwd wins so a run of sessions stays in one place.
-              sessionsStore.selectedExternal?.cwd ?? projectDir ?? workDir
+              sessionsStore.selectedExternal?.cwd ?? workDir
             );
           }}
           onBranch={(source, messageId, text) => sessionsStore.branchFrom(source, messageId, text)}
@@ -158,28 +161,23 @@ const SessionsRail = observer(function SessionsRail({
   store,
   chatTab,
   workDir,
-  projectDir,
+  contextProjects,
 }: {
   store: TaskSessionsStore;
   chatTab: ChatTab;
   workDir: string;
-  projectDir?: string;
+  contextProjects?: Array<{ name: string; path: string }>;
 }) {
   // Only this tab's agent sessions — one tab per agent.
   const external = store.railSessions.filter((s) => s.providerId === chatTab.providerId);
   const { t } = useTranslation();
   const [choosingContext, setChoosingContext] = useState(false);
-  const hasContextChoice = !!(projectDir && projectDir.toLowerCase() !== workDir.toLowerCase());
+  // Same gate as the TUI conversation modal: only offer a choice when there
+  // is more than one context project; otherwise everything runs in task dir.
+  const hasContextChoice = (contextProjects?.length ?? 0) > 1;
   const contextOptions = [
-    ...(hasContextChoice
-      ? [
-          {
-            label: t('chat:projectContext', { name: projectDir.split(/[\/]/).pop() }),
-            path: projectDir,
-          },
-        ]
-      : []),
     { label: t('chat:taskDirectory'), path: workDir },
+    ...(contextProjects ?? []).map((p) => ({ label: p.name, path: p.path })),
   ];
 
   return (
@@ -196,10 +194,7 @@ const SessionsRail = observer(function SessionsRail({
             size="icon"
             className="size-5"
             onClick={() =>
-              store.createLocalSession(
-                chatTab.providerId,
-                store.selectedExternal?.cwd ?? projectDir ?? workDir
-              )
+              store.createLocalSession(chatTab.providerId, store.selectedExternal?.cwd ?? workDir)
             }
             aria-label={t('chat:newSession')}
           >
